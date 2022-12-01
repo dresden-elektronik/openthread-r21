@@ -51,7 +51,7 @@
 
 // defined by compiler flags for flexibility
 #ifndef CFG_TUSB_MCU
-#define CFG_TUSB_MCU OPT_MCU_SAMD21 //R21 uses the same MCU
+#define CFG_TUSB_MCU OPT_MCU_SAMR21
 #endif
 
 #ifndef CFG_TUSB_RHPORT0_MODE
