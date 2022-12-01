@@ -26,7 +26,7 @@
 
 #include "tusb_option.h"
 
-#if CFG_TUD_ENABLED && (CFG_TUSB_MCU == OPT_MCU_SAMD21)
+#if CFG_TUD_ENABLED && (CFG_TUSB_MCU == OPT_MCU_SAMR21)
 
 #include "samr21.h"
 #include "device/dcd.h"
