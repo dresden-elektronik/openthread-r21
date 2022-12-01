@@ -1,0 +1,6 @@
+[submodule "openthread"]
+	path = openthread
+	url = https://github.com/openthread/openthread
+[submodule "thrid_party/tinyusb"]
+	path = thrid_party/tinyusb
+	url = https://github.com/hathach/tinyusb
