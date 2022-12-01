@@ -1,3 +1,6 @@
 [submodule "openthread"]
 	path = openthread
 	url = https://github.com/openthread/openthread
+[submodule "third_party/tinyusb"]
+	path = third_party/tinyusb
+	url = https://github.com/hathach/tinyusb/
