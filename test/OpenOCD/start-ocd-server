@@ -1,0 +1,1 @@
+sudo openocd -f ATMEL-ICE-OpenOCD-samr21e18a.cfg
