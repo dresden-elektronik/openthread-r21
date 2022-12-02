@@ -148,7 +148,7 @@ static uint32_t s_csmaBackoffIntervallMax_us    = 240;  // SYMBOL_DURATION_802_1
 static uint32_t s_csmaBackoffIntervallDiff_us   = 224; // sCsmaBackoffIntervallMax - sCsmaBackoffIntervallMax
 static uint32_t s_csmaBackoffIntervallStep_us   = 14;  // sCsmaBackoffIntervallDiff / 16, need cause at86rf233 can create 2 Random bits per SPI Read 
 
-const static uint16_t s_ackMaxWaitDuration_us   = 56; // 12 * SYMBOL_DURATION_802_15_4_us
+const static uint16_t s_ackMaxWaitDuration_us   = 250; // 12 * SYMBOL_DURATION_802_15_4_us
 static uint16_t s_transmissionTimeout_us        = 10000;
 
 static uint64_t s_ieeeAddr;
@@ -367,11 +367,11 @@ bool samr21RadioSendFrame(FrameBuffer_t *frame)
 // timer via TC4
 void TC4_Handler()
 {
+            PORT->Group[0].OUTSET.reg = PORT_PA08;
     // Reset IRQ
     TC4->COUNT16.INTFLAG.bit.OVF = 1;
-    PORT->Group[0].OUTSET.reg = PORT_PA08;
     samr21RadioFsmHandleEvent(RADIO_EVENT_TIMER_TRIGGER);
-    PORT->Group[0].OUTCLR.reg = PORT_PA08;
+            PORT->Group[0].OUTCLR.reg = PORT_PA08;
 }
 
 // timer via TC5
@@ -905,6 +905,7 @@ void samr21RadioLiveRxParser()
     }
 
     // Prepre TRX
+
     samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_ACK_REQUESTED);
     PORT->Group[0].OUTCLR.reg = PORT_PA15;
     return;
