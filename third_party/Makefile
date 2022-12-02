@@ -1,185 +1,78 @@
 
-CC=./gcc-arm-none-eabi/bin/arm-none-eabi-gcc
-CXX=./gcc-arm-none-eabi/bin/arm-none-eabi-g++
-ASM=./gcc-arm-none-eabi/bin/arm-none-eabi-as
-GDB=./gcc-arm-none-eabi/bin/arm-none-eabi-gdb
+CC=../gcc-arm-none-eabi/bin/arm-none-eabi-gcc
+CXX=../gcc-arm-none-eabi/bin/arm-none-eabi-g++
+ASM=../gcc-arm-none-eabi/bin/arm-none-eabi-as
+GDB=../gcc-arm-none-eabi/bin/arm-none-eabi-gdb
 
 MACH=cortex-m0plus
 
 OPT=-O0
 
-HAL_DIR=./HAL
-
-OUT_DIR=./out
-
-LINKERSCRIPT=./ASF/samr21e18a_flash.ld
+OUT_DIR=../out/tinyUSB
 
 CMSIS_DEVICE_DIR=./CMSIS/r21
+CMSIS_CORE_DIR=./CMSIS/core
 
 TINYUSB_SRC_DIR=./tinyusb/src
-TINYUSB_CONF_DIR=./tinyusb/config
+TINYUSB_MOD_SRC_DIR=./tinyusb_modified/src
+TINYUSB_CONF_DIR=./tinyusb_config
 
-INCDIRS= -I. -I./CMSIS/r21/include -I./CMSIS/r21/source -I./CMSIS/core -I./AT86RF233 -I$(HAL_DIR) -I$(TINYUSB_SRC_DIR) -I$(TINYUSB_CONF_DIR)
-DEFINES= -D__SAMR21E18A__ -D__CORECLK__=1000000 -D__PERIPHERALCLK__ -D_DEBUG
+INCDIRS= -I. -I$(CMSIS_DEVICE_DIR)/include -I$(CMSIS_DEVICE_DIR)/source -I$(CMSIS_CORE_DIR) -I$(TINYUSB_SRC_DIR) -I$(TINYUSB_CONF_DIR)
+DEFINES= -D__SAMR21E18A__
 
-CFLAGS= -c -g -mcpu=$(MACH) -mfloat-abi=soft -mthumb -std=gnu99 -Wall $(OPT) $(INCDIRS) $(DEFINES)
-LDFLAGS= -mcpu=$(MACH) -mfloat-abi=soft -specs=nano.specs -specs=nosys.specs -mthumb -Wall -Wl,--entry=Reset_Handler -T$(LINKERSCRIPT)
+CFLAGS= -c -g -mcpu=$(MACH) --specs=nosys.specs -mfloat-abi=soft -mthumb -std=gnu99 -Wall $(OPT) $(INCDIRS) $(DEFINES) 
 
-allTX:\
-	mainTX.o \
-	tusb.o \
-	usbd.o \
-	usbd_control.o \
-	tusb_fifo.o \
-	cdc_device.o \
-	dcd_samd.o \
-	usb_descriptors.o \
-	startup_samr21.o \
-	system_samr21.o \
-	samr21PowerManager.o \
-	samr21Radio.o \
-	samr21RadioFSM.o \
-	samr21Timer.o \
-	samr21NopDelay.o \
-	samr21Rtc.o \
-	samr21Trx.o \
-	samr21Clock.o \
-	finalTX.elf
+MKDIR=mkdir
 
-allRX:\
-	mainRX.o \
-	tusb.o \
-	usbd.o \
-	usbd_control.o \
-	tusb_fifo.o \
-	cdc_device.o \
-	dcd_samd.o \
-	usb_descriptors.o \
-	startup_samr21.o \
-	system_samr21.o \
-	samr21PowerManager.o \
-	samr21Radio.o \
-	samr21RadioFSM.o \
-	samr21Timer.o \
-	samr21NopDelay.o \
-	samr21Rtc.o \
-	samr21Trx.o \
-	samr21Clock.o \
-	finalRX.elf
+tinyUSB:\
+	$(OUT_DIR) \
+	$(OUT_DIR)/tusb.o \
+	$(OUT_DIR)/usbd.o \
+	$(OUT_DIR)/usbd_control.o \
+	$(OUT_DIR)/tusb_fifo.o \
+	$(OUT_DIR)/cdc_device.o \
+	$(OUT_DIR)/usb_descriptors.o \
+	$(OUT_DIR)/dcd_samr.o 
 
-##TinyUSB
-
-tusb.o:$(TINYUSB_SRC_DIR)/tusb.c
-	$(CC) $(CFLAGS) -o $@ $^
-
-usbd.o:$(TINYUSB_SRC_DIR)/device/usbd.c
-	$(CC) $(CFLAGS) -o $@ $^
-
-usbd_control.o:$(TINYUSB_SRC_DIR)/device/usbd_control.c
-	$(CC) $(CFLAGS) -o $@ $^
-
-tusb_fifo.o:$(TINYUSB_SRC_DIR)/common/tusb_fifo.c
-	$(CC) $(CFLAGS) -o $@ $^
-
-cdc_device.o:$(TINYUSB_SRC_DIR)/class/cdc/cdc_device.c
-	$(CC) $(CFLAGS) -o $@ $^
-
-dcd_samd.o:$(TINYUSB_SRC_DIR)/portable/microchip/samd/dcd_samd.c
-	$(CC) $(CFLAGS) -o $@ $^
-
-usb_descriptors.o:$(TINYUSB_CONF_DIR)/usb_descriptors.c
-	$(CC) $(CFLAGS) -o $@ $^
-
-
-
-
-##APPLICATION
-mainTX.o:mainTX.c
-	$(CC) $(CFLAGS) -o $@ $^
-
-mainRX.o:mainRX.c
-	$(CC) $(CFLAGS) -o $@ $^
-
-samr21Trx.o:$(HAL_DIR)/samr21Trx.c
-	$(CC) $(CFLAGS) -o $@ $^
-
-samr21Clock.o:$(HAL_DIR)/samr21Clock.c
-	$(CC) $(CFLAGS) -o $@ $^
-
-samr21PowerManager.o:$(HAL_DIR)/samr21PowerManager.c
-	$(CC) $(CFLAGS) -o $@ $^
-
-samr21Timer.o:$(HAL_DIR)/samr21Timer.c
-	$(CC) $(CFLAGS) -o $@ $^
-
-samr21NopDelay.o:$(HAL_DIR)/samr21NopDelay.c
-	$(CC) $(CFLAGS) -o $@ $^
-
-samr21Rtc.o:$(HAL_DIR)/samr21Rtc.c
-	$(CC) $(CFLAGS) -o $@ $^
-
-samr21Radio.o:$(HAL_DIR)/samr21Radio.c
-	$(CC) $(CFLAGS) -o $@ $^
-
-samr21RadioFSM.o:$(HAL_DIR)/samr21RadioFSM.c
-	$(CC) $(CFLAGS) -o $@ $^
-
-startup_samr21.o:$(CMSIS_DEVICE_DIR)/source/gcc/startup_samr21.c
-	$(CC) $(CFLAGS) -o $@ $^
-
-system_samr21.o:$(CMSIS_DEVICE_DIR)/source/system_samr21.c 
-	$(CC) $(CFLAGS) -o $@ $^
 	
-finalRX.elf:\
-	tusb.o \
-	mainRX.o \
-	usbd.o \
-	usbd_control.o \
-	tusb_fifo.o \
-	cdc_device.o \
-	dcd_samd.o \
-	usb_descriptors.o \
-	startup_samr21.o \
-	system_samr21.o \
-	samr21PowerManager.o \
-	samr21Radio.o \
-	samr21RadioFSM.o \
-	samr21Timer.o \
-	samr21Rtc.o \
-	samr21NopDelay.o \
-	samr21Trx.o \
-	samr21Clock.o 
+$(OUT_DIR):
+	$(MKDIR) -p $@
 
-	$(CC) $(LDFLAGS) -o $@ $^
+$(OUT_DIR)/tusb.o:\
+	$(TINYUSB_SRC_DIR)/tusb.c 
+	
+	$(CC) $(CFLAGS) -o $@ $^
 
-finalTX.elf:\
-	tusb.o \
-	mainTX.o \
-	usbd.o \
-	usbd_control.o \
-	tusb_fifo.o \
-	cdc_device.o \
-	dcd_samd.o \
-	usb_descriptors.o \
-	startup_samr21.o \
-	system_samr21.o \
-	samr21PowerManager.o \
-	samr21Radio.o \
-	samr21RadioFSM.o \
-	samr21Timer.o \
-	samr21Rtc.o \
-	samr21NopDelay.o \
-	samr21Trx.o \
-	samr21Clock.o 
+$(OUT_DIR)/usbd.o:\
+	$(TINYUSB_SRC_DIR)/device/usbd.c 
 
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ $^
 
-flashRX: finalRX.elf
-	$(GDB) --init-eval-command='target extended-remote localhost:3333' ./finalRX.elf --eval-command='load'
+$(OUT_DIR)/usbd_control.o:\
+	$(TINYUSB_SRC_DIR)/device/usbd_control.c 
 
-flashTX: finalTX.elf
-	$(GDB) --init-eval-command='target extended-remote localhost:3333' ./finalTX.elf --eval-command='load'
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(OUT_DIR)/tusb_fifo.o:\
+	$(TINYUSB_SRC_DIR)/common/tusb_fifo.c 
+
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(OUT_DIR)/cdc_device.o:\
+	$(TINYUSB_SRC_DIR)/class/cdc/cdc_device.c 
+
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(OUT_DIR)/usb_descriptors.o:\
+	$(TINYUSB_CONF_DIR)/usb_descriptors.c 
+
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(OUT_DIR)/dcd_samr.o:\
+	$(TINYUSB_MOD_SRC_DIR)/portable/microchip/samr/dcd_samr.c
+
+	$(CC) $(CFLAGS) -o $@ $^
 
 clean:
-	rm -rf *.o *.elf
+	rm -rf $(OUT_DIR)
 
