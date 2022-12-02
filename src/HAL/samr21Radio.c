@@ -148,7 +148,7 @@ static uint32_t s_csmaBackoffIntervallMax_us    = 240;  // SYMBOL_DURATION_802_1
 static uint32_t s_csmaBackoffIntervallDiff_us   = 224; // sCsmaBackoffIntervallMax - sCsmaBackoffIntervallMax
 static uint32_t s_csmaBackoffIntervallStep_us   = 14;  // sCsmaBackoffIntervallDiff / 16, need cause at86rf233 can create 2 Random bits per SPI Read 
 
-const static uint16_t s_ackMaxWaitDuration_us   = 160; // 12 * SYMBOL_DURATION_802_15_4_us
+const static uint16_t s_ackMaxWaitDuration_us   = 56; // 12 * SYMBOL_DURATION_802_15_4_us
 static uint16_t s_transmissionTimeout_us        = 10000;
 
 static uint64_t s_ieeeAddr;
@@ -369,8 +369,9 @@ void TC4_Handler()
 {
     // Reset IRQ
     TC4->COUNT16.INTFLAG.bit.OVF = 1;
-
+    PORT->Group[0].OUTSET.reg = PORT_PA08;
     samr21RadioFsmHandleEvent(RADIO_EVENT_TIMER_TRIGGER);
+    PORT->Group[0].OUTCLR.reg = PORT_PA08;
 }
 
 // timer via TC5
@@ -378,9 +379,8 @@ void TC5_Handler()
 {
     // Reset IRQ
     TC5->COUNT16.INTFLAG.bit.OVF = 1;
-    PORT->Group[0].OUTSET.reg = PORT_PA08;
+
     samr21RadioFsmHandleEvent(RADIO_EVENT_TIMEOUT_TRIGGER);
-    PORT->Group[0].OUTCLR.reg = PORT_PA08;
 }
 
 // irq from AT86RF233
@@ -494,8 +494,6 @@ void samr21RadioStartBackoffTimer()
 void samr21RadioSendTXPayload()
 {
 
-    PORT->Group[0].OUTSET.reg= PORT_PA06;
-
     samr21RadioChangeState(TRX_CMD_FORCE_PLL_ON);
     while (g_trxStatus.bit.trxStatus != TRX_STATUS_PLL_ON)
     {
@@ -505,6 +503,7 @@ void samr21RadioSendTXPayload()
     __disable_irq();
     // Start Trasmission
     samr21TrxSetSLP_TR(true);
+    PORT->Group[0].OUTSET.reg= PORT_PA06;
 
     // add tx timestamp
     sf_ringBufferGetCurrent()->txTimestamp = samr21RtcGetTimestamp();
@@ -547,7 +546,6 @@ void samr21RadioSendTXPayload()
 
     // Queue Move to RX
     samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_RX_ON);
-    PORT->Group[0].OUTCLR.reg= PORT_PA06;
 }
 
 void samr21RadioTransmissionCleanup()
@@ -594,6 +592,7 @@ exit:
 
 void samr21RadioWaitForAck()
 {
+    PORT->Group[0].OUTCLR.reg= PORT_PA06;
     samr21Timer4Set(s_ackMaxWaitDuration_us);
 }
 
@@ -886,8 +885,11 @@ void samr21RadioLiveRxParser()
     samr21TrxSetSSel(false);
     __enable_irq();
 
+    samr21RadioChangeState(TRX_CMD_FORCE_PLL_ON);
+
     if (!rxStatus.bit.crcValid)
     {
+        samr21RadioChangeState(TRX_CMD_RX_ON);
         samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_MSG_INVALID);
         PORT->Group[0].OUTCLR.reg = PORT_PA15;
         return;
@@ -896,13 +898,13 @@ void samr21RadioLiveRxParser()
     // Check if Ack is needed
     if (!sf_ringBufferGetCurrent()->inboundFrame.header.frameControlField1.ackRequest)
     {
+        samr21RadioChangeState(TRX_CMD_RX_ON);
         samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_MSG_VALID);
         PORT->Group[0].OUTCLR.reg = PORT_PA15;
         return;
     }
 
     // Prepre TRX
-    samr21RadioChangeState(TRX_CMD_FORCE_PLL_ON);
     samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_ACK_REQUESTED);
     PORT->Group[0].OUTCLR.reg = PORT_PA15;
     return;
@@ -910,7 +912,7 @@ void samr21RadioLiveRxParser()
 
 void samr21RadioSendAck()
 {
-    PORT->Group[0].OUTSET.reg = PORT_PA14;
+    
     while (g_trxStatus.bit.trxStatus != TRX_STATUS_PLL_ON)
     {
         samr21TrxUpdateStatus();
@@ -918,6 +920,7 @@ void samr21RadioSendAck()
     __disable_irq();
     
     // Start Trasmission
+    PORT->Group[0].OUTSET.reg = PORT_PA14;
     samr21TrxSetSLP_TR(true);
     // add tx timestamp
     TransmissionBuffer_t * buffer = sf_ringBufferGetCurrent();
