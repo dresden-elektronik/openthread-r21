@@ -3,6 +3,8 @@ CC=../gcc-arm-none-eabi/bin/arm-none-eabi-gcc
 CXX=../gcc-arm-none-eabi/bin/arm-none-eabi-g++
 ASM=../gcc-arm-none-eabi/bin/arm-none-eabi-as
 GDB=../gcc-arm-none-eabi/bin/arm-none-eabi-gdb
+
+OCD=openocd
 MKDIR=mkdir
 
 MACH=cortex-m0plus
@@ -111,6 +113,22 @@ $(IMAGE_OUT_DIR)/testTX.elf:\
 	$(CC) $(LDFLAGS) -o $@ $^ $(TINYUSB_OBJS) $(CMSIS_OBJS)	$(HAL_OBJS) 
 
 
+flashTX:testTX
+	$(OCD) -f ./OpenOCD_config/ATMEL-ICE-OpenOCD-samr21e18a.cfg & echo $$! > ./OpenOCD_config/tempOcdInstance.pid
+	$(GDB) --init-eval-command='target extended-remote localhost:3333' $(IMAGE_OUT_DIR)/testRX.elf --eval-command='load'
+	if [ -a ./OpenOCD_config/tempOcdInstance.pid ]; then \
+    	kill -TERM $$(cat ./OpenOCD_config/tempOcdInstance.pid) || true; \
+	fi;
+	rm ./OpenOCD_config/tempOcdInstance.pid
+
+flashRX:testRX
+	$(OCD) -f ./OpenOCD_config/ATMEL-ICE-OpenOCD-samr21e18a.cfg & echo $$! > ./OpenOCD_config/tempOcdInstance.pid
+	$(GDB) --init-eval-command='target extended-remote localhost:3333' $(IMAGE_OUT_DIR)/testRX.elf --eval-command='load'
+	if [ -a ./OpenOCD_config/tempOcdInstance.pid ]; then \
+    	kill -TERM $$(cat ./OpenOCD_config/tempOcdInstance.pid) || true; \
+	fi;
+	rm ./OpenOCD_config/tempOcdInstance.pid
+
 third_party:
 	cd ../third_party && make
 
@@ -130,4 +148,3 @@ cleanAll:
 clean:
 	rm -rf $(IMAGE_OUT_DIR)
 	rm -rf $(OBJ_OUT_DIR)
-
