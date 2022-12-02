@@ -1,7 +1,7 @@
 //Author Eric Härtel @ dresden elektronik ingenieurtechnik gmbh © 2022
 
-#ifndef _802_15_4_BITFIELD_H_
-#define _802_15_4_BITFIELD_H_
+#ifndef _802_15_4_HELPER_H_
+#define _802_15_4_HELPER_H_
 
 #define IEEE_802_15_4_FRAME_SIZE                128
 #define IEEE_802_15_4_PDSU_SIZE                 127
@@ -97,4 +97,4 @@ typedef struct
 // }macSourceAddressingFieldsExtAddrNoPan_t;
 
 
-#endif //_802_15_4_BITFIELD_H_
+#endif //_802_15_4_HELPER_H_

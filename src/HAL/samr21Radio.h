@@ -4,8 +4,6 @@
 
 
 #include "samr21.h"
-#include "at86rf233_Bitfield.h"
-#include "802_15_4_Bitfields.h"
 #include "samr21RadioFSM.h"
 #include "samr21NopDelay.h"
 #include "samr21Timer.h"
@@ -13,6 +11,9 @@
 #include "samr21Trx.h"
 #include <stdbool.h>
 #include <string.h>
+
+#include "include/at86rf233_Bitfield.h"
+#include "include/802_15_4_Helper.h"
 
 #ifndef NUM_RADIO_BUFFER
 #define NUM_RADIO_BUFFER 4
