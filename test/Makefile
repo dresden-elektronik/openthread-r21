@@ -9,20 +9,34 @@ MACH=cortex-m0plus
 
 OPT=-O0
 
-OUT_DIR=../out/test
+OBJ_OUT_DIR=../out/test
+IMAGE_OUT_DIR=../out/images
 
 CMSIS_DEVICE_DIR=../third_party/CMSIS/r21
 CMSIS_CORE_DIR=../third_party/CMSIS/core
 
-TINYUSB_OBJ_DIR=../out/tinyUSB
 TINYUSB_INC_DIR=../third_party/tinyusb/src
+TINYUSB_CONF_DIR=../third_party/tinyusb_config
+
+HAL_INC_DIR=../src/HAL/include
+
+AT86RF233_INC_DIR=../third_party/ATMEL/AT86RF233
+
+TINYUSB_OBJS=$(wildcard ../out/tinyUSB/*.o)
+CMSIS_OBJS=$(wildcard ../out/CMSIS_Startup/*.o)
+HAL_OBJS=$(wildcard ../out/samr21HAL/*.o)
+
+
 
 INCDIRS=\
 	-I. \
 	-I$(CMSIS_DEVICE_DIR)/include \
 	-I$(CMSIS_DEVICE_DIR)/source \
 	-I$(CMSIS_CORE_DIR) \
-	-I$(TINYUSB_INC_DIR)
+	-I$(TINYUSB_INC_DIR) \
+	-I$(TINYUSB_CONF_DIR) \
+	-I$(AT86RF233_INC_DIR) \
+	-I$(HAL_INC_DIR)
 	
 DEFINES= -D__SAMR21E18A__
 
@@ -39,27 +53,81 @@ CFLAGS= \
 	$(INCDIRS) \
 	$(DEFINES) 
 
-LINKERSCRIPT=./ASF/samr21e18a_flash.ld
+LINKERSCRIPT=../third_party/ATMEL/LINKER/samr21e18a_flash.ld
+
+LDFLAGS= \
+ 	-mcpu=$(MACH) \
+	-mfloat-abi=soft \
+	-specs=nano.specs \
+	-specs=nosys.specs \
+	-mthumb \
+	-Wall \
+	-Wl,--entry=Reset_Handler \
+	-T$(LINKERSCRIPT)
+
+testTX:\
+	samr21HAL \
+	third_party \
+	$(OBJ_OUT_DIR) \
+	$(IMAGE_OUT_DIR) \
+	$(OBJ_OUT_DIR)/testTX.o \
+	$(IMAGE_OUT_DIR)/testTX.elf
+
+testRX:\
+	samr21HAL \
+	third_party \
+	$(OBJ_OUT_DIR) \
+	$(IMAGE_OUT_DIR) \
+	$(OBJ_OUT_DIR)/testRX.o \
+	$(IMAGE_OUT_DIR)/testRX.elf
 
 
-tinyUSB:\
-	$(TINYUSB_OBJ_DIR) \
-	$(TINYUSB_OBJ_DIR)/tusb.o \
-	$(TINYUSB_OBJ_DIR)/usbd.o \
-	$(TINYUSB_OBJ_DIR)/usbd_control.o \
-	$(TINYUSB_OBJ_DIR)/tusb_fifo.o \
-	$(TINYUSB_OBJ_DIR)/cdc_device.o \
-	$(TINYUSB_OBJ_DIR)/usb_descriptors.o \
-	$(TINYUSB_OBJ_DIR)/dcd_samr.o
+$(OBJ_OUT_DIR):
+	$(MKDIR) -p $@
+
+$(IMAGE_OUT_DIR):
+	$(MKDIR) -p $@
 	
-	cd ../third_party && make tinyUSB
-	
+$(OBJ_OUT_DIR)/testRX.o:\
+	./mainRX.c 	
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(OBJ_OUT_DIR)/testTX.o:\
+	./mainTX.c 	
+	$(CC) $(CFLAGS) -o $@ $^
+
+
+
+
+
+$(IMAGE_OUT_DIR)/testRX.elf:\
+	$(OBJ_OUT_DIR)/testRX.o 
+
+	$(CC) $(LDFLAGS) -o $@ $^ $(TINYUSB_OBJS) $(CMSIS_OBJS)	$(HAL_OBJS) 
+
+$(IMAGE_OUT_DIR)/testTX.elf:\
+	$(OBJ_OUT_DIR)/testTX.o 
+
+	$(CC) $(LDFLAGS) -o $@ $^ $(TINYUSB_OBJS) $(CMSIS_OBJS)	$(HAL_OBJS) 
+
+
+third_party:
+	cd ../third_party && make
+
+samr21HAL:
+	cd ../src && make
 	 	
 $(OUT_DIR):
 	$(MKDIR) -p $@
 
 
+cleanAll:
+	cd ../third_party && make clean
+	cd ../src && make clean
+	rm -rf $(IMAGE_OUT_DIR)
+	rm -rf $(OBJ_OUT_DIR)
 
 clean:
-	rm -rf $(OUT_DIR)
+	rm -rf $(IMAGE_OUT_DIR)
+	rm -rf $(OBJ_OUT_DIR)
 

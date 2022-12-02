@@ -17,6 +17,7 @@ CMSIS_CORE_DIR=../third_party/CMSIS/core
 AT86RF233_INC_DIR=../third_party/ATMEL/AT86RF233
 
 HAL_DIR=./HAL
+HAL_INC_DIR=./HAL/include
 
 INCDIRS=\
 	-I. \
@@ -24,7 +25,7 @@ INCDIRS=\
 	-I$(CMSIS_DEVICE_DIR)/source \
 	-I$(CMSIS_CORE_DIR) \
 	-I$(AT86RF233_INC_DIR) \
-	-I$(HAL_DIR) 
+	-I$(HAL_INC_DIR) 
 	
 DEFINES= -D__SAMR21E18A__ -D_DEBUG
 

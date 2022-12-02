@@ -3,12 +3,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "HAL/samr21Trx.h"
-#include "HAL/samr21Radio.h"
-#include "HAL/samr21Rtc.h"
-#include "HAL/samr21NopDelay.h"
-#include "HAL/samr21PowerManager.h"
-#include "HAL/samr21Timer.h"
+#include "samr21Trx.h"
+#include "samr21Radio.h"
+#include "samr21Rtc.h"
+#include "samr21NopDelay.h"
+#include "samr21PowerManager.h"
+#include "samr21Timer.h"
 
 #include "tusb.h"
 

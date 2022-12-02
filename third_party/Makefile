@@ -3,6 +3,7 @@ CC=../gcc-arm-none-eabi/bin/arm-none-eabi-gcc
 CXX=../gcc-arm-none-eabi/bin/arm-none-eabi-g++
 ASM=../gcc-arm-none-eabi/bin/arm-none-eabi-as
 GDB=../gcc-arm-none-eabi/bin/arm-none-eabi-gdb
+MKDIR=mkdir
 
 MACH=cortex-m0plus
 
@@ -18,12 +19,28 @@ TINYUSB_SRC_DIR=./tinyusb/src
 TINYUSB_MOD_SRC_DIR=./tinyusb_modified/src
 TINYUSB_CONF_DIR=./tinyusb_config
 
-INCDIRS= -I. -I$(CMSIS_DEVICE_DIR)/include -I$(CMSIS_DEVICE_DIR)/source -I$(CMSIS_CORE_DIR) -I$(TINYUSB_SRC_DIR) -I$(TINYUSB_CONF_DIR)
+INCDIRS= \
+	-I. \
+	-I$(CMSIS_DEVICE_DIR)/include \
+	-I$(CMSIS_DEVICE_DIR)/source \
+	-I$(CMSIS_CORE_DIR) \
+	-I$(TINYUSB_SRC_DIR) \
+	-I$(TINYUSB_CONF_DIR)
+
 DEFINES= -D__SAMR21E18A__
 
-CFLAGS= -c -g -mcpu=$(MACH) --specs=nosys.specs -mfloat-abi=soft -mthumb -std=gnu99 -Wall $(OPT) $(INCDIRS) $(DEFINES) 
-
-MKDIR=mkdir
+CFLAGS= \
+	-c \
+	-g \
+	-mcpu=$(MACH) \
+	--specs=nosys.specs \
+	-mfloat-abi=soft \
+	-mthumb \
+	-std=gnu99 \
+	-Wall \
+	$(OPT) \
+	$(INCDIRS) \
+	$(DEFINES) 
 
 all:tinyUSB CMSIS_Startup
 

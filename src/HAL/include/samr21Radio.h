@@ -12,11 +12,11 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "include/at86rf233_Bitfield.h"
-#include "include/802_15_4_Helper.h"
+#include "at86rf233_Bitfield.h"
+#include "802_15_4_Helper.h"
 
 #ifndef NUM_RADIO_BUFFER
-#define NUM_RADIO_BUFFER 4
+    #define NUM_RADIO_BUFFER 4
 #endif
 
 #ifndef SIZE_TABLE_FRAME_PENDING_SHORT_ADDR
@@ -27,9 +27,8 @@
     #define SIZE_TABLE_FRAME_PENDING_IEEE_ADDR 10
 #endif
 
-
 #ifndef SYMBOL_DURATION_802_15_4_us
-#define SYMBOL_DURATION_802_15_4_us 16
+    #define SYMBOL_DURATION_802_15_4_us 16
 #endif
  
 typedef union

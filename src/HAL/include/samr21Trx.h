@@ -7,7 +7,7 @@
 #include "samr21NopDelay.h"
 #include <stdbool.h>
 
-#include "include/at86rf233_Bitfield.h"
+#include "at86rf233_Bitfield.h"
 #include "at86rf233.h"
 
 #define CPU_WAIT_CYCLE_AFTER_SSEL_LOW               9   // 187.5ns

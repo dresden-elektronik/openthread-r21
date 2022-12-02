@@ -1,9 +1,9 @@
 //Author Eric Härtel @ dresden elektronik ingenieurtechnik gmbh © 2022
-#include "at86rf233.h"
-
 #ifndef _AT86RF233_BITFIELD_H_
 #define _AT86RF233_BITFIELD_H_
 
+#include "at86rf233.h"
+#include <stdint.h>
 
 typedef union {
     struct{
