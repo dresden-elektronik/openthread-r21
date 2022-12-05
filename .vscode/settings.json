@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "alarm-milli.h": "c"
+        "alarm-milli.h": "c",
+        "otplatsystemheader.h": "c"
     }
 }
