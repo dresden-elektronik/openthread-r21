@@ -9,55 +9,12 @@
 #include "samr21NopDelay.h"
 #include "samr21PowerManager.h"
 #include "samr21Timer.h"
+#include "samr21Nvm.h"
 
-#include "tusb.h"
-
-void samr21NvmInit(){
-    NVMCTRL->CTRLB.bit.RWS = 1;
-}
-
-bool dtrFlag;
 
 void dcd_int_handler (uint8_t rhport);
 void USB_Handler(){
     dcd_int_handler(0);
-}
-
-void samr21UsbInit(){
-    //Setup Ports for USB
-        //Setup PIN PA24 as USB D-
-            //Make Input
-            PORT->Group[0].DIRSET.reg= PORT_PA24;
-
-            //Setup Mux Settings
-            PORT->Group[0].WRCONFIG.reg =
-                PORT_WRCONFIG_HWSEL
-                |PORT_WRCONFIG_WRPINCFG
-                |PORT_WRCONFIG_WRPMUX
-                |PORT_WRCONFIG_PMUX(MUX_PA24G_USB_DM)
-                //|PORT_WRCONFIG_PULLEN
-                //|PORT_WRCONFIG_INEN
-                |PORT_WRCONFIG_PMUXEN
-                |PORT_WRCONFIG_PINMASK(PORT_PA24 >> 16) //upper Halfword
-            ;
-            PORT->Group[0].OUTCLR.reg= PORT_PA24;
-            
-        //Setup PIN PA25 as USB D+
-            //Make Output
-            PORT->Group[0].DIRSET.reg= PORT_PA25;
-
-            //Setup Mux Settings
-            PORT->Group[0].WRCONFIG.reg =
-                PORT_WRCONFIG_HWSEL
-                |PORT_WRCONFIG_WRPINCFG
-                |PORT_WRCONFIG_WRPMUX
-                |PORT_WRCONFIG_PMUX(MUX_PA25G_USB_DP)
-                //|PORT_WRCONFIG_PULLEN
-                //|PORT_WRCONFIG_INEN
-                |PORT_WRCONFIG_PMUXEN
-                |PORT_WRCONFIG_PINMASK(PORT_PA25 >> 16) //upper Halfword
-            ;
-            PORT->Group[0].OUTCLR.reg= PORT_PA25;
 }
 
 void samr21DebugPortsInit(){
@@ -165,11 +122,12 @@ extern AT86RF233_REG_IRQ_STATUS_t     g_trxLastIrq;               //from samr21t
 
 int main(int argc, char const *argv[])
 {
-    samr21NvmInit();
     samr21PowerManagerInit();
-    samr21ClockInit();
-    samr21TrxInterfaceInit();
+    samr21NvmInit();
 
+    samr21ClockInit();
+
+    samr21TrxInterfaceInit();
     samr21TrxSetupMClk(0x5); //MCLK 1MHz -> 16 Mhz
     samr21ClockInitAfterTrxSetup();
 
@@ -179,7 +137,6 @@ int main(int argc, char const *argv[])
     samr21RadioInit();  
 
     samr21UsbInit();
-    tusb_init();
 
     uint64_t ieeeAddr = 0xB0B1B2B3B4B5B6B7;
     uint16_t shortAddr = 0xB8B9;
@@ -236,80 +193,11 @@ int main(int argc, char const *argv[])
             tud_cdc_write_flush();
         }
     
-        cdc_task(); // 
-        tud_task(); // device task   
+        samr21UsbTask();
         tempI++; 
     }
 }
 
-// Invoked when device is mounted
-void tud_mount_cb(void)
-{
-    __NOP();
-}
 
-// Invoked when device is unmounted
-void tud_umount_cb(void)
-{
-    __NOP();
-}
-
-// Invoked when usb bus is suspended
-// remote_wakeup_en : if host allow us  to perform remote wakeup
-// Within 7ms, device must draw an average of current less than 2.5 mA from bus
-void tud_suspend_cb(bool remote_wakeup_en)
-{
-    __NOP();
-}
-
-// Invoked when usb bus is resumed
-void tud_resume_cb(void)
-{
-    __NOP();
-}
-
-
-//--------------------------------------------------------------------+
-// USB CDC
-//--------------------------------------------------------------------+
-void cdc_task(void)
-{
-  // connected() check for DTR bit
-  // Most but not all terminal client set this when making connection
-  // if ( tud_cdc_connected() )
-  {
-    // connected and there are data available
-    if ( tud_cdc_available() )
-    {
-      // read datas
-      char buf[64];
-      uint32_t count = tud_cdc_read(buf, sizeof(buf));
-      (void) count;
-
-      // Echo back
-      // Note: Skip echo by commenting out write() and write_flush()
-      // for throughput test e.g
-      //    $ dd if=/dev/zero of=/dev/ttyACM0 count=10000
-      tud_cdc_write(buf, count);
-      tud_cdc_write_flush();
-    }
-  }
-}
-
-// Invoked when cdc when line state changed e.g connected/disconnected
-
-
-void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
-{
-  (void) itf;
-  (void) rts;
-  dtrFlag = dtr;
-}
-
-// Invoked when CDC interface received data from host
-void tud_cdc_rx_cb(uint8_t itf)
-{
-  (void) itf;
-}
 
 

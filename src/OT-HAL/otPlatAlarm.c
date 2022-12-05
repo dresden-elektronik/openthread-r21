@@ -1,7 +1,7 @@
+//Author Eric Härtel @ dresden elektronik ingenieurtechnik gmbh © 2022
 #include "openthread/platform/alarm-milli.h"
 #include "openthread/platform/alarm-micro.h"
 
-#include "samr21Rtc.h"
 #include "otPlatSystemHeader.h"
 
 #include "samr21Timer.h"
@@ -51,18 +51,17 @@ void samr21OtPlatAlarmTask(otInstance *aInstance){
     if(!s_alarmFired){
         return;
     }
+    s_alarmFired = false;
 
     //Copied from https://github.com/openthread/ot-samr21/blob/main/src/alarm.c
 #if OPENTHREAD_CONFIG_DIAG_ENABLE
         if (otPlatDiagModeGet())
         {
-            s_alarmFired = false;
             otPlatDiagAlarmFired(aInstance);
         }
         else
 #endif
         {
-            s_alarmFired = false;
             otPlatAlarmMilliFired(aInstance);
         }
     //End copied Snippet
