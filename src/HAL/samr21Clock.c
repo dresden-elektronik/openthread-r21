@@ -105,7 +105,7 @@ void samr21ClockTrxSrcInit(){
 
         //Setup GENCTRL
         GCLK->GENCTRL.reg = 
-            GCLK_GENCTRL_ID(4) // GCLKGEN1
+            GCLK_GENCTRL_ID(4) // GCLKGEN4
             |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_GCLKGEN1_Val)
             |GCLK_GENCTRL_RUNSTDBY
             //|GCLK_GENCTRL_DIVSEL
@@ -117,7 +117,7 @@ void samr21ClockTrxSrcInit(){
         //Wait for synchronization 
         while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
 
-        
+        //Use GCLKGEN 4 (1MHz) for RTC 
         GCLK->CLKCTRL.reg =
             //GCLK_CLKCTRL_WRTLOCK
             GCLK_CLKCTRL_CLKEN
@@ -127,7 +127,17 @@ void samr21ClockTrxSrcInit(){
         //Wait for synchronization 
         while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
 
-        //Use GCLKGEN 1 for TCC0/1 (16MHz -> 62.5ns)
+        //Use GCLKGEN 4 (1MHz) for TC3 (And TCC2, but unused)
+        GCLK->CLKCTRL.reg =
+            //GCLK_CLKCTRL_WRTLOCK
+            GCLK_CLKCTRL_CLKEN
+            |GCLK_CLKCTRL_GEN(4) // GCLKGEN1
+            |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TCC2_TC3_Val)
+        ;
+        //Wait for synchronization 
+        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+
+        //Use GCLKGEN 4 (1MHz) for TC 3/5
         GCLK->CLKCTRL.reg =
             //GCLK_CLKCTRL_WRTLOCK
             GCLK_CLKCTRL_CLKEN
