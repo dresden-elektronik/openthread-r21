@@ -363,7 +363,7 @@ bool samr21RadioSendFrame(FrameBuffer_t *frame)
 /*------------------*/
 // State Machine Transition Functions
 /*------------------*/
-void samr21RadioStartCCA()
+void fsm_func_samr21RadioStartCCA()
 {
     PORT->Group[0].OUTCLR.reg= PORT_PA07;
     
@@ -390,7 +390,7 @@ void samr21RadioStartCCA()
     s_phyCcCcaReg.bit.ccaRequest = 0;
 }
 
-void samr21RadioEvalCCA()
+void fsm_func_samr21RadioEvalCCA()
 {
     if (g_trxStatus.bit.ccaStatus)
     {
@@ -407,13 +407,13 @@ void samr21RadioEvalCCA()
     return; 
 }
 
-void samr21RadioStartBackoffTimer()
+void fsm_func_samr21RadioStartBackoffTimer()
 {
     PORT->Group[0].OUTSET.reg= PORT_PA07;
     samr21Timer4Set((s_csmaBackoffIntervallStep_us * samr21RadioGetRandomNibble()) + s_csmaBackoffIntervallMin_us);
 }
 
-void samr21RadioSendTXPayload()
+void fsm_func_samr21RadioSendTXPayload()
 {
 
     samr21RadioChangeState(TRX_CMD_FORCE_PLL_ON);
@@ -470,7 +470,7 @@ void samr21RadioSendTXPayload()
     samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_RX_ON);
 }
 
-void samr21RadioTransmissionCleanup()
+void fsm_func_samr21RadioTransmissionCleanup()
 {
     __disable_irq();
     // Stop Pending Timer
@@ -512,17 +512,17 @@ exit:
     return;
 }
 
-void samr21RadioWaitForAck()
+void fsm_func_samr21RadioWaitForAck()
 {
     PORT->Group[0].OUTCLR.reg= PORT_PA06;
     samr21Timer4Set(s_ackMaxWaitDuration_us);
 }
 
-void samr21RadioAckReceptionStarted(){
+void fsm_func_samr21RadioAckReceptionStarted(){
     samr21Timer4Stop();
 }
 
-void samr21RadioEvalRetransmission()
+void fsm_func_samr21RadioEvalRetransmission()
 {
     if(sf_ringBufferGetCurrent()->retrysLeft.transmission--){
         sf_ringBufferGetCurrent()->retrysLeft.csma = s_numMaxCsmaBackoffs;
@@ -536,7 +536,7 @@ void samr21RadioEvalRetransmission()
 
 
 
-void samr21RadioEvalAck()
+void fsm_func_samr21RadioEvalAck()
 {
     samr21Timer4Stop();
 
@@ -602,12 +602,12 @@ ackInvalid:
     return;
 }
 
-void samr21RadioTxAbort()
+void fsm_func_samr21RadioTxAbort()
 {
     __NOP();
 }
 
-void samr21RadioLiveRxParser()
+void fsm_func_samr21RadioLiveRxParser()
 {
     __disable_irq();
     PORT->Group[0].OUTSET.reg = PORT_PA15;
@@ -833,7 +833,7 @@ void samr21RadioLiveRxParser()
     return;
 }
 
-void samr21RadioSendAck()
+void fsm_func_samr21RadioSendAck()
 {
     
     while (g_trxStatus.bit.trxStatus != TRX_STATUS_PLL_ON)
@@ -905,7 +905,7 @@ void samr21RadioSendAck()
     PORT->Group[0].OUTCLR.reg = PORT_PA14;
 }
 
-void samr21RadioAbortLiveRxParser()
+void fsm_func_samr21RadioAbortLiveRxParser()
 {
     __NOP();
 }

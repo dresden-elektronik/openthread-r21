@@ -6,42 +6,42 @@ static const fsmItem s_fsmTxItemTable[]={
         {RADIO_STATE_TX_READY,                
             RADIO_SOFTEVENT_START_TX,     
                 RADIO_STATE_TX_CCA,      
-        samr21RadioStartCCA},  
+        fsm_func_samr21RadioStartCCA},  
 
             {RADIO_STATE_TX_CCA,                
                 RADIO_EVENT_IRQ_CCA_ED_DONE,     
                     RADIO_STATE_TX_CCA_EVAL,      
-            samr21RadioEvalCCA},  
+            fsm_func_samr21RadioEvalCCA},  
 
                 {RADIO_STATE_TX_CCA_EVAL,        
                     RADIO_SOFTEVENT_CHANNEL_BUSY,  
                         RADIO_STATE_TX_CCA_BACKOFF, 
-                samr21RadioStartBackoffTimer},
+                fsm_func_samr21RadioStartBackoffTimer},
 
                     {RADIO_STATE_TX_CCA_BACKOFF,        
                         RADIO_EVENT_TIMER_TRIGGER,  
                             RADIO_STATE_TX_CCA, 
-            /*----*/samr21RadioStartCCA},    
+            /*----*/fsm_func_samr21RadioStartCCA},    
 
                     {RADIO_STATE_TX_CCA_BACKOFF,        
                         RADIO_EVENT_TIMEOUT_TRIGGER,  
                             RADIO_STATE_TX_FAILED, 
-    /*------------*/samr21RadioTransmissionCleanup}, 
+    /*------------*/fsm_func_samr21RadioTransmissionCleanup}, 
                     
                 {RADIO_STATE_TX_CCA_EVAL,        
                     RADIO_SOFTEVENT_CHANNEL_CLEAR,  
                         RADIO_STATE_TX_SENDING, 
-                samr21RadioSendTXPayload},
+                fsm_func_samr21RadioSendTXPayload},
 
                     {RADIO_STATE_TX_SENDING,        
                         RADIO_EVENT_IRQ_TRX_END,  
                             RADIO_STATE_TX_DONE, 
-        /*--------*/samr21RadioTransmissionCleanup}, 
+        /*--------*/fsm_func_samr21RadioTransmissionCleanup}, 
 
                     {RADIO_STATE_TX_SENDING,        
                         RADIO_EVENT_TIMEOUT_TRIGGER,  
                             RADIO_STATE_TX_FAILED, 
-    /*------------*/samr21RadioTransmissionCleanup}, 
+    /*------------*/fsm_func_samr21RadioTransmissionCleanup}, 
 
                     {RADIO_STATE_TX_SENDING,        
                         RADIO_SOFTEVENT_ACK_REQUESTED,  
@@ -51,84 +51,84 @@ static const fsmItem s_fsmTxItemTable[]={
                         {RADIO_STATE_TX_SENDING_ACK_REQUESTED,        
                             RADIO_EVENT_IRQ_TRX_END,  
                                 RADIO_STATE_TX_WAITING_FOR_ACK, 
-                        samr21RadioWaitForAck}, 
+                        fsm_func_samr21RadioWaitForAck}, 
 
                         {RADIO_STATE_TX_SENDING_ACK_REQUESTED,        
                             RADIO_EVENT_TIMEOUT_TRIGGER,  
                                 RADIO_STATE_TX_FAILED, 
-    /*----------------*/samr21RadioTransmissionCleanup},
+    /*----------------*/fsm_func_samr21RadioTransmissionCleanup},
 
                             {RADIO_STATE_TX_WAITING_FOR_ACK,        
                                 RADIO_EVENT_TIMER_TRIGGER,  
                                     RADIO_STATE_TX_EVAL_RETRANSMISSIOM, 
-                            samr21RadioEvalRetransmission}, 
+                            fsm_func_samr21RadioEvalRetransmission}, 
 
                                 {RADIO_STATE_TX_EVAL_RETRANSMISSIOM,        
                                     RADIO_SOFTEVENT_START_TX,  
                                         RADIO_STATE_TX_CCA, 
-            /*----------------*/samr21RadioStartCCA}, 
+            /*----------------*/fsm_func_samr21RadioStartCCA}, 
 
                                 {RADIO_STATE_TX_EVAL_RETRANSMISSIOM,        
                                     RADIO_SOFTEVENT_NO_RETRYS_LEFT,  
                                         RADIO_STATE_TX_FAILED, 
-    /*------------------------*/samr21RadioTransmissionCleanup}, 
+    /*------------------------*/fsm_func_samr21RadioTransmissionCleanup}, 
 
                                 {RADIO_STATE_TX_EVAL_RETRANSMISSIOM,        
                                     RADIO_EVENT_TIMEOUT_TRIGGER,  
                                         RADIO_STATE_TX_FAILED, 
-    /*------------------------*/samr21RadioTransmissionCleanup},
+    /*------------------------*/fsm_func_samr21RadioTransmissionCleanup},
                 
                             {RADIO_STATE_TX_WAITING_FOR_ACK,        
                                 RADIO_EVENT_IRQ_RX_START,  
                                     RADIO_STATE_TX_RECEIVING_ACK, 
-                            samr21RadioAckReceptionStarted},
+                            fsm_func_samr21RadioAckReceptionStarted},
 
                                 {RADIO_STATE_TX_RECEIVING_ACK,        
                                     RADIO_EVENT_IRQ_TRX_END,  
                                         RADIO_STATE_TX_EVAL_ACK, 
-                                samr21RadioEvalAck},
+                                fsm_func_samr21RadioEvalAck},
 
                                     {RADIO_STATE_TX_EVAL_ACK,        
                                         RADIO_SOFTEVENT_ACK_INVALID,  
                                             RADIO_STATE_TX_CCA, 
-            /*--------------------*/samr21RadioStartCCA},
+            /*--------------------*/fsm_func_samr21RadioStartCCA},
 
                                     {RADIO_STATE_TX_EVAL_ACK,        
                                         RADIO_SOFTEVENT_ACK_VALID,  
                                             RADIO_STATE_TX_DONE, 
-    /*----------------------------*/samr21RadioTransmissionCleanup},
+    /*----------------------------*/fsm_func_samr21RadioTransmissionCleanup},
 
                                     {RADIO_STATE_TX_EVAL_ACK,        
                                         RADIO_SOFTEVENT_NO_RETRYS_LEFT,  
                                             RADIO_STATE_TX_FAILED, 
-    /*----------------------------*/samr21RadioTransmissionCleanup},
+    /*----------------------------*/fsm_func_samr21RadioTransmissionCleanup},
 
                                     {RADIO_STATE_TX_EVAL_ACK,        
                                         RADIO_EVENT_TIMEOUT_TRIGGER,  
                                             RADIO_STATE_TX_FAILED, 
-    /*---------------------------*/samr21RadioTransmissionCleanup},
+    /*---------------------------*/fsm_func_samr21RadioTransmissionCleanup},
 
                             {RADIO_STATE_TX_WAITING_FOR_ACK,        
                                     RADIO_EVENT_TIMEOUT_TRIGGER,  
                                         RADIO_STATE_TX_FAILED, 
-    /*---------------------*/samr21RadioTransmissionCleanup},
+    /*---------------------*/fsm_func_samr21RadioTransmissionCleanup},
 
 
                 {RADIO_STATE_TX_CCA_EVAL,        
                     RADIO_SOFTEVENT_NO_RETRYS_LEFT,  
                         RADIO_STATE_TX_FAILED, 
-    /*--------*/samr21RadioTransmissionCleanup},  
+    /*--------*/fsm_func_samr21RadioTransmissionCleanup},  
 
 
                 {RADIO_STATE_TX_CCA_EVAL,        
                     RADIO_EVENT_TIMEOUT_TRIGGER,  
                         RADIO_STATE_TX_FAILED, 
-    /*--------*/samr21RadioTransmissionCleanup}, 
+    /*--------*/fsm_func_samr21RadioTransmissionCleanup}, 
 
             {RADIO_STATE_TX_CCA,        
                 RADIO_EVENT_TIMEOUT_TRIGGER,  
                     RADIO_STATE_TX_FAILED, 
-    /*----*/samr21RadioTransmissionCleanup}, 
+    /*----*/fsm_func_samr21RadioTransmissionCleanup}, 
     
 
     //Final States   
@@ -149,22 +149,22 @@ static const fsmItem s_fsmRxItemTable[]={
         {RADIO_STATE_IDLE,                
             RADIO_EVENT_IRQ_RX_START,     
                 RADIO_STATE_RX_LIVE_MSG_PARSER,      
-        samr21RadioLiveRxParser},
+        fsm_func_samr21RadioLiveRxParser},
 
             {RADIO_STATE_RX_LIVE_MSG_PARSER,                
                 RADIO_SOFTEVENT_ACK_REQUESTED,     
                     RADIO_STATE_RX_SENDING_ACK,      
-            samr21RadioSendAck},
+            fsm_func_samr21RadioSendAck},
 
                 {RADIO_STATE_RX_SENDING_ACK,                
                     RADIO_EVENT_IRQ_TRX_END,     
                         RADIO_STATE_RX_DONE,      
-    /*--------*/samr21RadioTransmissionCleanup},
+    /*--------*/fsm_func_samr21RadioTransmissionCleanup},
 
             {RADIO_STATE_RX_LIVE_MSG_PARSER,                
                 RADIO_EVENT_TIMER_TRIGGER,     
                     RADIO_STATE_IDLE,      
-        /**/samr21RadioAbortLiveRxParser},
+        /**/fsm_func_samr21RadioAbortLiveRxParser},
 
             {RADIO_STATE_RX_LIVE_MSG_PARSER,                
                 RADIO_SOFTEVENT_MSG_INVALID,     
@@ -174,7 +174,7 @@ static const fsmItem s_fsmRxItemTable[]={
             {RADIO_STATE_RX_LIVE_MSG_PARSER,                
                 RADIO_SOFTEVENT_MSG_VALID,     
                     RADIO_STATE_RX_DONE,      
-    /*----*/samr21RadioTransmissionCleanup},
+    /*----*/fsm_func_samr21RadioTransmissionCleanup},
 
     //Final States
     {RADIO_STATE_RX_DONE,                
@@ -310,6 +310,7 @@ void TC5_Handler()
 }
 
 // irq from AT86RF233
+extern AT86RF233_REG_IRQ_STATUS_t g_trxLastIrq;
 void EIC_Handler()
 {
     // Clear IRQ

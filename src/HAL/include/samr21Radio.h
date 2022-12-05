@@ -103,31 +103,31 @@ typedef struct{
 
 //TX Operations
     //CSMA
-        void samr21RadioStartCCA();
-        void samr21RadioEvalCCA();
-        void samr21RadioStartBackoffTimer();
+        void fsm_func_samr21RadioStartCCA();
+        void fsm_func_samr21RadioEvalCCA();
+        void fsm_func_samr21RadioStartBackoffTimer();
     
     //Transmit
-        void samr21RadioSendTXPayload();
+        void fsm_func_samr21RadioSendTXPayload();
 
     //Ack Handaling
-        void samr21RadioWaitForAck();
-        void samr21RadioEvalRetransmission();
-        void samr21RadioEvalAck();
+        void fsm_func_samr21RadioWaitForAck();
+        void fsm_func_samr21RadioEvalRetransmission();
+        void fsm_func_samr21RadioEvalAck();
     
-        void samr21RadioTxAbort();
+        void fsm_func_samr21RadioTxAbort();
 
 
 //RX Operations
     //Recive Stage
-        void samr21RadioLiveRxParser();
-        void samr21RadioAbortLiveRxParser();
+        void fsm_func_samr21RadioLiveRxParser();
+        void fsm_func_samr21RadioAbortLiveRxParser();
     //Sending Ack
-        void samr21RadioSendAck();
-        void samr21RadioAckReceptionStarted();
+        void fsm_func_samr21RadioSendAck();
+        void fsm_func_samr21RadioAckReceptionStarted();
 
 //BOTH RX and TX
-        void samr21RadioTransmissionCleanup();
+        void fsm_func_samr21RadioTransmissionCleanup();
 
 //Helper Funcs
 
