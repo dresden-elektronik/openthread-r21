@@ -69,8 +69,7 @@ void samr21Timer4Set(uint16_t value_us){
 
     TC4->COUNT16.CTRLBSET.reg =
         TC_CTRLBSET_CMD_RETRIGGER
-    ;
-    
+    ;   
 }   
 
 void samr21Timer4Stop(){ 
@@ -86,8 +85,7 @@ void samr21Timer5Set(uint16_t value_us){
 
     TC5->COUNT16.CTRLBSET.reg =
         TC_CTRLBSET_CMD_RETRIGGER
-    ;
-    
+    ; 
 }   
 
 void samr21Timer5Stop(){ 
@@ -96,15 +94,15 @@ void samr21Timer5Stop(){
     ;
 }
   
-//MOVED TO samr21Radio.c
+//MOVED TO samr21RadioFSM.c
 // void TC4_Handler(){
 //     TC4->COUNT16.INTFLAG.bit.OVF = 1;
 //     /*CODE*/
 // }
-//MOVED TO samr21Radio.c
+//MOVED TO samr21RadioFSM.c
 // void TC5_Handler(){
 //     TC5->COUNT16.INTFLAG.bit.OVF = 1;
 //     /*CODE*/
 // }
-//MOVED TO samr21Radio.c
+//MOVED TO samr21RadioFSM.c
 
