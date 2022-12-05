@@ -67,7 +67,10 @@ typedef struct{
         {
             uint8_t csma:4;
             uint8_t transmission:4;
-        }retrysLeft;
+        }                   retrysLeft;
+
+        //ED Operation
+        int8_t              measuredEngeryLevel;
     };      
 
     RadioJobState           currentJobState;
@@ -80,14 +83,23 @@ typedef struct{
     void samr21RadioChangeState(uint8_t newState);
     void samr21RadioChangeChannel(uint8_t newChannel);
     void samr21RadioChangeCCAMode(uint8_t newCcaMode);
-    void samr21RadioChangeTXPower(uint8_t txPower);
-    void samr21RadioChangeCCAThreshold(uint8_t threshold);
-    void samr21RadioSetShortAddr(uint16_t shortAddr);
-    void samr21RadioSetPanID(uint16_t panId);
-    void samr21RadioSetIEEEAddr(uint64_t ieeeAddr);
+
+    void samr21RadioChangeTXPower(int8_t txPower);
+    int8_t samr21RadioGetTXPower();
+
+    void samr21RadioChangeCCAThreshold(int8_t threshold);
+    int8_t samr21RadioGetCurrentCCAThreshold();
+
+    void samr21RadioSetShortAddr(uint8_t* shortAddr);
+    void samr21RadioSetPanID(uint8_t* panId);
+    void samr21RadioSetIeeeAddr(uint8_t* ieeeAddr);
     void samr21RadioChangeCSMABackoffExponent(uint8_t minBE, uint8_t maxBE);
     void samr21RadioChangeNumTransmitRetrys(uint8_t numRetrys);
     void samr21RadioChangeNumBackoffsCSMA(uint8_t numBackoffs);
+
+    void samr21RadioTurnTrxOff();
+    void samr21RadioTurnTrxOn();
+    AT86RF233_REG_TRX_STATUS_t samr21RadioGetStatus();
 
 //M.I.S.C Functions
     uint8_t samr21RadioGetRandom2Bit();
@@ -96,6 +108,7 @@ typedef struct{
 
 //Interface Function
     bool samr21RadioSendFrame(FrameBuffer_t * frame);
+
 
 //PROTOTYPE! MUST BE DEFINED IN APPLIKATION CODE
     void cbf_samr21RadioReceivedMsgFrame(FrameBuffer_t* psduMsg, FrameBuffer_t* psduAck);

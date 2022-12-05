@@ -2,6 +2,8 @@
     "files.associations": {
         "alarm-milli.h": "c",
         "otplatsystemheader.h": "c",
-        "entropy.h": "c"
+        "entropy.h": "c",
+        "at86rf233_bitfield.h": "c",
+        "stdint.h": "c"
     }
 }

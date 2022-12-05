@@ -151,19 +151,22 @@ static uint32_t s_csmaBackoffIntervallStep_us   = 14;  // sCsmaBackoffIntervallD
 const static uint16_t s_ackMaxWaitDuration_us   = 250; // 12 * SYMBOL_DURATION_802_15_4_us
 static uint16_t s_transmissionTimeout_us        = 10000;
 
-static uint64_t s_ieeeAddr;
-static uint16_t s_shortAddr;
-static uint16_t s_panId;
+static uint8_t s_ieeeAddr[8];
+static uint8_t s_shortAddr[2];
+static uint8_t s_panId[2];
+
+//TX Power Table (Factor x4 for Resolution)(r21 Datasheet Table 38-9)
+#define SIZE_AT86RF233_TX_POWER_TABLE 16
+static const int8_t s_txPowerTable[SIZE_AT86RF233_TX_POWER_TABLE]={16,15,14,12,10,8,4,0,-4,-8,-12,-16,-24,-32,-48,-68};
 
 void samr21RadioInit()
 {
     // Get TRX into RX State
     samr21RadioChangeState(TRX_CMD_FORCE_TRX_OFF);
-    while ((samr21TrxReadRegister(TRX_STATUS_REG) & TRX_STATUS_MASK) != TRX_STATUS_TRX_OFF)
-        ;
+    while ((samr21TrxReadRegister(TRX_STATUS_REG) & TRX_STATUS_MASK) != TRX_STATUS_TRX_OFF);
+
     samr21RadioChangeState(TRX_CMD_RX_ON);
-    while ((samr21TrxReadRegister(TRX_STATUS_REG) & TRX_STATUS_MASK) != TRX_STATUS_RX_ON)
-        ;
+    while ((samr21TrxReadRegister(TRX_STATUS_REG) & TRX_STATUS_MASK) != TRX_STATUS_RX_ON);
 
     // Clear all pending IRQ by reading Register
     samr21TrxReadRegister(IRQ_STATUS_REG);
@@ -207,6 +210,28 @@ void samr21RadioInit()
 
     // Enable in NVIC
     __NVIC_EnableIRQ(EIC_IRQn);
+
+    samr21RadioFsmEnable(true);
+}
+
+void samr21RadioTurnTrxOff(){
+    samr21RadioFsmEnable(false);
+
+    samr21RadioChangeState(TRX_CMD_FORCE_TRX_OFF);
+    while ((samr21TrxReadRegister(TRX_STATUS_REG) & TRX_STATUS_MASK) != TRX_STATUS_TRX_OFF);
+}
+
+void samr21RadioTurnTrxOn(){
+    sf_ringBufferGetCurrent()->currentJobState = RADIO_STATE_IDLE;
+    samr21RadioFsmChangeJobStatePointer(&(sf_ringBufferGetCurrent()->currentJobState));
+    samr21RadioFsmEnable(true);
+
+    samr21RadioChangeState(TRX_CMD_RX_ON);
+    while ((samr21TrxReadRegister(TRX_STATUS_REG) & TRX_STATUS_MASK) != TRX_STATUS_RX_ON);
+}
+
+AT86RF233_REG_TRX_STATUS_t samr21RadioGetStatus(){
+    return g_trxStatus.trxStatus;
 }
 
 void samr21RadioChangeState(uint8_t newState)
@@ -215,11 +240,29 @@ void samr21RadioChangeState(uint8_t newState)
     samr21TrxWriteRegister(TRX_STATE_REG, newState);
 }
 
-void samr21RadioChangeTXPower(uint8_t txPower)
+void samr21RadioChangeTXPower(int8_t txPower)
 {
-    AT86RF233_REG_PHY_TX_PWR_t temp;
-    temp.bit.txPwr = txPower;
-    samr21TrxWriteRegister(PHY_TX_PWR_REG, temp.reg);
+    txPower = txPower << 2; // multiply by 4
+
+    for(uint8_t i = 0; i < SIZE_AT86RF233_TX_POWER_TABLE; i++){
+        if(
+            (s_txPowerTable[i] >= txPower)
+            && (s_txPowerTable[i+1] <= txPower)
+        ){
+            s_phyTxPwr.bit.txPwr = i;
+            goto writeReg;
+        }
+    }
+
+    //Default
+    s_phyTxPwr.bit.txPwr = 0x0;
+
+writeReg:
+    samr21TrxWriteRegister(PHY_TX_PWR_REG, s_phyTxPwr.reg);
+}
+
+int8_t samr21RadioGetTXPower(){
+    return s_txPowerTable[s_phyTxPwr.bit.txPwr] >> 2; // devide by 4
 }
 
 uint8_t samr21RadioReadLastEDMeasurment()
@@ -244,29 +287,31 @@ uint8_t samr21RadioGetRandomByte()
     return rVal;
 }
 
-void samr21RadioSetShortAddr(uint16_t shortAddr)
+void samr21RadioSetShortAddr(uint8_t* shortAddr)
 {
-    s_shortAddr = shortAddr;
+    s_shortAddr[0] = shortAddr[0];
+    s_shortAddr[1] = shortAddr[1];
 
-    samr21TrxWriteRegister(SHORT_ADDR_0_REG, (s_shortAddr & 0x00FF));
-    samr21TrxWriteRegister(SHORT_ADDR_1_REG, ((s_shortAddr & 0xFF00) >> 8));
+    samr21TrxWriteRegister(SHORT_ADDR_0_REG, shortAddr[0]);
+    samr21TrxWriteRegister(SHORT_ADDR_1_REG, shortAddr[1]);
 }
 
-void samr21RadioSetPanID(uint16_t panId)
+void samr21RadioSetPanID(uint8_t* panId)
 {
-    s_panId = panId;
+    s_panId[0] = panId[0];
+    s_panId[1] = panId[1];
 
-    samr21TrxWriteRegister(PAN_ID_0_REG, (s_panId & 0x00FF));
-    samr21TrxWriteRegister(PAN_ID_1_REG, ((s_panId & 0xFF00) >> 8));
+
+    samr21TrxWriteRegister(PAN_ID_0_REG, panId[0]);
+    samr21TrxWriteRegister(PAN_ID_1_REG, panId[1]);
 }
 
-void samr21RadioSetIEEEAddr(uint64_t ieeeAddr)
+void samr21RadioSetIeeeAddr(uint8_t* ieeeAddr)
 {
-    s_ieeeAddr = ieeeAddr;
-
-    for (uint8_t i = 0; i < 4; i++) // IEEE address has 8 bytes
+    for (uint8_t i = 0; i < 8; i++) // IEEE address has 8 bytes
     {
-        samr21TrxWriteRegister(IEEE_ADDR_0_REG + i, (uint8_t *)(&s_ieeeAddr)[i]);
+        s_ieeeAddr[i] = ieeeAddr[i];
+        samr21TrxWriteRegister(IEEE_ADDR_0_REG + i, ieeeAddr[i]);
     }
 }
 
@@ -282,11 +327,17 @@ void samr21RadioChangeCCAMode(uint8_t newCcaMode)
     samr21TrxWriteRegister(PHY_CC_CCA_REG, s_phyCcCcaReg.reg);
 }
 
-void samr21RadioChangeCCAThreshold(uint8_t threshold)
+void samr21RadioChangeCCAThreshold(int8_t threshold)
 {
-    AT86RF233_REG_CCA_THRES_t temp;
-    temp.bit.ccaEdThres = threshold;
-    samr21TrxWriteRegister(CCA_THRES_REG, temp.reg);
+    int8_t diff = (AT86RF233_RSSI_BASE_VAL - threshold);
+    s_ccaThres.bit.ccaEdThres = abs(diff) >> 1; //Devide by 2
+
+    samr21TrxWriteRegister(CCA_THRES_REG, s_ccaThres.reg);
+}
+
+int8_t samr21RadioGetCurrentCCAThreshold()
+{
+    return ( AT86RF233_RSSI_BASE_VAL + ( s_ccaThres.bit.ccaEdThres << 1 ) ); //Multiply by 2
 }
 
 void samr21RadioChangeCSMABackoffExponent(uint8_t minBE, uint8_t maxBE)
@@ -305,6 +356,8 @@ void samr21RadioChangeNumTransmitRetrys(uint8_t numRetrys)
 {
     s_numMaxTransmissionRetrys = numRetrys;
 }
+
+
 
 /*------------------*/
 // Interface Functions
@@ -371,6 +424,28 @@ void fsm_func_samr21RadioStartCCA()
     if(sf_ringBufferGetCurrent()->currentJobState == RADIO_STATE_TX_READY){
         samr21Timer5Set(s_transmissionTimeout_us);
     }
+
+    // Check if Transciver is in recive state
+    if (g_trxStatus.bit.trxStatus != TRX_STATUS_RX_ON)
+    {
+        samr21RadioChangeState(TRX_CMD_RX_ON);
+        while ((samr21TrxReadRegister(TRX_STATUS_REG) & TRX_STATUS_MASK) != TRX_STATUS_RX_ON)
+            ;
+    }
+
+    // Prepare CCA Measurment
+    s_phyCcCcaReg.bit.ccaRequest = 1;
+
+    // Start CCA Measurment
+    samr21TrxWriteRegister(PHY_CC_CCA_REG, s_phyCcCcaReg.reg);
+
+    // Reset local copy of ccaRequest Bit
+    s_phyCcCcaReg.bit.ccaRequest = 0;
+}
+
+void fsm_func_samr21RadioStartED()
+{
+    samr21Timer5Set(s_transmissionTimeout_us);
 
     // Check if Transciver is in recive state
     if (g_trxStatus.bit.trxStatus != TRX_STATUS_RX_ON)

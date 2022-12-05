@@ -79,7 +79,8 @@ otPlatHAL:\
 	$(OT_PLAT_HAL_OUT_DIR) \
 	$(OT_PLAT_HAL_OUT_DIR)/otPlatAlarm.o \
 	$(OT_PLAT_HAL_OUT_DIR)/otPlatEntropy.o \
-	$(OT_PLAT_HAL_OUT_DIR)/otPlatSystem.o
+	$(OT_PLAT_HAL_OUT_DIR)/otPlatUartUsb.o \
+	$(OT_PLAT_HAL_OUT_DIR)/otPlatRadio.o
 
 	
 $(HAL_OUT_DIR):
@@ -154,6 +155,15 @@ $(OT_PLAT_HAL_OUT_DIR)/otPlatSystem.o:\
 	
 	$(CC) $(CFLAGS) -o $@ $^
 
+$(OT_PLAT_HAL_OUT_DIR)/otPlatUartUsb.o:\
+	$(OT_PLAT_HAL_DIR)/otPlatUartUsb.c 
+	
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(OT_PLAT_HAL_OUT_DIR)/otPlatRadio.o:\
+	$(OT_PLAT_HAL_DIR)/otPlatRadio.c 
+	
+	$(CC) $(CFLAGS) -o $@ $^
 
 clean:
 	rm -rf $(HAL_OUT_DIR)

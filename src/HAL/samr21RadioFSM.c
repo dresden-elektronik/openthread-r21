@@ -1,6 +1,13 @@
 //Author Eric Härtel @ dresden elektronik ingenieurtechnik gmbh © 2022
 #include "samr21RadioFSM.h"
 
+volatile static bool s_fsmEnabled = false;
+
+void samr21RadioFsmEnable(bool enable){
+    s_fsmEnabled = enable;
+}
+
+
 static const fsmItem s_fsmTxItemTable[]={
 
         {RADIO_STATE_TX_READY,                
@@ -184,6 +191,36 @@ static const fsmItem s_fsmRxItemTable[]={
 };
 #define RADIO_STATE_RX_LAST RADIO_STATE_RX_DONE
 
+static const fsmItem s_fsmEdItemTable[]={
+
+        {RADIO_STATE_REQUEST_ED,                
+            RADIO_SOFTEVENT_START_ED,     
+                RADIO_STATE_WAIT_FOR_ED_RESULT,      
+        fsm_func_samr21StartEd},
+
+            {RADIO_STATE_WAIT_FOR_ED_RESULT,                
+                RADIO_EVENT_IRQ_CCA_ED_DONE,     
+                    RADIO_STATE_ED_DONE,      
+    /*----*/fsm_func_samr21RadioEdCleanup},
+
+            {RADIO_STATE_WAIT_FOR_ED_RESULT,                
+                RADIO_EVENT_TIMEOUT_TRIGGER,     
+                    RADIO_STATE_ED_FAILED,      
+    /*----*/fsm_func_samr21RadioEdCleanup},
+
+    //Final States
+    {RADIO_STATE_ED_FAILED,                
+        RADIO_EVENT_NONE,     
+            RADIO_STATE_ED_FAILED,      
+    NULL},
+
+    {RADIO_STATE_ED_DONE,                
+        RADIO_EVENT_NONE,     
+            RADIO_STATE_ED_DONE,      
+    NULL}
+};
+#define RADIO_STATE_ED_LAST RADIO_STATE_ED_DONE
+
 static volatile RadioEvent s_softEvent = RADIO_EVENT_NONE;
 static volatile RadioJobState * s_currentActiveStatePtr = NULL;
 
@@ -191,13 +228,11 @@ void samr21RadioFsmHandleEvent(RadioEvent event)
 {
     RadioJobState * currentStatePtr = s_currentActiveStatePtr;
 
-
     __NVIC_DisableIRQ(EIC_IRQn); 
+
     //Look for RX States first, cause timinig is more critical
     if (*(currentStatePtr) < MARKER_RADIO_STATES_END_RX){
-
 beginFsmRxHandler:
-
         for (uint8_t i = 0; s_fsmRxItemTable[i].state != RADIO_STATE_RX_LAST; i++)
         {		
             if(s_fsmRxItemTable[i].state != *(currentStatePtr)){
@@ -235,41 +270,80 @@ beginFsmRxHandler:
         }
     }
 
+    if (*(currentStatePtr) < MARKER_RADIO_STATES_END_TX){
 beginFsmTxHandler:
+        for (uint8_t i = 0; s_fsmTxItemTable[i].state != RADIO_STATE_TX_LAST; i++)
+        {		
+            if(s_fsmTxItemTable[i].state != *(currentStatePtr)){
+                continue;
+            }
+            
+            if(event != s_fsmTxItemTable[i].event){
+                continue;
+            }
 
-    for (uint8_t i = 0; s_fsmTxItemTable[i].state != RADIO_STATE_TX_LAST; i++)
-    {		
-        if(s_fsmTxItemTable[i].state != *(currentStatePtr)){
-            continue;
+            //Check for Transition Function       
+            if(s_fsmTxItemTable[i].transitionFunction != NULL){
+                s_fsmTxItemTable[i].transitionFunction();
+            }  
+            
+            //Update State
+            if(*(currentStatePtr) < MARKER_RADIO_STATES_BEGINN_OTHER_DONE){
+                *(currentStatePtr) = s_fsmTxItemTable[i].nextState;
+            }
+
+            //Refresh State Pointer cause a change could have been invoked by a transition function
+            currentStatePtr = s_currentActiveStatePtr;
+
+            //Check for Soft Events
+            if(s_softEvent){
+
+                event = s_softEvent;
+                s_softEvent = RADIO_EVENT_NONE;
+
+                goto beginFsmTxHandler;
+            }	
+
+            goto exitFsm;
         }
-        
-        if(event != s_fsmTxItemTable[i].event){
-            continue;
+    }
+
+    if (*(currentStatePtr) < MARKER_RADIO_STATES_END_ED){
+beginFsmEdHandler:
+        for (uint8_t i = 0; s_fsmEdItemTable[i].state != RADIO_STATE_ED_LAST; i++)
+        {		
+            if(s_fsmEdItemTable[i].state != *(currentStatePtr)){
+                continue;
+            }
+            
+            if(event != s_fsmEdItemTable[i].event){
+                continue;
+            }
+
+            //Check for Transition Function       
+            if(s_fsmEdItemTable[i].transitionFunction != NULL){
+                s_fsmEdItemTable[i].transitionFunction();
+            }  
+            
+            //Update State
+            if(*(currentStatePtr) < MARKER_RADIO_STATES_BEGINN_OTHER_DONE){
+                *(currentStatePtr) = s_fsmEdItemTable[i].nextState;
+            }
+
+            //Refresh State Pointer cause a change could have been invoked by a transition function
+            currentStatePtr = s_currentActiveStatePtr;
+
+            //Check for Soft Events
+            if(s_softEvent){
+
+                event = s_softEvent;
+                s_softEvent = RADIO_EVENT_NONE;
+
+                goto beginFsmEdHandler;
+            }	
+
+            goto exitFsm;
         }
-
-        //Check for Transition Function       
-        if(s_fsmTxItemTable[i].transitionFunction != NULL){
-            s_fsmTxItemTable[i].transitionFunction();
-        }  
-        
-        //Update State
-        if(*(currentStatePtr) < MARKER_RADIO_STATES_BEGINN_OTHER_DONE){
-            *(currentStatePtr) = s_fsmTxItemTable[i].nextState;
-        }
-
-        //Refresh State Pointer cause a change could have been invoked by a transition function
-        currentStatePtr = s_currentActiveStatePtr;
-
-        //Check for Soft Events
-        if(s_softEvent){
-
-            event = s_softEvent;
-            s_softEvent = RADIO_EVENT_NONE;
-
-            goto beginFsmTxHandler;
-        }	
-
-        goto exitFsm;
     }
 
 exitFsm:
@@ -293,11 +367,12 @@ void samr21RadioFsmChangeJobStatePointer(RadioJobState* newActiveJobStatePtr){
 // timer via TC4
 void TC4_Handler()
 {
-            PORT->Group[0].OUTSET.reg = PORT_PA08;
     // Reset IRQ
     TC4->COUNT16.INTFLAG.bit.OVF = 1;
-    samr21RadioFsmHandleEvent(RADIO_EVENT_TIMER_TRIGGER);
-            PORT->Group[0].OUTCLR.reg = PORT_PA08;
+
+    if(s_fsmEnabled){
+        samr21RadioFsmHandleEvent(RADIO_EVENT_TIMER_TRIGGER);
+    } 
 }
 
 // timer via TC5
@@ -306,7 +381,9 @@ void TC5_Handler()
     // Reset IRQ
     TC5->COUNT16.INTFLAG.bit.OVF = 1;
 
-    samr21RadioFsmHandleEvent(RADIO_EVENT_TIMEOUT_TRIGGER);
+    if(s_fsmEnabled){
+        samr21RadioFsmHandleEvent(RADIO_EVENT_TIMEOUT_TRIGGER);
+    } 
 }
 
 // irq from AT86RF233
@@ -319,7 +396,7 @@ void EIC_Handler()
 
     g_trxLastIrq = (AT86RF233_REG_IRQ_STATUS_t)samr21TrxReadRegister(IRQ_STATUS_REG);
 
-    if (g_trxLastIrq.reg == 0x00)
+    if (g_trxLastIrq.reg == 0x00 || !s_fsmEnabled)
     {
         return;
     }

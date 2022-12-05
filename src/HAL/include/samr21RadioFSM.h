@@ -35,11 +35,19 @@ typedef enum RadioJobState{
     RADIO_STATE_TX_EVAL_RETRANSMISSIOM        = 0x2A,
     MARKER_RADIO_STATES_END_TX                = 0x2F,
 
+    //ED States
+    MARKER_RADIO_STATES_BEGINN_ED             = 0x30,
+    RADIO_STATE_REQUEST_ED                    = 0x31,
+    RADIO_STATE_WAIT_FOR_ED_RESULT            = 0x32,
+    MARKER_RADIO_STATES_END_ED                = 0x3F,
+
     //To Be Evaluated States
     MARKER_RADIO_STATES_BEGINN_OTHER_DONE     = 0xF0,
     RADIO_STATE_RX_DONE                       = 0xF1,
     RADIO_STATE_TX_DONE                       = 0xF2,
+    RADIO_STATE_ED_DONE                       = 0xF3,
     RADIO_STATE_TX_FAILED                     = 0xFA,
+    RADIO_STATE_ED_FAILED                     = 0xFB,
     MARKER_RADIO_STATES_END_OTHER_DONE        = 0xFF,
 } RadioJobState;
 
@@ -77,6 +85,7 @@ typedef enum RadioEvent{
     RADIO_SOFTEVENT_CHANNEL_CLEAR             = 0x37,
     RADIO_SOFTEVENT_CHANNEL_BUSY              = 0x38,
     RADIO_SOFTEVENT_ACK_REQUESTED             = 0x39,
+    RADIO_SOFTEVENT_START_ED                  = 0x3A,
     MARKER_RADIO_EVENTS_END_SOFTEVENTS        = 0x3F,
 } RadioEvent;
 
@@ -86,6 +95,10 @@ typedef struct {
 	RadioJobState nextState;
 	void (*transitionFunction)(void);
 } fsmItem;
+
+
+//Turns the FSM on or off
+void samr21RadioFsmEnable(bool enable);
 
 //Called from Event Handler Functions or by Application to start a TX procedure
 void samr21RadioFsmHandleEvent(RadioEvent event);
