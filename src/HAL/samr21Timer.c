@@ -88,6 +88,22 @@ void samr21TimerInit(){
     NVIC_EnableIRQ(TC5_IRQn);
 }
 
+void samr21Timer3Set(uint16_t value_us){ 
+    while (TC3->COUNT16.STATUS.bit.SYNCBUSY);
+
+    TC3->COUNT16.COUNT.reg = value_us;
+
+    TC3->COUNT16.CTRLBSET.reg =
+        TC_CTRLBSET_CMD_RETRIGGER
+    ;   
+}   
+
+void samr21Timer3Stop(){ 
+    TC3->COUNT16.CTRLBSET.reg =
+        TC_CTRLBSET_CMD_STOP
+    ;
+}  
+
 void samr21Timer4Set(uint16_t value_us){ 
     while (TC4->COUNT16.STATUS.bit.SYNCBUSY);
 
@@ -121,8 +137,8 @@ void samr21Timer5Stop(){
 }
 
 //MOVED TO otPlatAlarm.c
-// void TC4_Handler(){
-//     TC4->COUNT16.INTFLAG.bit.OVF = 1;
+// void TC3_Handler(){
+//     TC3->COUNT16.INTFLAG.bit.OVF = 1;
 //     /*CODE*/
 // }
 //MOVED TO otPlatAlarm.c
