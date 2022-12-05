@@ -6,7 +6,7 @@
 
 //Handler that checks for fired Alarm
 void samr21OtPlatAlarmTask(otInstance *aInstance);
-
+void samr21OtPlatUsbTask();
 
 
 #endif //_SAMR21_OT_PLATFORM_H_

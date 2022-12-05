@@ -37,11 +37,10 @@ void samr21UsbInit(){
             ;
             PORT->Group[0].OUTCLR.reg= PORT_PA25;
 
-    //Init Tiny Usb
     tusb_init();
 }
 
-void samr21UsbTask(){
+void samr21UsbEchoTask(){
     tud_task(); 
     if ( tud_cdc_available() )
     {
@@ -65,45 +64,5 @@ void samr21UsbTask(){
 void dcd_int_handler (uint8_t rhport);
 void USB_Handler(){
     dcd_int_handler(0);
-}
-
-// Invoked when device is mounted
-void tud_mount_cb(void)
-{
-    __NOP();
-}
-
-// Invoked when device is unmounted
-void tud_umount_cb(void)
-{
-    __NOP();
-}
-
-// Invoked when usb bus is suspended
-// remote_wakeup_en : if host allow us  to perform remote wakeup
-// Within 7ms, device must draw an average of current less than 2.5 mA from bus
-void tud_suspend_cb(bool remote_wakeup_en)
-{
-    __NOP();
-}
-
-// Invoked when usb bus is resumed
-void tud_resume_cb(void)
-{
-    __NOP();
-}
-
-// Invoked when cdc when line state changed e.g connected/disconnected
-void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
-{
-  (void) itf;
-  (void) rts;
-  (void) dtr;
-}
-
-// Invoked when CDC interface received data from host
-void tud_cdc_rx_cb(uint8_t itf)
-{
-  (void) itf;
 }
 

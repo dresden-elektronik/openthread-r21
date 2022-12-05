@@ -7,6 +7,6 @@
 #include "tusb.h"
 
 void samr21UsbInit();
-void samr21UsbTask();
+void samr21UsbEchoTask();
 
 #endif //_SAMR21_USB_H_

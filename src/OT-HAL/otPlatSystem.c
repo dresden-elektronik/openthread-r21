@@ -48,5 +48,5 @@ void otSysDeinit(void)
 void otSysProcessDrivers(otInstance *aInstance)
 {
     samr21OtPlatAlarmTask(aInstance);
-    samr21UsbTask();
+    samr21OtPlatUsbTask();
 }
