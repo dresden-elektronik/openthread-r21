@@ -109,9 +109,9 @@ int main(int argc, char const *argv[])
     uint64_t ieeeAddr = 0xA0A1A2A3A4A5A6A7;
     uint16_t shortAddr = 0xA8A9;
     uint16_t panId = 0xCAFE;
-    samr21RadioSetIEEEAddr(ieeeAddr);
-    samr21RadioSetShortAddr(shortAddr);
-    samr21RadioSetPanID(shortAddr);
+    samr21RadioSetIeeeAddr(&ieeeAddr);
+    samr21RadioSetShortAddr(&shortAddr);
+    samr21RadioSetPanId(&shortAddr);
     samr21RadioChangeChannel(13);
 
     FrameBuffer_t tempFrame;
@@ -162,25 +162,14 @@ int main(int argc, char const *argv[])
 
     while (true)
     {
-        // uint8_t RegVal[0x3F];
-        // for (uint16_t i = 1; i <= 0x3D; i++) 
-        // {
-        //     RegVal[i] = samr21TrxReadRegister(i);
-        //     tud_task(); // device task
-        // }
         if(tempI>0x00FF){
             if(samr21RadioSendFrame(&tempFrame)){
                 tempFrame.header.sequenceNumber++;
             }
             tempI=0;
         }
-        
-        if(dtrFlag && g_trxLastIrq.reg){
-            tud_cdc_write(g_trxLastIrq.reg, 1);
-            tud_cdc_write_flush();
-        }
-
-        samr21UsbTask();
+    
+        samr21UsbEchoTask();
         tempI++; 
     }
 }
