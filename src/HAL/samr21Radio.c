@@ -85,13 +85,13 @@ static uint32_t s_csmaBackoffIntervallDiff_us   = 224; // sCsmaBackoffIntervallM
 static uint32_t s_csmaBackoffIntervallStep_us   = 14;  // sCsmaBackoffIntervallDiff / 16, need cause at86rf233 can create 2 Random bits per SPI Read 
 
 const static uint16_t s_ackMaxWaitDuration_us   = 250; // 12 * SYMBOL_DURATION_802_15_4_us
-static uint16_t s_transmissionTimeout_us        = 10000;
+static uint16_t s_transmissionTimeout_us        = 0xFFFF;
 
 static uint8_t s_ieeeAddr[8];
 static uint8_t s_shortAddr[2];
 static uint8_t s_panId[2];
 
-//TX Power Table (Factor x4 for Resolution)(r21 Datasheet Table 38-9)
+//TX Power Table (Factor x4 for Resolution and to avoid float)(r21 Datasheet Table 38-9)
 #define SIZE_AT86RF233_TX_POWER_TABLE 16
 static const int8_t s_txPowerTable[SIZE_AT86RF233_TX_POWER_TABLE]={16,15,14,12,10,8,4,0,-4,-8,-12,-16,-24,-32,-48,-68};
 
@@ -176,7 +176,7 @@ void samr21RadioChangeState(uint8_t newState)
     samr21TrxWriteRegister(TRX_STATE_REG, newState);
 }
 
-void samr21RadioChangeTXPower(int8_t txPower)
+void samr21RadioSetTxPower(int8_t txPower)
 {
     txPower = txPower << 2; // multiply by 4
 
@@ -197,7 +197,7 @@ writeReg:
     samr21TrxWriteRegister(PHY_TX_PWR_REG, s_phyTxPwr.reg);
 }
 
-int8_t samr21RadioGetTXPower(){
+int8_t samr21RadioGetTxPower(){
     return s_txPowerTable[s_phyTxPwr.bit.txPwr] >> 2; // devide by 4
 }
 
@@ -262,7 +262,7 @@ void samr21RadioChangeCCAMode(uint8_t newCcaMode)
     samr21TrxWriteRegister(PHY_CC_CCA_REG, s_phyCcCcaReg.reg);
 }
 
-void samr21RadioChangeCcaThreshold(int8_t threshold)
+void samr21RadioSetCcaThreshold(int8_t threshold)
 {
     int8_t diff = (AT86RF233_RSSI_BASE_VAL - threshold);
     s_ccaThres.bit.ccaEdThres = abs(diff) >> 1; //Devide by 2
@@ -297,23 +297,23 @@ void samr21RadioChangeNumTransmitRetrys(uint8_t numRetrys)
 /*------------------*/
 // Interface Functions
 /*------------------*/
-bool samr21RadioSendFrame(FrameBuffer_t *frame)
+bool samr21RadioSendFrame(FrameBuffer_t *frame, uint8_t channel)
 {
     // Get the next avivable Buffer
     __disable_irq();
     JobBuffer_t *buffer = sf_ringBufferGetNext();
 
-    //Check if Last Queued Transmission started yet
+    //Check if Last Queued Transmission didn't start yet
     if(buffer->currentJobState == RADIO_STATE_TX_READY){
         __enable_irq();
         return false;
     }
-    PORT->Group[0].OUTSET.reg= PORT_PA09;
 
     // mark buffer as in Setup
     buffer->currentJobState = RADIO_STATE_IN_SETUP;
     __enable_irq();
 
+    buffer->channel = channel;
     // Fill buffer (dirty memcpy)
     for (uint8_t i = 0; i <= frame->header.lenght; i++)
     {
@@ -347,6 +347,46 @@ bool samr21RadioSendFrame(FrameBuffer_t *frame)
     __enable_irq();
     return true;
 }
+
+bool samr21RadioStartEnergyDetection(uint8_t channel, uint16_t duration)
+{
+    // Get the next avivable Buffer
+    __disable_irq();
+    JobBuffer_t *buffer = sf_ringBufferGetNext();
+
+    //Check if Last Queued Transmission didn't start yet
+    if(buffer->currentJobState == RADIO_STATE_TX_READY){
+        __enable_irq();
+        return false;
+    }
+
+    // mark buffer 
+    buffer->currentJobState = RADIO_STATE_ED_READY;
+    buffer->edTimeleft = duration;
+
+    // If Radio is in an Idle State, start immediately
+    if (
+        sf_ringBufferGetCurrent()->currentJobState == RADIO_STATE_IDLE
+        || sf_ringBufferGetCurrent()->currentJobState > MARKER_RADIO_STATES_BEGINN_OTHER_DONE
+    ){
+        
+        // Make prepared Buffer the active One
+        sf_ringBufferMoveForward();
+
+        // Change Active State Ptr in FSM
+        samr21RadioFsmChangeJobStatePointer(&(buffer->currentJobState));
+        __enable_irq();
+       
+
+        // Jump Start Statemachnine
+        samr21RadioFsmHandleEvent(RADIO_SOFTEVENT_START_ED);
+        return true;
+    }
+
+    __enable_irq();
+    return true;
+}
+
 
 JobBuffer_t* samr21RadioGetNextFinishedJobBuffer(){
     for (uint8_t i = 0; i < NUM_RADIO_JOB_BUFFER; i++){
@@ -433,11 +473,21 @@ void samr21RadioClearIeeeAddrPendingFrameTable(){
 /*------------------*/
 void fsm_func_samr21RadioStartCCA()
 {
-    PORT->Group[0].OUTCLR.reg= PORT_PA07;
-    
     // Start TimeoutTimer
     if(sf_ringBufferGetCurrent()->currentJobState == RADIO_STATE_TX_READY){
         samr21Timer5Set(s_transmissionTimeout_us);
+    }
+    
+    //check for corect channel
+    if(sf_ringBufferGetCurrent()->channel != s_phyCcCcaReg.bit.channel){       
+        samr21RadioChangeState(TRX_CMD_FORCE_TRX_OFF);
+        while ((samr21TrxReadRegister(TRX_STATUS_REG) & TRX_STATUS_MASK) != TRX_STATUS_TRX_OFF);
+
+        s_phyCcCcaReg.bit.channel = sf_ringBufferGetCurrent()->channel;
+        samr21TrxWriteRegister(PHY_CC_CCA_REG, s_phyCcCcaReg.reg);
+
+        samr21RadioChangeState(TRX_CMD_RX_ON);
+        while ((samr21TrxReadRegister(TRX_STATUS_REG) & TRX_STATUS_MASK) != TRX_STATUS_RX_ON);
     }
 
     // Check if Transciver is in recive state
@@ -458,16 +508,28 @@ void fsm_func_samr21RadioStartCCA()
     s_phyCcCcaReg.bit.ccaRequest = 0;
 }
 
-void fsm_func_samr21RadioStartED()
-{
-    samr21Timer5Set(s_transmissionTimeout_us);
+void fsm_func_samr21StartEd()
+{   
+    //Queue the next ED allrdy (once per ms)
+    samr21Timer4Set(1000);
+
+    // Check if Transciver is in right channel
+    if(sf_ringBufferGetCurrent()->channel != s_phyCcCcaReg.bit.channel){       
+        samr21RadioChangeState(TRX_CMD_FORCE_TRX_OFF);
+        while ((samr21TrxReadRegister(TRX_STATUS_REG) & TRX_STATUS_MASK) != TRX_STATUS_TRX_OFF);
+
+        s_phyCcCcaReg.bit.channel = sf_ringBufferGetCurrent()->channel;
+        samr21TrxWriteRegister(PHY_CC_CCA_REG, s_phyCcCcaReg.reg);
+
+        samr21RadioChangeState(TRX_CMD_RX_ON);
+        while ((samr21TrxReadRegister(TRX_STATUS_REG) & TRX_STATUS_MASK) != TRX_STATUS_RX_ON);
+    }
 
     // Check if Transciver is in recive state
     if (g_trxStatus.bit.trxStatus != TRX_STATUS_RX_ON)
     {
         samr21RadioChangeState(TRX_CMD_RX_ON);
-        while ((samr21TrxReadRegister(TRX_STATUS_REG) & TRX_STATUS_MASK) != TRX_STATUS_RX_ON)
-            ;
+        while ((samr21TrxReadRegister(TRX_STATUS_REG) & TRX_STATUS_MASK) != TRX_STATUS_RX_ON);
     }
 
     // Prepare CCA Measurment
@@ -499,13 +561,11 @@ void fsm_func_samr21RadioEvalCCA()
 
 void fsm_func_samr21RadioStartBackoffTimer()
 {
-    PORT->Group[0].OUTSET.reg= PORT_PA07;
     samr21Timer4Set((s_csmaBackoffIntervallStep_us * samr21RadioGetRandomNibble()) + s_csmaBackoffIntervallMin_us);
 }
 
 void fsm_func_samr21RadioSendTXPayload()
 {
-
     samr21RadioChangeState(TRX_CMD_FORCE_PLL_ON);
     while (g_trxStatus.bit.trxStatus != TRX_STATUS_PLL_ON)
     {
@@ -515,7 +575,6 @@ void fsm_func_samr21RadioSendTXPayload()
     __disable_irq();
     // Start Trasmission
     samr21TrxSetSLP_TR(true);
-    PORT->Group[0].OUTSET.reg= PORT_PA06;
 
     // add tx timestamp
     sf_ringBufferGetCurrent()->txTimestamp = samr21RtcGetTimestamp();
@@ -566,12 +625,10 @@ void fsm_func_samr21RadioJobCleanup()
     // Stop Pending Timer
     samr21Timer4Stop();
     samr21Timer5Stop();
-    PORT->Group[0].OUTCLR.reg= PORT_PA09;
 
     // Look for a Queued Transmission
     if (sf_ringBufferGetNext()->currentJobState == RADIO_STATE_TX_READY)
     {
-        PORT->Group[0].OUTSET.reg= PORT_PA09;
         // Make prepared Buffer the active One
         sf_ringBufferMoveForward();
 
@@ -580,6 +637,21 @@ void fsm_func_samr21RadioJobCleanup()
 
         // Jump Start Next Statemachnine
         samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_START_TX);
+        
+        goto exit;
+    }
+
+    // Look for a Queued Energy Scans
+    if (sf_ringBufferGetNext()->currentJobState == RADIO_STATE_ED_READY)
+    {
+        // Make prepared Buffer the active One
+        sf_ringBufferMoveForward();
+
+        // Change Active State Ptr in FSM
+        samr21RadioFsmChangeJobStatePointer(&(sf_ringBufferGetCurrent()->currentJobState));
+
+        // Jump Start Next Statemachnine
+        samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_START_ED);
         
         goto exit;
     }
@@ -604,7 +676,6 @@ exit:
 
 void fsm_func_samr21RadioWaitForAck()
 {
-    PORT->Group[0].OUTCLR.reg= PORT_PA06;
     samr21Timer4Set(s_ackMaxWaitDuration_us);
 }
 
@@ -700,7 +771,6 @@ void fsm_func_samr21RadioTxAbort()
 void fsm_func_samr21RadioLiveRxParser()
 {
     __disable_irq();
-    PORT->Group[0].OUTSET.reg = PORT_PA15;
 
     // add rx timestamp
     JobBuffer_t * buffer = sf_ringBufferGetCurrent();
@@ -718,7 +788,6 @@ void fsm_func_samr21RadioLiveRxParser()
     buffer->inboundFrame.header.lenght = samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
     buffer->downloadedSize = 1;
 
-    PORT->Group[0].OUTSET.reg = PORT_PA16;
     // Download Recived Frame Till FCF
     while (buffer->downloadedSize <  4) //1Byte PhyHeader, 2Byte FCF, 1Byte Sequenz Number
     { 
@@ -735,7 +804,6 @@ void fsm_func_samr21RadioLiveRxParser()
         buffer->inboundFrame.raw[buffer->downloadedSize++] =
             samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
     }
-    PORT->Group[0].OUTCLR.reg = PORT_PA16;
 
     //Extract Address Postion Infromation from recived Frame FCS
     uint8_t posSourceAddr, posDestinationAddr, posSourcePanId, posDestinationPanId;
@@ -768,7 +836,6 @@ void fsm_func_samr21RadioLiveRxParser()
     curPosOffset += 
         (( buffer->inboundFrame.header.frameControlField2.sourceAddressingMode & 0b01 ) ? ( sizeof(uint64_t) - sizeof(uint16_t) ) : 0 );
 
-    PORT->Group[0].OUTSET.reg = PORT_PA16;
     // Download The Address Information data of the Frame 
     while (buffer->downloadedSize < curPosOffset)
     {
@@ -784,7 +851,6 @@ void fsm_func_samr21RadioLiveRxParser()
         buffer->inboundFrame.raw[buffer->downloadedSize++] =
             samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
     }
-    PORT->Group[0].OUTCLR.reg = PORT_PA16;
 
     if ((buffer->inboundFrame.header.frameControlField2.destinationAddressingMode == IEEE_802_15_4_ADDR_SHORT))
     {
@@ -794,7 +860,6 @@ void fsm_func_samr21RadioLiveRxParser()
                 samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_MSG_INVALID);
                 samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
                 samr21TrxSetSSel(false);
-                PORT->Group[0].OUTCLR.reg = PORT_PA15;
                 __enable_irq();
                 return;
             }
@@ -807,7 +872,6 @@ void fsm_func_samr21RadioLiveRxParser()
                 samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_MSG_INVALID);
                 samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
                 samr21TrxSetSSel(false);
-                PORT->Group[0].OUTCLR.reg = PORT_PA15;
                 __enable_irq();
                 return;
             }
@@ -822,7 +886,6 @@ void fsm_func_samr21RadioLiveRxParser()
                 samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_MSG_INVALID);
                 samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
                 samr21TrxSetSSel(false);
-                PORT->Group[0].OUTCLR.reg = PORT_PA15;
                 __enable_irq();
                 return;
             }
@@ -864,7 +927,6 @@ void fsm_func_samr21RadioLiveRxParser()
         // );
     }
 
-    PORT->Group[0].OUTSET.reg = PORT_PA16;
     // Download The Remaining data of the Frame 
     while (buffer->downloadedSize <= buffer->inboundFrame.header.lenght)
     {
@@ -881,7 +943,6 @@ void fsm_func_samr21RadioLiveRxParser()
         buffer->inboundFrame.raw[buffer->downloadedSize++] =
             samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
     }
-    PORT->Group[0].OUTCLR.reg = PORT_PA16;
 
     // 3 Byte after the msg Frame are LQI,RSSI and CRC Informations (see r21 datasheet 35.3.2 Frame Buffer Access Mode)
     samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES);
@@ -903,7 +964,6 @@ void fsm_func_samr21RadioLiveRxParser()
     {
         samr21RadioChangeState(TRX_CMD_RX_ON);
         samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_MSG_INVALID);
-        PORT->Group[0].OUTCLR.reg = PORT_PA15;
         return;
     }
 
@@ -912,20 +972,17 @@ void fsm_func_samr21RadioLiveRxParser()
     {
         samr21RadioChangeState(TRX_CMD_RX_ON);
         samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_MSG_VALID);
-        PORT->Group[0].OUTCLR.reg = PORT_PA15;
         return;
     }
 
     // Prepre TRX
 
     samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_ACK_REQUESTED);
-    PORT->Group[0].OUTCLR.reg = PORT_PA15;
     return;
 }
 
 void fsm_func_samr21RadioSendAck()
 {
-    
     while (g_trxStatus.bit.trxStatus != TRX_STATUS_PLL_ON)
     {
         samr21TrxUpdateStatus();
@@ -933,7 +990,6 @@ void fsm_func_samr21RadioSendAck()
     __disable_irq();
     
     // Start Trasmission
-    PORT->Group[0].OUTSET.reg = PORT_PA14;
     samr21TrxSetSLP_TR(true);
     // add tx timestamp
     JobBuffer_t * buffer = sf_ringBufferGetCurrent();
@@ -957,7 +1013,6 @@ void fsm_func_samr21RadioSendAck()
 
         samr21RadioChangeState(TRX_CMD_RX_ON);
         samr21RadioFsmQueueSoftEvent(RADIO_EVENT_ERROR);
-        PORT->Group[0].OUTCLR.reg = PORT_PA14;
         __enable_irq();
         
         return;
@@ -992,7 +1047,6 @@ void fsm_func_samr21RadioSendAck()
 
     // Queue Move to RX
     samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_RX_ON);
-    PORT->Group[0].OUTCLR.reg = PORT_PA14;
 }
 
 void fsm_func_samr21RadioAbortLiveRxParser()
@@ -1000,26 +1054,23 @@ void fsm_func_samr21RadioAbortLiveRxParser()
     __NOP();
 }
 
-void fsm_func_samr21StartEd()
-{
-    // Start TimeoutTimer
-    samr21Timer5Set(s_transmissionTimeout_us);
+void fsm_func_samr21EvalEd()
+{   
+    uint8_t edReading = samr21TrxReadRegister(PHY_ED_LEVEL_REG);
 
+    if(sf_ringBufferGetCurrent()->measuredEngeryLevel < edReading){
+        sf_ringBufferGetCurrent()->measuredEngeryLevel = edReading;
+    }
+}
 
-    // Check if Transciver is in recive state
-    if (g_trxStatus.bit.trxStatus != TRX_STATUS_RX_ON)
+void fsm_func_samr21EvalEdContinuation()
+{   
+    if (--(sf_ringBufferGetCurrent()->edTimeleft))
     {
-        samr21RadioChangeState(TRX_CMD_RX_ON);
-        while ((samr21TrxReadRegister(TRX_STATUS_REG) & TRX_STATUS_MASK) != TRX_STATUS_RX_ON)
-            ;
+        samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_START_ED);
+        return;
     }
 
-    // Prepare CCA Measurment
-    s_phyCcCcaReg.bit.ccaRequest = 1;
-
-    // Start CCA Measurment
-    samr21TrxWriteRegister(PHY_CC_CCA_REG, s_phyCcCcaReg.reg);
-
-    // Reset local copy of ccaRequest Bit
-    s_phyCcCcaReg.bit.ccaRequest = 0;
+    samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_STOP_ED);
+    return;
 }

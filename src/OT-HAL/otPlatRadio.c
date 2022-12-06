@@ -103,7 +103,7 @@ otError otPlatRadioSetCcaEnergyDetectThreshold(otInstance *aInstance, int8_t aTh
 {
     OT_UNUSED_VARIABLE(aInstance);
 
-    samr21RadioChangeCcaThreshold(aThreshold);
+    samr21RadioSetCcaThreshold(aThreshold);
 
     return OT_ERROR_NONE;
 }
@@ -121,14 +121,14 @@ otError otPlatRadioGetTransmitPower(otInstance *aInstance, int8_t *aPower)
 {
     OT_UNUSED_VARIABLE(aInstance);
 
-    *(aPower) = samr21RadioGetTXPower();
+    *(aPower) = samr21RadioGetTxPower();
 }
 
 otError otPlatRadioSetTransmitPower(otInstance *aInstance, int8_t aPower)
 {
     OT_UNUSED_VARIABLE(aInstance);
 
-    samr21RadioChangeTXPower(aPower);
+    samr21RadioSetTxPower(aPower);
 
     return OT_ERROR_NONE;
 }

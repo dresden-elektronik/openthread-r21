@@ -193,27 +193,32 @@ static const fsmItem s_fsmRxItemTable[]={
 
 static const fsmItem s_fsmEdItemTable[]={
 
-        {RADIO_STATE_REQUEST_ED,                
+        {RADIO_STATE_ED_READY,                
             RADIO_SOFTEVENT_START_ED,     
                 RADIO_STATE_WAIT_FOR_ED_RESULT,      
         fsm_func_samr21StartEd},
 
             {RADIO_STATE_WAIT_FOR_ED_RESULT,                
                 RADIO_EVENT_IRQ_CCA_ED_DONE,     
-                    RADIO_STATE_ED_DONE,      
-    /*----*/fsm_func_samr21RadioJobCleanup},
+                    RADIO_STATE_EVAL_ED_RESULT,      
+            fsm_func_samr21EvalEd},
 
-            {RADIO_STATE_WAIT_FOR_ED_RESULT,                
-                RADIO_EVENT_TIMEOUT_TRIGGER,     
-                    RADIO_STATE_ED_FAILED,      
-    /*----*/fsm_func_samr21RadioJobCleanup},
+                {RADIO_STATE_EVAL_ED_RESULT,                
+                    RADIO_EVENT_TIMER_TRIGGER,     
+                        RADIO_STATE_EVAL_ED_CONTINUATION,      
+                fsm_func_samr21EvalEdContinuation},
+
+                    {RADIO_STATE_EVAL_ED_CONTINUATION,                
+                        RADIO_SOFTEVENT_START_ED,     
+                            RADIO_STATE_WAIT_FOR_ED_RESULT,      
+        /*--------*/fsm_func_samr21StartEd},
+
+                    {RADIO_STATE_EVAL_ED_CONTINUATION,                
+                        RADIO_SOFTEVENT_STOP_ED,     
+                            RADIO_STATE_ED_DONE,      
+    /*------------*/fsm_func_samr21RadioJobCleanup},
 
     //Final States
-    {RADIO_STATE_ED_FAILED,                
-        RADIO_EVENT_NONE,     
-            RADIO_STATE_ED_FAILED,      
-    NULL},
-
     {RADIO_STATE_ED_DONE,                
         RADIO_EVENT_NONE,     
             RADIO_STATE_ED_DONE,      

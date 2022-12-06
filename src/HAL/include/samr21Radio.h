@@ -50,12 +50,17 @@ typedef struct{
     FrameBuffer_t           outboundFrame;
     FrameBuffer_t           inboundFrame;
 
-
+    
     uint32_t                txTimestamp;
 
-    uint32_t                rxTimestamp; 
+    union{
+        uint32_t            rxTimestamp;
+        uint32_t            edTimeleft;
+    };
+
     int8_t                  rxRSSI;
     uint8_t                 rxLQI;
+    uint8_t                 channel;
 
 
     union{
@@ -84,10 +89,10 @@ typedef struct{
     void samr21RadioChangeChannel(uint8_t newChannel);
     void samr21RadioChangeCCAMode(uint8_t newCcaMode);
 
-    void samr21RadioChangeTXPower(int8_t txPower);
-    int8_t samr21RadioGetTXPower();
+    void samr21RadioSetTxPower(int8_t txPower);
+    int8_t samr21RadioGetTxPower();
 
-    void samr21RadioChangeCcaThreshold(int8_t threshold);
+    void samr21RadioSetCcaThreshold(int8_t threshold);
     int8_t samr21RadioGetCurrentCcaThreshold();
 
     void samr21RadioSetShortAddr(uint8_t* shortAddr);
@@ -109,7 +114,7 @@ typedef struct{
     uint8_t samr21RadioGetRandomByte();
 
 //Interface Function
-    bool samr21RadioSendFrame(FrameBuffer_t * frame);
+    bool samr21RadioSendFrame(FrameBuffer_t * frame, uint8_t channel);
     JobBuffer_t* samr21RadioGetNextFinishedJobBuffer();
 
     bool samr21RadioAddShortAddrToPendingFrameTable(uint16_t shortAddr);
@@ -151,5 +156,7 @@ typedef struct{
 
 //Energy Detection Operations
         void fsm_func_samr21StartEd();
+        void fsm_func_samr21EvalEd();
+        void fsm_func_samr21EvalEdContinuation();
 
 #endif // _SAMR21_RADIO_H_

@@ -14,7 +14,7 @@ void samr21RtcInit(){
 
     //Setup the RTC
     RTC->MODE0.CTRL.reg=
-        RTC_MODE0_CTRL_PRESCALER(0x0) // take __PERIPHERALCLK__ (16Mhz or 1 Mhz depending on TRX settings)
+        RTC_MODE0_CTRL_PRESCALER(0x0) // 1 Mhz 
         //|RTC_MODE0_CTRL_MATCHCLR
         |RTC_MODE0_CTRL_MODE(0x0) //COUNT 32Bit mode
         |RTC_MODE0_CTRL_ENABLE
@@ -22,6 +22,10 @@ void samr21RtcInit(){
 
     //Wait for Setup to finish
     while(RTC->MODE0.STATUS.bit.SYNCBUSY);
+
+    // RTC->MODE0.PER.reg = SAMR21_RTC_MAX_VALUE;
+    // //Wait for Setup to finish
+    // while(RTC->MODE0.STATUS.bit.SYNCBUSY);
 
     //Force permanent Sync with COUT Register
     RTC->MODE0.READREQ.reg=
