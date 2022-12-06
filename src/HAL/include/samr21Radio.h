@@ -15,8 +15,8 @@
 #include "at86rf233_Bitfield.h"
 #include "802_15_4_Helper.h"
 
-#ifndef NUM_RADIO_BUFFER
-    #define NUM_RADIO_BUFFER 4
+#ifndef NUM_RADIO_JOB_BUFFER
+    #define NUM_RADIO_JOB_BUFFER 4
 #endif
 
 #ifndef SIZE_TABLE_FRAME_PENDING_SHORT_ADDR
@@ -74,7 +74,7 @@ typedef struct{
     };      
 
     RadioJobState           currentJobState;
-}TransmissionBuffer_t;
+}JobBuffer_t;
 
 //Config Functions
     void samr21RadioInit();
@@ -87,32 +87,39 @@ typedef struct{
     void samr21RadioChangeTXPower(int8_t txPower);
     int8_t samr21RadioGetTXPower();
 
-    void samr21RadioChangeCCAThreshold(int8_t threshold);
-    int8_t samr21RadioGetCurrentCCAThreshold();
+    void samr21RadioChangeCcaThreshold(int8_t threshold);
+    int8_t samr21RadioGetCurrentCcaThreshold();
 
     void samr21RadioSetShortAddr(uint8_t* shortAddr);
-    void samr21RadioSetPanID(uint8_t* panId);
+    void samr21RadioSetPanId(uint8_t* panId);
     void samr21RadioSetIeeeAddr(uint8_t* ieeeAddr);
-    void samr21RadioChangeCSMABackoffExponent(uint8_t minBE, uint8_t maxBE);
+    void samr21RadioChangeCsmaBackoffExponent(uint8_t minBE, uint8_t maxBE);
     void samr21RadioChangeNumTransmitRetrys(uint8_t numRetrys);
-    void samr21RadioChangeNumBackoffsCSMA(uint8_t numBackoffs);
+    void samr21RadioChangeNumBackoffsCsma(uint8_t numBackoffs);
 
     void samr21RadioTurnTrxOff();
     void samr21RadioTurnTrxOn();
     AT86RF233_REG_TRX_STATUS_t samr21RadioGetStatus();
 
+
+
 //M.I.S.C Functions
-    uint8_t samr21RadioGetRandom2Bit();
+    uint8_t samr21RadioGetRandomCrumb();
     uint8_t samr21RadioGetRandomNibble();
     uint8_t samr21RadioGetRandomByte();
 
 //Interface Function
     bool samr21RadioSendFrame(FrameBuffer_t * frame);
+    JobBuffer_t* samr21RadioGetNextFinishedJobBuffer();
 
+    bool samr21RadioAddShortAddrToPendingFrameTable(uint16_t shortAddr);
+    bool samr21RadioFindShortAddrInPendingFrameTable(uint16_t shortAddr, bool remove);
+    void samr21RadioClearShortAddrPendingFrameTable();
 
-//PROTOTYPE! MUST BE DEFINED IN APPLIKATION CODE
-    void cbf_samr21RadioReceivedMsgFrame(FrameBuffer_t* psduMsg, FrameBuffer_t* psduAck);
-    void cbf_samr21RadioTransmitMsgFrameDone(bool success, FrameBuffer_t* psduAck);
+    bool samr21RadioAddIeeeAddrToPendingFrameTable(uint64_t ieeeAddr);
+    bool samr21RadioFindIeeeAddrInPendingFrameTable(uint64_t ieeeAddr, bool remove);
+    void samr21RadioClearIeeeAddrPendingFrameTable();
+
 
 //TX Operations
     //CSMA
@@ -140,9 +147,9 @@ typedef struct{
         void fsm_func_samr21RadioAckReceptionStarted();
 
 //BOTH RX and TX
-        void fsm_func_samr21RadioTransmissionCleanup();
+        void fsm_func_samr21RadioJobCleanup();
 
-//Helper Funcs
-
+//Energy Detection Operations
+        void fsm_func_samr21StartEd();
 
 #endif // _SAMR21_RADIO_H_

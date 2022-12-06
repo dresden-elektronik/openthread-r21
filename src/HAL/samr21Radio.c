@@ -5,23 +5,23 @@
 // Ringbuffer for Transmissions
 static struct RingTransmissionBuffer
 {
-    TransmissionBuffer_t bufferData[NUM_RADIO_BUFFER];
+    JobBuffer_t bufferData[NUM_RADIO_JOB_BUFFER];
     uint8_t activeBufferIndex;
 } s_ringTransmissionBuffer;
 
-static TransmissionBuffer_t *sf_ringBufferGetCurrent()
+static JobBuffer_t *sf_ringBufferGetCurrent()
 {
     return &(s_ringTransmissionBuffer.bufferData[s_ringTransmissionBuffer.activeBufferIndex]);
 };
 
-static TransmissionBuffer_t *sf_ringBufferGetNext()
+static JobBuffer_t *sf_ringBufferGetNext()
 {
-    return &(s_ringTransmissionBuffer.bufferData[(s_ringTransmissionBuffer.activeBufferIndex + 1) % NUM_RADIO_BUFFER]);
+    return &(s_ringTransmissionBuffer.bufferData[(s_ringTransmissionBuffer.activeBufferIndex + 1) % NUM_RADIO_JOB_BUFFER]);
 };
 
 static void sf_ringBufferMoveForward()
 {
-    s_ringTransmissionBuffer.activeBufferIndex = (s_ringTransmissionBuffer.activeBufferIndex + 1) % NUM_RADIO_BUFFER;
+    s_ringTransmissionBuffer.activeBufferIndex = (s_ringTransmissionBuffer.activeBufferIndex + 1) % NUM_RADIO_JOB_BUFFER;
 };
 
 //Frame Pending Table Short Addr
@@ -31,76 +31,12 @@ static struct framePendingTableShortAddr
     uint8_t size;
 } s_framePendingTableShortAddr;
 
-static bool sf_addShortAddrToPendingFrameTable(uint16_t shortAddr){
-    if(s_framePendingTableShortAddr.size >= SIZE_TABLE_FRAME_PENDING_SHORT_ADDR){
-        //No Space left
-        return false;
-    }
-
-    s_framePendingTableShortAddr.addr[s_framePendingTableShortAddr.size++] = shortAddr;
-    return true;
-} 
-
-static bool sf_findShortAddrInPendingFrameTable(uint16_t shortAddr, bool remove){
-    for (uint8_t i = 0; i < SIZE_TABLE_FRAME_PENDING_SHORT_ADDR; i++)
-    {
-        if(s_framePendingTableShortAddr.addr[i] == shortAddr){
-
-            if(remove){
-                s_framePendingTableShortAddr.addr[i] = s_framePendingTableShortAddr.addr[s_framePendingTableShortAddr.size--];
-            }   
-            return true;
-        }
-    }
-    //Address not found, can't be removed
-    return false;
-} 
-
-
 //Frame Pending Table IEEE Addr
 static struct framePendingTableIeeeAddr
 {
     uint64_t addr[SIZE_TABLE_FRAME_PENDING_IEEE_ADDR];
     uint8_t size;
 } s_framePendingTableIeeeAddr;
-
-static bool sf_addIeeeAddrToPendingFrameTable(uint64_t ieeeAddr){
-    if(s_framePendingTableIeeeAddr.size >= SIZE_TABLE_FRAME_PENDING_IEEE_ADDR){
-        //No Space left
-        return false;
-    }
-    s_framePendingTableIeeeAddr.addr[s_framePendingTableIeeeAddr.size++] = ieeeAddr;
-    return true;
-} 
-
-static bool sf_findIeeeAddrInPendingFrameTable(uint64_t ieeeAddr, bool remove){
-
-    //Split the addr into 2 Half Words, cause the M0+ is 32 Bit based, so time can be saved
-    uint32_t addrLowerHalfWord = ((uint32_t*)(&ieeeAddr))[0];
-    uint32_t addrUpperHalfWord = ((uint32_t*)(&ieeeAddr))[1];
-
-    for (uint8_t i = 0; i < SIZE_TABLE_FRAME_PENDING_SHORT_ADDR; i++)
-    {
-        //only check lower Halfword first to safe some Time
-        if(((uint32_t*)(&s_framePendingTableIeeeAddr.addr[i])[0]) != addrLowerHalfWord){
-            continue;     
-        }
-
-        //if the lower Halfword matches, the upper Halfword is also checked
-        if(((uint32_t*)(&s_framePendingTableIeeeAddr.addr[i])[1]) == addrUpperHalfWord){
-
-            if(remove){
-                s_framePendingTableIeeeAddr.addr[i] = s_framePendingTableIeeeAddr.addr[s_framePendingTableIeeeAddr.size--];
-            }
-
-            return true;
-        }
-    }
-
-    //Address not found
-    return false;
-} 
-
 
 // Local Register Copys of At86rf233 to save some Read Acceses
 extern AT86RF233_REG_TRX_STATUS_t   g_trxStatus;  // from samr21trx.c
@@ -173,7 +109,7 @@ void samr21RadioInit()
     // Setup Buffer
     s_ringTransmissionBuffer.activeBufferIndex = 0;
 
-    for(uint8_t i = 0; i < NUM_RADIO_BUFFER; i++){
+    for(uint8_t i = 0; i < NUM_RADIO_JOB_BUFFER; i++){
         s_ringTransmissionBuffer.bufferData->currentJobState = RADIO_STATE_IDLE;
     }
     
@@ -231,7 +167,7 @@ void samr21RadioTurnTrxOn(){
 }
 
 AT86RF233_REG_TRX_STATUS_t samr21RadioGetStatus(){
-    return g_trxStatus.trxStatus;
+    return g_trxStatus;
 }
 
 void samr21RadioChangeState(uint8_t newState)
@@ -270,7 +206,7 @@ uint8_t samr21RadioReadLastEDMeasurment()
     return samr21TrxReadRegister(PHY_ED_LEVEL_REG);
 }
 
-uint8_t samr21RadioGetRandom2Bit()
+uint8_t samr21RadioGetRandomCrumb()
 {
     return (samr21TrxReadRegister(PHY_RSSI_REG) >> 5) & 0b00000011;
 }
@@ -296,11 +232,10 @@ void samr21RadioSetShortAddr(uint8_t* shortAddr)
     samr21TrxWriteRegister(SHORT_ADDR_1_REG, shortAddr[1]);
 }
 
-void samr21RadioSetPanID(uint8_t* panId)
+void samr21RadioSetPanId(uint8_t* panId)
 {
     s_panId[0] = panId[0];
     s_panId[1] = panId[1];
-
 
     samr21TrxWriteRegister(PAN_ID_0_REG, panId[0]);
     samr21TrxWriteRegister(PAN_ID_1_REG, panId[1]);
@@ -327,7 +262,7 @@ void samr21RadioChangeCCAMode(uint8_t newCcaMode)
     samr21TrxWriteRegister(PHY_CC_CCA_REG, s_phyCcCcaReg.reg);
 }
 
-void samr21RadioChangeCCAThreshold(int8_t threshold)
+void samr21RadioChangeCcaThreshold(int8_t threshold)
 {
     int8_t diff = (AT86RF233_RSSI_BASE_VAL - threshold);
     s_ccaThres.bit.ccaEdThres = abs(diff) >> 1; //Devide by 2
@@ -335,19 +270,19 @@ void samr21RadioChangeCCAThreshold(int8_t threshold)
     samr21TrxWriteRegister(CCA_THRES_REG, s_ccaThres.reg);
 }
 
-int8_t samr21RadioGetCurrentCCAThreshold()
+int8_t samr21RadioGetCurrentCcaThreshold()
 {
     return ( AT86RF233_RSSI_BASE_VAL + ( s_ccaThres.bit.ccaEdThres << 1 ) ); //Multiply by 2
 }
 
-void samr21RadioChangeCSMABackoffExponent(uint8_t minBE, uint8_t maxBE)
+void samr21RadioChangeCsmaBackoffExponent(uint8_t minBE, uint8_t maxBE)
 {
     s_csmaBackoffIntervallMin_us = ((1 << minBE) - 1) * SYMBOL_DURATION_802_15_4_us;
     s_csmaBackoffIntervallMax_us = ((1 << maxBE) - 1) * SYMBOL_DURATION_802_15_4_us;
     s_csmaBackoffIntervallDiff_us = s_csmaBackoffIntervallMax_us - s_csmaBackoffIntervallMin_us;
 }
 
-void samr21RadioChangeNumBackoffsCSMA(uint8_t numBackoffs)
+void samr21RadioChangeNumBackoffsCsma(uint8_t numBackoffs)
 {
     s_numMaxCsmaBackoffs = numBackoffs;
 }
@@ -366,7 +301,7 @@ bool samr21RadioSendFrame(FrameBuffer_t *frame)
 {
     // Get the next avivable Buffer
     __disable_irq();
-    TransmissionBuffer_t *buffer = sf_ringBufferGetNext();
+    JobBuffer_t *buffer = sf_ringBufferGetNext();
 
     //Check if Last Queued Transmission started yet
     if(buffer->currentJobState == RADIO_STATE_TX_READY){
@@ -412,6 +347,86 @@ bool samr21RadioSendFrame(FrameBuffer_t *frame)
     __enable_irq();
     return true;
 }
+
+JobBuffer_t* samr21RadioGetNextFinishedJobBuffer(){
+    for (uint8_t i = 0; i < NUM_RADIO_JOB_BUFFER; i++){
+        if(s_ringTransmissionBuffer.bufferData[i].currentJobState > MARKER_RADIO_STATES_BEGINN_OTHER_DONE){
+            return &(s_ringTransmissionBuffer.bufferData[i]);
+        }
+    }
+    return NULL;
+}
+
+bool samr21RadioAddShortAddrToPendingFrameTable(uint16_t shortAddr){
+    if(s_framePendingTableShortAddr.size >= SIZE_TABLE_FRAME_PENDING_SHORT_ADDR){
+        //No Space left
+        return false;
+    }
+
+    s_framePendingTableShortAddr.addr[s_framePendingTableShortAddr.size++] = shortAddr;
+    return true;
+} 
+
+bool samr21RadioFindShortAddrInPendingFrameTable(uint16_t shortAddr, bool remove){
+    for (uint8_t i = 0; i < SIZE_TABLE_FRAME_PENDING_SHORT_ADDR; i++)
+    {
+        if(s_framePendingTableShortAddr.addr[i] == shortAddr){
+
+            if(remove){
+                s_framePendingTableShortAddr.addr[i] = s_framePendingTableShortAddr.addr[s_framePendingTableShortAddr.size--];
+            }   
+            return true;
+        }
+    }
+    //Address not found, can't be removed
+    return false;
+} 
+
+void samr21RadioClearShortAddrPendingFrameTable(){
+    s_framePendingTableShortAddr.size = 0;
+} 
+
+bool samr21RadioAddIeeeAddrToPendingFrameTable(uint64_t ieeeAddr){
+    if(s_framePendingTableIeeeAddr.size >= SIZE_TABLE_FRAME_PENDING_IEEE_ADDR){
+        //No Space left
+        return false;
+    }
+    s_framePendingTableIeeeAddr.addr[s_framePendingTableIeeeAddr.size++] = ieeeAddr;
+    return true;
+} 
+
+bool samr21RadioFindIeeeAddrInPendingFrameTable(uint64_t ieeeAddr, bool remove){
+
+    //Split the addr into 2 Half Words, cause the M0+ is 32 Bit based, so time can be saved
+    uint32_t addrLowerHalfWord = ((uint32_t*)(&ieeeAddr))[0];
+    uint32_t addrUpperHalfWord = ((uint32_t*)(&ieeeAddr))[1];
+
+    for (uint8_t i = 0; i < SIZE_TABLE_FRAME_PENDING_SHORT_ADDR; i++)
+    {
+        //only check lower Halfword first to safe some Time
+        if(((uint32_t*)(&s_framePendingTableIeeeAddr.addr[i])[0]) != addrLowerHalfWord){
+            continue;     
+        }
+
+        //if the lower Halfword matches, the upper Halfword is also checked
+        if(((uint32_t*)(&s_framePendingTableIeeeAddr.addr[i])[1]) == addrUpperHalfWord){
+
+            if(remove){
+                s_framePendingTableIeeeAddr.addr[i] = s_framePendingTableIeeeAddr.addr[s_framePendingTableIeeeAddr.size--];
+            }
+
+            return true;
+        }
+    }
+
+    //Address not found
+    return false;
+} 
+
+void samr21RadioClearIeeeAddrPendingFrameTable(){
+    s_framePendingTableIeeeAddr.size = 0;
+} 
+
 
 /*------------------*/
 // State Machine Transition Functions
@@ -545,7 +560,7 @@ void fsm_func_samr21RadioSendTXPayload()
     samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_RX_ON);
 }
 
-void fsm_func_samr21RadioTransmissionCleanup()
+void fsm_func_samr21RadioJobCleanup()
 {
     __disable_irq();
     // Stop Pending Timer
@@ -688,7 +703,7 @@ void fsm_func_samr21RadioLiveRxParser()
     PORT->Group[0].OUTSET.reg = PORT_PA15;
 
     // add rx timestamp
-    TransmissionBuffer_t * buffer = sf_ringBufferGetCurrent();
+    JobBuffer_t * buffer = sf_ringBufferGetCurrent();
     buffer->rxTimestamp = samr21RtcGetTimestamp();
 
     // Enable SPI Slave Select
@@ -819,7 +834,7 @@ void fsm_func_samr21RadioLiveRxParser()
         uint16_t shortAddr = buffer->inboundFrame.raw[posSourceAddr];//Little Endian Order
         shortAddr += (buffer->inboundFrame.raw[posSourceAddr + 1]) << 8;
 
-        buffer->outboundFrame.header.frameControlField1.framePending = sf_findShortAddrInPendingFrameTable(shortAddr, false);
+        buffer->outboundFrame.header.frameControlField1.framePending = samr21RadioFindShortAddrInPendingFrameTable(shortAddr, false);
 
         //Does not work Beacause of no support for unaligned accesses on the Cortex-M0 processor.
         //(
@@ -840,7 +855,7 @@ void fsm_func_samr21RadioLiveRxParser()
         ieeeAddr += (buffer->inboundFrame.raw[posSourceAddr+6]) << 48;
         ieeeAddr += (buffer->inboundFrame.raw[posSourceAddr+7]) << 56;
         
-        buffer->outboundFrame.header.frameControlField1.framePending = sf_findIeeeAddrInPendingFrameTable(ieeeAddr, false);
+        buffer->outboundFrame.header.frameControlField1.framePending = samr21RadioFindIeeeAddrInPendingFrameTable(ieeeAddr, false);
 
         //Does not work Because of no support for unaligned accesses on the Cortex-M0 processor.
         // (
@@ -921,7 +936,7 @@ void fsm_func_samr21RadioSendAck()
     PORT->Group[0].OUTSET.reg = PORT_PA14;
     samr21TrxSetSLP_TR(true);
     // add tx timestamp
-    TransmissionBuffer_t * buffer = sf_ringBufferGetCurrent();
+    JobBuffer_t * buffer = sf_ringBufferGetCurrent();
 
     buffer->txTimestamp = samr21RtcGetTimestamp();
 
@@ -983,4 +998,28 @@ void fsm_func_samr21RadioSendAck()
 void fsm_func_samr21RadioAbortLiveRxParser()
 {
     __NOP();
+}
+
+void fsm_func_samr21StartEd()
+{
+    // Start TimeoutTimer
+    samr21Timer5Set(s_transmissionTimeout_us);
+
+
+    // Check if Transciver is in recive state
+    if (g_trxStatus.bit.trxStatus != TRX_STATUS_RX_ON)
+    {
+        samr21RadioChangeState(TRX_CMD_RX_ON);
+        while ((samr21TrxReadRegister(TRX_STATUS_REG) & TRX_STATUS_MASK) != TRX_STATUS_RX_ON)
+            ;
+    }
+
+    // Prepare CCA Measurment
+    s_phyCcCcaReg.bit.ccaRequest = 1;
+
+    // Start CCA Measurment
+    samr21TrxWriteRegister(PHY_CC_CCA_REG, s_phyCcCcaReg.reg);
+
+    // Reset local copy of ccaRequest Bit
+    s_phyCcCcaReg.bit.ccaRequest = 0;
 }

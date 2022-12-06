@@ -8,29 +8,6 @@
 
 static otRadioState s_radioState = OT_RADIO_STATE_DISABLED;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 void otPlatRadioGetIeeeEui64(otInstance *aInstance, uint8_t *aIeeeEui64)
 {
     uint64_t ieeeAddr = samr21NvmGetIeeeAddr();
@@ -40,25 +17,12 @@ void otPlatRadioGetIeeeEui64(otInstance *aInstance, uint8_t *aIeeeEui64)
     }
 }
 
-void otPlatRadioSetPanId(otInstance *aInstance, uint16_t aPanId)
-{
-    OT_UNUSED_VARIABLE(aInstance);
-
-    otLogDebgPlat("Set Pan ID: 0x%04X", aPanId);
-
-    radioTrxOff();
-
-    PHY_SetPanId(aPanId);
-
-    radioRestore();
-}
-
 
 otRadioState otPlatRadioGetState(otInstance *aInstance)
 {
     OT_UNUSED_VARIABLE(aInstance);
 
-    uint8_t status = samr21RadioGetStatus().bit.trxStatus
+    uint8_t status = samr21RadioGetStatus().bit.trxStatus;
 
     switch (status){
         case TRX_STATUS_P_ON:
@@ -112,7 +76,7 @@ void otPlatRadioSetPanId(otInstance *aInstance, uint16_t aPanId)
 
     samr21RadioTurnTrxOff();
 
-    samr21RadioSetPanID(&aPanId);
+    samr21RadioSetPanId(&aPanId);
 
     samr21RadioTurnTrxOn();
 }
@@ -139,7 +103,7 @@ otError otPlatRadioSetCcaEnergyDetectThreshold(otInstance *aInstance, int8_t aTh
 {
     OT_UNUSED_VARIABLE(aInstance);
 
-    samr21RadioChangeCCAThreshold(aThreshold);
+    samr21RadioChangeCcaThreshold(aThreshold);
 
     return OT_ERROR_NONE;
 }
@@ -148,7 +112,7 @@ otError otPlatRadioGetCcaEnergyDetectThreshold(otInstance *aInstance, int8_t *aT
 {
     OT_UNUSED_VARIABLE(aInstance);
 
-    *(aThreshold) = samr21RadioGetCurrentCCAThreshold();
+    *(aThreshold) = samr21RadioGetCurrentCcaThreshold();
 
     return OT_ERROR_NONE;
 }

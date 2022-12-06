@@ -12,11 +12,6 @@
 #include "samr21Nvm.h"
 
 
-void dcd_int_handler (uint8_t rhport);
-void USB_Handler(){
-    dcd_int_handler(0);
-}
-
 void samr21DebugPortsInit(){
         PORT->Group[0].DIRSET.reg= PORT_PA06;
 
@@ -141,9 +136,9 @@ int main(int argc, char const *argv[])
     uint64_t ieeeAddr = 0xB0B1B2B3B4B5B6B7;
     uint16_t shortAddr = 0xB8B9;
     uint16_t panId = 0xCAFE;
-    samr21RadioSetIEEEAddr(ieeeAddr);
-    samr21RadioSetShortAddr(shortAddr);
-    samr21RadioSetPanID(shortAddr);
+    samr21RadioSetIeeeAddr(&ieeeAddr);
+    samr21RadioSetShortAddr(&shortAddr);
+    samr21RadioSetPanId(&shortAddr);
     samr21RadioChangeChannel(13);
 
     FrameBuffer_t tempFrame;
@@ -187,13 +182,8 @@ int main(int argc, char const *argv[])
     char buf[15] = "Sending Frame\n\r";
 
     while (true)
-    {   
-        if(dtrFlag && g_trxLastIrq.reg){
-            tud_cdc_write(g_trxLastIrq.reg, 1);
-            tud_cdc_write_flush();
-        }
-    
-        samr21UsbTask();
+    {    
+        samr21UsbEchoTask();
         tempI++; 
     }
 }
