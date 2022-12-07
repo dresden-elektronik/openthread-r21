@@ -10,6 +10,7 @@
 #include "samr21PowerManager.h"
 #include "samr21Timer.h"
 #include "samr21Nvm.h"
+#include "samr21Usb.h"
 
 
 
@@ -163,7 +164,7 @@ int main(int argc, char const *argv[])
     while (true)
     {
         if(tempI>0x00FF){
-            if(samr21RadioSendFrame(&tempFrame)){
+            if(samr21RadioSendFrame(&tempFrame, 13)){
                 tempFrame.header.sequenceNumber++;
             }
             tempI=0;

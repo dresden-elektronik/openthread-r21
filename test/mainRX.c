@@ -10,6 +10,7 @@
 #include "samr21PowerManager.h"
 #include "samr21Timer.h"
 #include "samr21Nvm.h"
+#include "samr21Usb.h"
 
 
 void samr21DebugPortsInit(){

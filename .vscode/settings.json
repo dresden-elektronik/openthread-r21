@@ -6,6 +6,11 @@
         "at86rf233_bitfield.h": "c",
         "stdint.h": "c",
         "samr21trx.h": "c",
-        "samr21rtc.h": "c"
+        "samr21rtc.h": "c",
+        "samr21nvm.h": "c",
+        "samr21powermanager.h": "c",
+        "samr21nopdelay.h": "c",
+        "samr21radio.h": "c",
+        "samr21timer.h": "c"
     }
 }
