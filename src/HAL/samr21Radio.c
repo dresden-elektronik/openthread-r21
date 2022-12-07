@@ -730,8 +730,11 @@ void fsm_func_samr21RadioEvalAck()
 
     __disable_irq();
 
+    //get current JobBuffer
+    JobBuffer_t* buffer = sf_ringBufferGetCurrent();
+
     // add rx timestamp
-    sf_ringBufferGetCurrent()->rxTimestamp = samr21RtcGetTimestamp();
+    buffer->rxTimestamp = samr21RtcGetTimestamp();
 
     // Enable SPI Slave Select
     samr21TrxSetSSel(true);
@@ -742,10 +745,16 @@ void fsm_func_samr21RadioEvalAck()
 
     // First Byte is the msg Lenght
     samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES);
-    sf_ringBufferGetCurrent()->inboundFrame.header.lenght = samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
+    buffer->inboundFrame.header.lenght = samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
+
+    if(buffer->inboundFrame.header.lenght > IEEE_802_15_4_PDSU_SIZE){
+        samr21TrxSetSSel(false);
+        __enable_irq();
+        goto ackInvalid;
+    }
 
     // Download Recived Frame
-    for (uint8_t i = 1; i <= (sf_ringBufferGetCurrent()->inboundFrame.header.lenght); i++)
+    for (uint8_t i = 1; i <= (buffer->inboundFrame.header.lenght); i++)
     {
         samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES);
         sf_ringBufferGetCurrent()->inboundFrame.raw[i] = samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
@@ -753,10 +762,10 @@ void fsm_func_samr21RadioEvalAck()
 
     // 3 Byte after the msg Frame are LQI,RSSI and CRC Informations (see r21 datasheet 35.3.2 Frame Buffer Access Mode)
     samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES);
-    sf_ringBufferGetCurrent()->rxLQI = samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
+    buffer->rxLQI = samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
 
     samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES);
-    sf_ringBufferGetCurrent()->rxRSSI = AT86RF233_RSSI_BASE_VAL + samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
+    buffer->rxRSSI = AT86RF233_RSSI_BASE_VAL + samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
 
     AT86RF233_REG_RX_STATUS_t rxStatus = (AT86RF233_REG_RX_STATUS_t)samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
 
@@ -770,7 +779,7 @@ void fsm_func_samr21RadioEvalAck()
         goto ackInvalid;
     }
 
-    if (sf_ringBufferGetCurrent()->inboundFrame.header.sequenceNumber != sf_ringBufferGetCurrent()->outboundFrame.header.sequenceNumber)
+    if (buffer->inboundFrame.header.sequenceNumber != buffer->outboundFrame.header.sequenceNumber)
     {
         goto ackInvalid;
     }

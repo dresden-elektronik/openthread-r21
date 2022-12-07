@@ -11,6 +11,8 @@
         "samr21powermanager.h": "c",
         "samr21nopdelay.h": "c",
         "samr21radio.h": "c",
-        "samr21timer.h": "c"
+        "samr21timer.h": "c",
+        "string.h": "c",
+        "802_15_4_helper.h": "c"
     }
 }
