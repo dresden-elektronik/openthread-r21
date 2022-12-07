@@ -180,23 +180,29 @@ int main(int argc, char const *argv[])
     tempFrame.header.lenght = 20 + IEEE_802_15_4_CRC_SIZE;
     
     uint32_t tempI = 0x0FFFF;
-    char buf[15] = "Sending Frame\n\r";
+
+    char msgRcv[15] = "Recived Frame: ";
+    char msgAck[13] = "Sending Ack: ";
+    samr21RadioReceive(13);
 
     while (true)
     {    
         if(samr21RadioGetNextFinishedJobBuffer()->currentJobState == RADIO_STATE_RX_DONE){
-            char buf[170] = "Recived Frame: ";
+            char buf[170];
+
+            memcpy(buf, msgRcv, 15);
             uint8_t len = 15;
 
             memcpy(&buf[len], samr21RadioGetNextFinishedJobBuffer()->inboundFrame.raw, samr21RadioGetNextFinishedJobBuffer()->inboundFrame.header.lenght+1);
             
             len += samr21RadioGetNextFinishedJobBuffer()->inboundFrame.header.lenght+1;
 
+            buf[len++] = '\n';
             buf[len++] = '\r';
-            buf[len] = '\n';
 
             tud_cdc_write(buf, len);
             tud_cdc_write_flush();
+            samr21RadioReceive(13);
         }
 
         samr21UsbEchoTask();
