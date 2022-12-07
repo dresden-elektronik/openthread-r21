@@ -157,9 +157,9 @@ int main(int argc, char const *argv[])
     tempFrame.raw[26] =  '!';
 
     tempFrame.header.lenght = 26 + IEEE_802_15_4_CRC_SIZE;
-    
+    char msgRcv[15] = "Recived Frame: ";
+    char msgAck[13] = "Recived Ack: ";
     uint32_t tempI = 0x0FFFF;
-    char buf[170];
 
     while (true)
     {
@@ -170,19 +170,23 @@ int main(int argc, char const *argv[])
             tempI=0;
         }
 
-        if(samr21RadioGetNextFinishedJobBuffer()->currentJobState == RADIO_STATE_TX_DONE){
-            char buf[170] = "Send Complete  Ack Frame: ";
-            uint8_t len = 26;
+        JobBuffer_t * buffer = samr21RadioGetNextFinishedJobBuffer();
+        if(buffer->currentJobState == RADIO_STATE_TX_DONE){
+            char buf[170];
 
-            memcpy(&buf[len], samr21RadioGetNextFinishedJobBuffer()->inboundFrame.raw, samr21RadioGetNextFinishedJobBuffer()->inboundFrame.header.lenght+1);
+            memcpy(buf, msgAck, 13);
+            uint8_t len = 13;
+
+            memcpy(&buf[len], buffer->inboundFrame.raw, buffer->inboundFrame.header.lenght+1);
             
-            len += samr21RadioGetNextFinishedJobBuffer()->inboundFrame.header.lenght+1;
+            len += buffer->inboundFrame.header.lenght+1;
 
+            buf[len++] = '\n';
             buf[len++] = '\r';
-            buf[len] = '\n';
 
             tud_cdc_write(buf, len);
             tud_cdc_write_flush();
+            samr21RadioReceive(13);
         }
         
         samr21UsbEchoTask();

@@ -187,15 +187,16 @@ int main(int argc, char const *argv[])
 
     while (true)
     {    
-        if(samr21RadioGetNextFinishedJobBuffer()->currentJobState == RADIO_STATE_RX_DONE){
+        JobBuffer_t * buffer = samr21RadioGetNextFinishedJobBuffer();
+        if(buffer->currentJobState == RADIO_STATE_RX_DONE){
             char buf[170];
 
             memcpy(buf, msgRcv, 15);
             uint8_t len = 15;
 
-            memcpy(&buf[len], samr21RadioGetNextFinishedJobBuffer()->inboundFrame.raw, samr21RadioGetNextFinishedJobBuffer()->inboundFrame.header.lenght+1);
+            memcpy(&buf[len], buffer->inboundFrame.raw, buffer->inboundFrame.header.lenght+1);
             
-            len += samr21RadioGetNextFinishedJobBuffer()->inboundFrame.header.lenght+1;
+            len += buffer->inboundFrame.header.lenght+1;
 
             buf[len++] = '\n';
             buf[len++] = '\r';
