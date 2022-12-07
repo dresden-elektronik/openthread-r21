@@ -115,7 +115,12 @@ typedef struct{
 
 //Interface Function
     bool samr21RadioSendFrame(FrameBuffer_t * frame, uint8_t channel);
+    void samr21RadioReceive(uint8_t channel);
+
     JobBuffer_t* samr21RadioGetNextFinishedJobBuffer();
+    RadioJobState samr21RadioGetCurrentJobStatus();
+
+
 
     bool samr21RadioAddShortAddrToPendingFrameTable(uint16_t shortAddr);
     bool samr21RadioFindShortAddrInPendingFrameTable(uint16_t shortAddr, bool remove);

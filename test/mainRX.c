@@ -183,6 +183,21 @@ int main(int argc, char const *argv[])
 
     while (true)
     {    
+        if(samr21RadioGetNextFinishedJobBuffer()->currentJobState == RADIO_STATE_RX_DONE){
+            char buf[170] = "Recived Frame: ";
+            uint8_t len = 15;
+
+            memcpy(&buf[len], samr21RadioGetNextFinishedJobBuffer()->inboundFrame.raw, samr21RadioGetNextFinishedJobBuffer()->inboundFrame.header.lenght+1);
+            
+            len += samr21RadioGetNextFinishedJobBuffer()->inboundFrame.header.lenght+1;
+
+            buf[len++] = '\r';
+            buf[len] = '\n';
+
+            tud_cdc_write(buf, len);
+            tud_cdc_write_flush();
+        }
+
         samr21UsbEchoTask();
         tempI++; 
     }

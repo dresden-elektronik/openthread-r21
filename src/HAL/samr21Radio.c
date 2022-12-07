@@ -152,7 +152,7 @@ void samr21RadioInit()
 
 void samr21RadioTurnTrxOff(){
     samr21RadioFsmEnable(false);
-
+    sf_ringBufferGetCurrent()->currentJobState = RADIO_STATE_OFF;
     samr21RadioChangeState(TRX_CMD_FORCE_TRX_OFF);
     while ((samr21TrxReadRegister(TRX_STATUS_REG) & TRX_STATUS_MASK) != TRX_STATUS_TRX_OFF);
 }
@@ -163,6 +163,7 @@ void samr21RadioTurnTrxOn(){
     samr21RadioFsmEnable(true);
 
     samr21RadioChangeState(TRX_CMD_RX_ON);
+
     while ((samr21TrxReadRegister(TRX_STATUS_REG) & TRX_STATUS_MASK) != TRX_STATUS_RX_ON);
 }
 
@@ -304,7 +305,11 @@ bool samr21RadioSendFrame(FrameBuffer_t *frame, uint8_t channel)
     JobBuffer_t *buffer = sf_ringBufferGetNext();
 
     //Check if Last Queued Transmission didn't start yet
-    if(buffer->currentJobState == RADIO_STATE_TX_READY){
+    //Or Radio is in a disabled state
+    if(
+        buffer->currentJobState == RADIO_STATE_TX_READY
+        ||sf_ringBufferGetCurrent()->currentJobState == RADIO_STATE_OFF
+    ){
         __enable_irq();
         return false;
     }
@@ -328,6 +333,7 @@ bool samr21RadioSendFrame(FrameBuffer_t *frame, uint8_t channel)
     buffer->currentJobState = RADIO_STATE_TX_READY;
     if (
         sf_ringBufferGetCurrent()->currentJobState == RADIO_STATE_IDLE
+        || sf_ringBufferGetCurrent()->currentJobState == RADIO_STATE_RX_IDLE
         || sf_ringBufferGetCurrent()->currentJobState > MARKER_RADIO_STATES_BEGINN_OTHER_DONE
     ){
         
@@ -346,6 +352,24 @@ bool samr21RadioSendFrame(FrameBuffer_t *frame, uint8_t channel)
 
     __enable_irq();
     return true;
+}
+
+void samr21RadioReceive(uint8_t channel){
+    sf_ringBufferGetCurrent()->
+    if(channel != s_phyCcCcaReg.bit.channel){       
+        s_phyCcCcaReg.bit.channel = channel;
+        channel
+        samr21TrxWriteRegister(PHY_CC_CCA_REG, s_phyCcCcaReg.reg);
+    }
+
+    if(sf_ringBufferGetCurrent()->currentJobState == RADIO_STATE_OFF){
+        samr21RadioTurnTrxOn();
+    }
+
+    samr21RadioChangeState(TRX_CMD_RX_ON);
+    while ((samr21TrxReadRegister(TRX_STATUS_REG) & TRX_STATUS_MASK) != TRX_STATUS_RX_ON);
+
+    sf_ringBufferGetCurrent()->currentJobState = RADIO_STATE_RX_IDLE;
 }
 
 bool samr21RadioStartEnergyDetection(uint8_t channel, uint16_t duration)
@@ -396,6 +420,11 @@ JobBuffer_t* samr21RadioGetNextFinishedJobBuffer(){
     }
     return NULL;
 }
+
+RadioJobState samr21RadioGetCurrentJobStatus(){
+    return sf_ringBufferGetCurrent()->currentJobState;
+}
+
 
 bool samr21RadioAddShortAddrToPendingFrameTable(uint16_t shortAddr){
     if(s_framePendingTableShortAddr.size >= SIZE_TABLE_FRAME_PENDING_SHORT_ADDR){

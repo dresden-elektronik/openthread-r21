@@ -4,6 +4,8 @@
         "otplatsystemheader.h": "c",
         "entropy.h": "c",
         "at86rf233_bitfield.h": "c",
-        "stdint.h": "c"
+        "stdint.h": "c",
+        "samr21trx.h": "c",
+        "samr21rtc.h": "c"
     }
 }

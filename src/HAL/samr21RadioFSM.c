@@ -153,7 +153,7 @@ static const fsmItem s_fsmTxItemTable[]={
 
 static const fsmItem s_fsmRxItemTable[]={
 
-        {RADIO_STATE_IDLE,                
+        {RADIO_STATE_RX_IDLE,                
             RADIO_EVENT_IRQ_RX_START,     
                 RADIO_STATE_RX_LIVE_MSG_PARSER,      
         fsm_func_samr21RadioLiveRxParser},

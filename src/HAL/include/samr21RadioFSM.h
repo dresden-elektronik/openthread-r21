@@ -14,11 +14,13 @@
 typedef enum RadioJobState{
     RADIO_STATE_IDLE                          = 0x00,
     RADIO_STATE_IN_SETUP                      = 0x01,
+    RADIO_STATE_OFF                           = 0x02,
 
     //RX States
     MARKER_RADIO_STATES_BEGINN_RX             = 0x10,
-    RADIO_STATE_RX_LIVE_MSG_PARSER            = 0x11,
-    RADIO_STATE_RX_SENDING_ACK                = 0x12,
+    RADIO_STATE_RX_IDLE                       = 0x11,
+    RADIO_STATE_RX_LIVE_MSG_PARSER            = 0x12,
+    RADIO_STATE_RX_SENDING_ACK                = 0x13,
     MARKER_RADIO_STATES_END_RX                = 0x1F,
     
     //TX States

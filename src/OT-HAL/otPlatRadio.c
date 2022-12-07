@@ -6,6 +6,8 @@
 #include "samr21Radio.h"
 #include "samr21Nvm.h"
 
+extern AT86RF233_REG_TRX_STATUS_t   g_trxStatus;  // from samr21trx.c
+
 static otRadioState s_radioState = OT_RADIO_STATE_DISABLED;
 
 void otPlatRadioGetIeeeEui64(otInstance *aInstance, uint8_t *aIeeeEui64)
@@ -133,3 +135,20 @@ otError otPlatRadioSetTransmitPower(otInstance *aInstance, int8_t aPower)
     return OT_ERROR_NONE;
 }
 
+int8_t otPlatRadioGetReceiveSensitivity(otInstance *aInstance)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+
+    return AT86RF233_RSSI_BASE_VAL;
+}
+
+bool otPlatRadioIsEnabled(otInstance *aInstance)
+{
+    if (
+        g_trxStatus.bit.trxStatus == TRX_STATUS_TRX_OFF
+        || g_trxStatus.bit.trxStatus == TRX_STATUS_P_ON
+    ){
+        return false;
+    }
+    return true;
+}

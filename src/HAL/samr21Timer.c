@@ -78,12 +78,16 @@ void samr21TimerInit(){
     while (TC5->COUNT16.STATUS.bit.SYNCBUSY); 
 
 
-    //enable interrupt in TC Module
+    //clear pending interrupt in TC Module
     TC3->COUNT16.INTFLAG.bit.OVF = 1;
     TC4->COUNT16.INTFLAG.bit.OVF = 1;
     TC5->COUNT16.INTFLAG.bit.OVF = 1;
     //enable interrupt in NVIC
+
+#ifndef __TESTBUILD__
     NVIC_EnableIRQ(TC3_IRQn);
+#endif
+
     NVIC_EnableIRQ(TC4_IRQn);
     NVIC_EnableIRQ(TC5_IRQn);
 }

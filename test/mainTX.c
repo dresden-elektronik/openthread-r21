@@ -158,7 +158,7 @@ int main(int argc, char const *argv[])
     tempFrame.header.lenght = 26 + IEEE_802_15_4_CRC_SIZE;
     
     uint32_t tempI = 0x0FFFF;
-    char buf[15] = "Sending Frame\n\r";
+    char buf[170];
 
     while (true)
     {
@@ -168,9 +168,24 @@ int main(int argc, char const *argv[])
             }
             tempI=0;
         }
-    
+
+        if(samr21RadioGetNextFinishedJobBuffer()->currentJobState == RADIO_STATE_TX_DONE){
+            char buf[170] = "Send Complete  Ack Frame: ";
+            uint8_t len = 26;
+
+            memcpy(&buf[len], samr21RadioGetNextFinishedJobBuffer()->inboundFrame.raw, samr21RadioGetNextFinishedJobBuffer()->inboundFrame.header.lenght+1);
+            
+            len += samr21RadioGetNextFinishedJobBuffer()->inboundFrame.header.lenght+1;
+
+            buf[len++] = '\r';
+            buf[len] = '\n';
+
+            tud_cdc_write(buf, len);
+            tud_cdc_write_flush();
+        }
+        
         samr21UsbEchoTask();
-        tempI++; 
+        tempI++;
     }
 }
 
