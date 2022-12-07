@@ -355,10 +355,9 @@ bool samr21RadioSendFrame(FrameBuffer_t *frame, uint8_t channel)
 }
 
 void samr21RadioReceive(uint8_t channel){
-    sf_ringBufferGetCurrent()->
+
     if(channel != s_phyCcCcaReg.bit.channel){       
         s_phyCcCcaReg.bit.channel = channel;
-        channel
         samr21TrxWriteRegister(PHY_CC_CCA_REG, s_phyCcCcaReg.reg);
     }
 
@@ -367,9 +366,8 @@ void samr21RadioReceive(uint8_t channel){
     }
 
     samr21RadioChangeState(TRX_CMD_RX_ON);
-    while ((samr21TrxReadRegister(TRX_STATUS_REG) & TRX_STATUS_MASK) != TRX_STATUS_RX_ON);
-
     sf_ringBufferGetCurrent()->currentJobState = RADIO_STATE_RX_IDLE;
+    while ((samr21TrxReadRegister(TRX_STATUS_REG) & TRX_STATUS_MASK) != TRX_STATUS_RX_ON);
 }
 
 bool samr21RadioStartEnergyDetection(uint8_t channel, uint16_t duration)
