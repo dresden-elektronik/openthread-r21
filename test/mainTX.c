@@ -159,6 +159,7 @@ int main(int argc, char const *argv[])
     tempFrame.header.lenght = 26 + IEEE_802_15_4_CRC_SIZE;
     char msgRcv[15] = "Recived Frame: ";
     char msgAck[13] = "Recived Ack: ";
+    char noAck[17] = "Recived No Ack!\n\r";
     uint32_t tempI = 0x0FFFF;
 
     while (true)
@@ -186,7 +187,12 @@ int main(int argc, char const *argv[])
 
             tud_cdc_write(buf, len);
             tud_cdc_write_flush();
-            samr21RadioReceive(13);
+            buffer->currentJobState = RADIO_STATE_IDLE;
+        }
+
+        if(buffer->currentJobState == RADIO_STATE_TX_FAILED){
+            tud_cdc_write(noAck, 17);
+            tud_cdc_write_flush();
         }
         
         samr21UsbEchoTask();

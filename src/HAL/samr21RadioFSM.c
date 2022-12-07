@@ -231,8 +231,12 @@ static volatile RadioJobState * s_currentActiveStatePtr = NULL;
 
 void samr21RadioFsmHandleEvent(RadioEvent event)
 {
-    RadioJobState * currentStatePtr = s_currentActiveStatePtr;
 
+#ifdef __TESTBUILD__
+    PORT->Group[0].OUTSET.reg= PORT_PA09;
+#endif
+
+    RadioJobState * currentStatePtr = s_currentActiveStatePtr;
     __NVIC_DisableIRQ(EIC_IRQn); 
 
     //Look for RX States first, cause timinig is more critical
@@ -353,7 +357,11 @@ beginFsmEdHandler:
 
 exitFsm:
 
-    __NVIC_EnableIRQ(EIC_IRQn);  
+    __NVIC_EnableIRQ(EIC_IRQn);
+    
+#ifdef __TESTBUILD__
+    PORT->Group[0].OUTCLR.reg= PORT_PA09;
+#endif  
     return; 
 }
 
