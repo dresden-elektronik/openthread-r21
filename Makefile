@@ -13,3 +13,6 @@ getToolchain:
 
 cleanAll:
 	rm ./out/* -rf
+
+killOCD:
+	cd ./test && make killOCD
