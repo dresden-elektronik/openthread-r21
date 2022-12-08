@@ -74,8 +74,8 @@ typedef enum RadioEvent{
 
     //From Timer Modules
     MARKER_RADIO_EVENTS_BEGINN_TIMER_IRQ      = 0x20,
-    RADIO_EVENT_TIMER_TRIGGER                 = 0x21, //Timer4
-    RADIO_EVENT_TIMEOUT_TRIGGER               = 0x22, //Timer5
+    RADIO_EVENT_TIMER_TRIGGER                 = 0x21, //TC4
+    RADIO_EVENT_TIMEOUT_TRIGGER               = 0x22, //TC5
     MARKER_RADIO_EVENTS_END_TIMMER_IRQ        = 0x2F,
 
     //Software Events
