@@ -81,7 +81,7 @@ typedef struct{
         }                   retrysLeft;
 
         //ED Operation
-        int8_t              measuredEngeryLevel;
+        uint8_t              measuredEngeryLevel;
     };      
 
     RadioJobState           jobState;
@@ -120,6 +120,8 @@ typedef struct{
 //Interface Function
     bool samr21RadioSendFrame(FrameBuffer_t * frame, uint8_t channel);
     bool samr21RadioReceive(uint8_t channel);
+
+    bool samr21RadioStartEnergyDetection(uint8_t channel, uint16_t duration);
 
     JobBuffer_t* samr21RadioGetNextFinishedJobBuffer();
 

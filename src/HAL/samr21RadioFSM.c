@@ -203,6 +203,11 @@ static const fsmItem s_fsmEdItemTable[]={
                     RADIO_JOB_STATE_EVAL_ED_RESULT,      
             fsm_func_samr21EvalEd},
 
+            {RADIO_JOB_STATE_WAIT_FOR_ED_RESULT,                
+                RADIO_EVENT_TIMER_TRIGGER,     
+                    RADIO_JOB_STATE_EVAL_ED_RESULT,      
+            fsm_func_samr21EvalEdContinuation},
+
                 {RADIO_JOB_STATE_EVAL_ED_RESULT,                
                     RADIO_EVENT_TIMER_TRIGGER,     
                         RADIO_JOB_STATE_EVAL_ED_CONTINUATION,      

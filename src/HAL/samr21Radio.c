@@ -424,6 +424,7 @@ bool samr21RadioStartEnergyDetection(uint8_t channel, uint16_t duration)
     // mark buffer 
     buffer->jobState = RADIO_JOB_STATE_ED_READY;
     buffer->edTimeleft = duration;
+    buffer->measuredEngeryLevel = 0;
     buffer->channel = channel;
 
     // If Radio is in an Idle State, start immediately
@@ -558,9 +559,6 @@ void fsm_func_samr21RadioStartCCA()
 
 void fsm_func_samr21StartEd()
 {   
-    //Queue the next ED allrdy (once per ms)
-    samr21Timer4Set(1000);
-
     // Check if Transciver is in recive state
     if (g_trxStatus.bit.trxStatus != TRX_STATUS_RX_ON)
     {
@@ -578,6 +576,9 @@ void fsm_func_samr21StartEd()
 
     // Reset local copy of ccaRequest Bit
     s_phyCcCcaReg.bit.ccaRequest = 0;
+
+    //Queue the next ED allrdy (once per ms)
+    samr21Timer4Set(1000);
 }
 
 void fsm_func_samr21RadioEvalCCA()

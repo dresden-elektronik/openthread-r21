@@ -175,7 +175,7 @@ int main(int argc, char const *argv[])
         if(buffer->jobState == RADIO_JOB_STATE_TX_DONE){
             char buf[170];
             
-            buf[0] = (buffer->outboundFrame.header.sequenceNumber / 100) + 48;;
+            buf[0] = (buffer->outboundFrame.header.sequenceNumber / 100) + 48;
             buf[1] = ((buffer->outboundFrame.header.sequenceNumber % 100) / 10) + 48;
             buf[2] = ((buffer->outboundFrame.header.sequenceNumber % 100) % 10) + 48;
             buf[3] = ' ';

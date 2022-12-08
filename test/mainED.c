@@ -157,16 +157,56 @@ int main(int argc, char const *argv[])
     tempFrame.raw[26] =  '!';
 
     tempFrame.header.lenght = 26 + IEEE_802_15_4_CRC_SIZE;
-    char msgRcv[15] = "Recived Frame: ";
-    char msgAck[13] = "Recived Ack: ";
-    char noAck[21] = "    Recived No Ack!\n\r";
-    uint32_t tempI = 0x0FFFF;
+    char edDone[23] = "\n\rED on Ch.:[  ] = -";
+    char edFailed[23]  = "\n\rED on Ch.:[  ] FAILED";
+
+    uint8_t curEdChannel = 13;
+
+    for(uint32_t i = 0; i < 0xFFFFF; i++){
+        samr21UsbEchoTask();
+    }
+
+    samr21RadioStartEnergyDetection(curEdChannel, 50);
 
     while (true)
     {   
-        
+        if(samr21RadioGetNextFinishedJobBuffer()->jobState == RADIO_JOB_STATE_ED_DONE){
+            edDone[13] =( curEdChannel / 10 ) + 48;
+            edDone[14] =( curEdChannel % 10 ) + 48;
+
+            uint8_t result = abs(AT86RF233_RSSI_BASE_VAL) - samr21RadioGetNextFinishedJobBuffer()->measuredEngeryLevel;
+
+            samr21RadioGetNextFinishedJobBuffer()->jobState = RADIO_JOB_STATE_IDLE;
+
+            edDone[20] = (result / 100) + 48;;
+            edDone[21] = ((result % 100) / 10) + 48;
+            edDone[22] = ((result % 100) % 10) + 48;
+
+            tud_cdc_write(edDone, 23);
+            tud_cdc_write_flush();
+
+            if(++curEdChannel > 26){
+                char buf[4] = "\n\r\n\r";
+                curEdChannel = 11;
+                tud_cdc_write(buf, 4);
+            }
+
+            samr21RadioStartEnergyDetection(curEdChannel, 50);
+        }
+
+        if(samr21RadioGetNextFinishedJobBuffer()->jobState == RADIO_JOB_STATE_ED_FAILED){
+            edFailed[13] =( curEdChannel / 10 ) + 48;
+            edFailed[14] =( curEdChannel % 10 ) + 48;
+
+             samr21RadioGetNextFinishedJobBuffer()->jobState = RADIO_JOB_STATE_IDLE;
+
+            tud_cdc_write(edFailed, 23);
+            tud_cdc_write_flush();
+
+            samr21RadioStartEnergyDetection(curEdChannel, 50);
+        }
+
         samr21UsbEchoTask();
-        
     }
 }
 

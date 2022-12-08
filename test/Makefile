@@ -148,7 +148,7 @@ flashRX:testRX
 
 flashED:testED
 	$(OCD) -f ./OpenOCD_config/ATMEL-ICE-OpenOCD-samr21e18a.cfg & echo $$! > ./OpenOCD_config/tempOcdInstance.pid
-	$(GDB) --init-eval-command='target extended-remote localhost:3333' $(IMAGE_OUT_DIR)/testRX.elf --eval-command='load'
+	$(GDB) --init-eval-command='target extended-remote localhost:3333' $(IMAGE_OUT_DIR)/testED.elf --eval-command='load'
 	if [ -a ./OpenOCD_config/tempOcdInstance.pid ]; then \
     	kill -TERM $$(cat ./OpenOCD_config/tempOcdInstance.pid) || true; \
 	fi;
