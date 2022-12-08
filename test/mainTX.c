@@ -179,9 +179,9 @@ int main(int argc, char const *argv[])
             buf[1] = ((buffer->outboundFrame.header.sequenceNumber % 100) / 10) + 48;
             buf[2] = ((buffer->outboundFrame.header.sequenceNumber % 100) % 10) + 48;
             buf[3] = ' ';
-
             uint8_t len = 4;
-            memcpy(buf, msgAck, 13);
+            
+            memcpy(&buf[len], msgAck, 13);
             len += 13;
 
             memcpy(&buf[len], buffer->inboundFrame.raw, buffer->inboundFrame.header.lenght+1);
