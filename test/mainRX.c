@@ -210,9 +210,10 @@ int main(int argc, char const *argv[])
             tud_cdc_write_flush();
 
             buffer->jobState = RADIO_JOB_STATE_IDLE;
-            samr21RadioReceive(13);
+            
         }
-
+        
+        samr21RadioReceive(13);
         samr21UsbEchoTask();
         tempI++; 
     }
