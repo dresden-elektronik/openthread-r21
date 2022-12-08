@@ -148,3 +148,9 @@ cleanAll:
 clean:
 	rm -rf $(IMAGE_OUT_DIR)
 	rm -rf $(OBJ_OUT_DIR)
+
+killOCD:
+	if [ -a ./OpenOCD_config/tempOcdInstance.pid ]; then \
+    	kill -TERM $$(cat ./OpenOCD_config/tempOcdInstance.pid) || true; \
+	fi;
+	rm ./OpenOCD_config/tempOcdInstance.pid
