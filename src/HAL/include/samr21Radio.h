@@ -30,7 +30,14 @@
 #ifndef SYMBOL_DURATION_802_15_4_us
     #define SYMBOL_DURATION_802_15_4_us 16
 #endif
- 
+
+typedef enum RadioState{
+    RADIO_STATE_IDLE                          = 0x00,
+    RADIO_STATE_SLEEP                         = 0x01,
+    RADIO_STATE_RX                            = 0x11,
+    RADIO_STATE_TX                            = 0x12
+} RadioState;
+
 typedef union
 {
     uint8_t raw[128]; 
@@ -62,7 +69,6 @@ typedef struct{
     uint8_t                 rxLQI;
     uint8_t                 channel;
 
-
     union{
         //RX Operation
         uint8_t             downloadedSize;
@@ -78,14 +84,13 @@ typedef struct{
         int8_t              measuredEngeryLevel;
     };      
 
-    RadioJobState           currentJobState;
+    RadioJobState           jobState;
 }JobBuffer_t;
 
 //Config Functions
     void samr21RadioInit();
 
 //Config Functions
-    void samr21RadioChangeState(uint8_t newState);
     void samr21RadioChangeChannel(uint8_t newChannel);
     void samr21RadioChangeCCAMode(uint8_t newCcaMode);
 
@@ -102,9 +107,8 @@ typedef struct{
     void samr21RadioChangeNumTransmitRetrys(uint8_t numRetrys);
     void samr21RadioChangeNumBackoffsCsma(uint8_t numBackoffs);
 
-    void samr21RadioTurnTrxOff();
-    void samr21RadioTurnTrxOn();
-    AT86RF233_REG_TRX_STATUS_t samr21RadioGetStatus();
+    void samr21RadioChangeState(RadioState newState, uint8_t channel);
+    RadioState samr21RadioGetStatus();
 
 
 
@@ -115,12 +119,9 @@ typedef struct{
 
 //Interface Function
     bool samr21RadioSendFrame(FrameBuffer_t * frame, uint8_t channel);
-    void samr21RadioReceive(uint8_t channel);
+    bool samr21RadioReceive(uint8_t channel);
 
     JobBuffer_t* samr21RadioGetNextFinishedJobBuffer();
-    RadioJobState samr21RadioGetCurrentJobStatus();
-
-
 
     bool samr21RadioAddShortAddrToPendingFrameTable(uint16_t shortAddr);
     bool samr21RadioFindShortAddrInPendingFrameTable(uint16_t shortAddr, bool remove);

@@ -24,25 +24,19 @@ otRadioState otPlatRadioGetState(otInstance *aInstance)
 {
     OT_UNUSED_VARIABLE(aInstance);
 
-    uint8_t status = samr21RadioGetStatus().bit.trxStatus;
+    uint8_t status = samr21RadioGetStatus();
 
     switch (status){
-        case TRX_STATUS_P_ON:
+        case RADIO_STATE_IDLE:
             return OT_RADIO_STATE_DISABLED;
 
-        case TRX_STATUS_TRX_OFF:
-            return OT_RADIO_STATE_DISABLED;
+        case RADIO_STATE_SLEEP:
+            return OT_RADIO_STATE_SLEEP;
         
-        case TRX_STATUS_BUSY_RX:
+        case RADIO_STATE_RX:
             return OT_RADIO_STATE_RECEIVE;
 
-        case TRX_STATUS_RX_ON:
-            return OT_RADIO_STATE_RECEIVE;
-
-        case TRX_STATUS_PLL_ON:
-            return OT_RADIO_STATE_TRANSMIT;
-        
-        case TRX_STATUS_BUSY_TX:
+        case RADIO_STATE_TX:
             return OT_RADIO_STATE_TRANSMIT;
         
         default:

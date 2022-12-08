@@ -159,7 +159,7 @@ int main(int argc, char const *argv[])
     tempFrame.header.lenght = 26 + IEEE_802_15_4_CRC_SIZE;
     char msgRcv[15] = "Recived Frame: ";
     char msgAck[13] = "Recived Ack: ";
-    char noAck[17] = "Recived No Ack!\n\r";
+    char noAck[21] = "    Recived No Ack!\n\r";
     uint32_t tempI = 0x0FFFF;
 
     while (true)
@@ -172,11 +172,17 @@ int main(int argc, char const *argv[])
         }
 
         JobBuffer_t * buffer = samr21RadioGetNextFinishedJobBuffer();
-        if(buffer->currentJobState == RADIO_STATE_TX_DONE){
+        if(buffer->jobState == RADIO_JOB_STATE_TX_DONE){
             char buf[170];
+            
+            buf[0] = (buffer->outboundFrame.header.sequenceNumber / 100) + 48;;
+            buf[1] = ((buffer->outboundFrame.header.sequenceNumber % 100) / 10) + 48;
+            buf[2] = ((buffer->outboundFrame.header.sequenceNumber % 100) % 10) + 48;
+            buf[3] = ' ';
 
+            uint8_t len = 4;
             memcpy(buf, msgAck, 13);
-            uint8_t len = 13;
+            len += 13;
 
             memcpy(&buf[len], buffer->inboundFrame.raw, buffer->inboundFrame.header.lenght+1);
             
@@ -187,12 +193,17 @@ int main(int argc, char const *argv[])
 
             tud_cdc_write(buf, len);
             tud_cdc_write_flush();
-            buffer->currentJobState = RADIO_STATE_IDLE;
+            buffer->jobState = RADIO_JOB_STATE_IDLE;
         }
 
-        if(buffer->currentJobState == RADIO_STATE_TX_FAILED){
-            tud_cdc_write(noAck, 17);
+        if(buffer->jobState == RADIO_JOB_STATE_TX_FAILED){
+            noAck[0] = (buffer->outboundFrame.header.sequenceNumber / 100) + 48;;
+            noAck[1] = ((buffer->outboundFrame.header.sequenceNumber % 100) / 10) + 48;
+            noAck[2] = ((buffer->outboundFrame.header.sequenceNumber % 100) % 10) + 48;
+
+            tud_cdc_write(noAck, 21);
             tud_cdc_write_flush();
+            buffer->jobState = RADIO_JOB_STATE_IDLE;
         }
         
         samr21UsbEchoTask();
