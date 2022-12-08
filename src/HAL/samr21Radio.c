@@ -700,6 +700,7 @@ void fsm_func_samr21RadioJobCleanup()
     {
         // Prepare the next Buffer
         sf_ringBufferGetNext()->jobState = RADIO_JOB_STATE_RX_IDLE;
+        sf_ringBufferGetNext()->channel  = sf_ringBufferGetCurrent()->channel;
         // Move to Next Buffer
         sf_ringBufferMoveForward();
         goto exit;
@@ -831,13 +832,23 @@ void fsm_func_samr21RadioLiveRxParser()
     buffer->inboundFrame.header.lenght = samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
     buffer->downloadedSize = 1;
 
+    
+
+    if(buffer->inboundFrame.header.lenght > IEEE_802_15_4_PDSU_SIZE){
+        samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_MSG_INVALID);
+        samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+        samr21TrxSetSSel(false);
+        __enable_irq();
+        return;
+    }
+
     // Download Recived Frame Till FCF
     while (buffer->downloadedSize <  4) //1Byte PhyHeader, 2Byte FCF, 1Byte Sequenz Number
     { 
         
         //(see r21 datasheet, 40.7 Frame Buffer Empty Indicator)
         samr21delayLoop(CPU_WAIT_CYCLE_FOR_FRAME_BUFFER_EMPTY_FLAG);
-        for(uint32_t timeout = 0; timeout < 0x0FFFFF; timeout++){
+        for(uint32_t timeout = 0; timeout < 0x005FFF; timeout++){
             if(!(PORT->Group[1].IN.reg & PORT_PB00)){
                 break;
             }
@@ -884,7 +895,7 @@ void fsm_func_samr21RadioLiveRxParser()
     {
         //(see r21 datasheet, 40.7 Frame Buffer Empty Indicator)
         samr21delayLoop(CPU_WAIT_CYCLE_FOR_FRAME_BUFFER_EMPTY_FLAG);
-        for(uint32_t timeout = 0; timeout < 0x0FFFFF; timeout++){
+        for(uint32_t timeout = 0; timeout < 0x005FFF; timeout++){
             if(!(PORT->Group[1].IN.reg & PORT_PB00)){
                 break;
             }
@@ -976,7 +987,7 @@ void fsm_func_samr21RadioLiveRxParser()
         samr21delayLoop(CPU_WAIT_CYCLE_FOR_FRAME_BUFFER_EMPTY_FLAG);
 
         //(see r21 datasheet, 40.7 Frame Buffer Empty Indicator)
-        for(uint32_t timeout = 0; timeout < 0x0FFFFF; timeout++){
+        for(uint32_t timeout = 0; timeout < 0x005FFF; timeout++){
             if(!(PORT->Group[1].IN.reg & PORT_PB00)){
                 break;
             }
