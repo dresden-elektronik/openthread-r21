@@ -370,8 +370,18 @@ bool samr21RadioSendFrame(FrameBuffer_t *frame, uint8_t channel)
 
 bool samr21RadioReceive(uint8_t channel)
 {
-    // Get the next avivable Buffer
     __disable_irq();
+
+    if(
+        sf_ringBufferGetCurrent()->channel == channel
+        && sf_ringBufferGetCurrent()->jobState > MARKER_RADIO_JOB_STATES_BEGINN_RX
+        && sf_ringBufferGetCurrent()->jobState < MARKER_RADIO_JOB_STATES_END_RX
+    ){
+        __enable_irq();
+        return true;
+    }
+
+    // Get the next avivable Buffer
     JobBuffer_t *buffer = sf_ringBufferGetNext();
 
     //Check if Last Queued Transmission did even start yet
