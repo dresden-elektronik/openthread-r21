@@ -3,6 +3,12 @@
 #ifndef _SAMR21_AES_H_
 #define _SAMR21_AES_H_
 
+#define SIZE_AES_KEY_BIT    128
+#define SIZE_AES_KEY_BYTE   16
+
+#define SIZE_AES_TEXT_BIT    128
+#define SIZE_AES_TEXT_BYTE   16
+
 #include "samr21.h"
 #include "samr21NopDelay.h"
 

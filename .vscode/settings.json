@@ -15,6 +15,7 @@
         "string.h": "c",
         "802_15_4_helper.h": "c",
         "uart.h": "c",
-        "samr21.h": "c"
+        "samr21.h": "c",
+        "at86rf233.h": "c"
     }
 }

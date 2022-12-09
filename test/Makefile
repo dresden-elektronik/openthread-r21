@@ -56,6 +56,7 @@ CFLAGS= \
 	$(DEFINES) 
 
 LINKERSCRIPT=../third_party/ATMEL/LINKER/samr21e18a_flash.ld
+LINKERSCRIPT_GCF=../third_party/ATMEL/LINKER/samr21e18a_flash_gcf_offset.ld
 
 LDFLAGS= \
  	-mcpu=$(MACH) \
@@ -64,8 +65,15 @@ LDFLAGS= \
 	-specs=nosys.specs \
 	-mthumb \
 	-Wall \
-	-Wl,--entry=Reset_Handler \
-	-T$(LINKERSCRIPT)
+	-Wl,--entry=Reset_Handler
+	
+testGCF:\
+	samr21HAL \
+	third_party \
+	$(OBJ_OUT_DIR) \
+	$(IMAGE_OUT_DIR) \
+	$(OBJ_OUT_DIR)/testTX.o \
+	$(IMAGE_OUT_DIR)/testGCF.elf
 
 testTX:\
 	samr21HAL \
@@ -123,29 +131,35 @@ $(OBJ_OUT_DIR)/testMisc.o:\
 	./mainMisc.c 	
 	$(CC) $(CFLAGS) -o $@ $^
 
-
-
+$(OBJ_OUT_DIR)/testGCF.o:\
+	./mainGCF.c 	
+	$(CC) $(CFLAGS) -o $@ $^
 
 
 $(IMAGE_OUT_DIR)/testRX.elf:\
 	$(OBJ_OUT_DIR)/testRX.o 
 
-	$(CC) $(LDFLAGS) -o $@ $^ $(TINYUSB_OBJS) $(CMSIS_OBJS)	$(HAL_OBJS) 
+	$(CC) $(LDFLAGS) -T$(LINKERSCRIPT) -o $@ $^ $(TINYUSB_OBJS) $(CMSIS_OBJS)	$(HAL_OBJS) 
 
 $(IMAGE_OUT_DIR)/testTX.elf:\
 	$(OBJ_OUT_DIR)/testTX.o 
 
-	$(CC) $(LDFLAGS) -o $@ $^ $(TINYUSB_OBJS) $(CMSIS_OBJS)	$(HAL_OBJS) 
+	$(CC) $(LDFLAGS) -T$(LINKERSCRIPT) -o $@ $^ $(TINYUSB_OBJS) $(CMSIS_OBJS)	$(HAL_OBJS) 
 
 $(IMAGE_OUT_DIR)/testED.elf:\
 	$(OBJ_OUT_DIR)/testED.o 
 
-	$(CC) $(LDFLAGS) -o $@ $^ $(TINYUSB_OBJS) $(CMSIS_OBJS)	$(HAL_OBJS) 
+	$(CC) $(LDFLAGS) -T$(LINKERSCRIPT) -o $@ $^ $(TINYUSB_OBJS) $(CMSIS_OBJS)	$(HAL_OBJS) 
 
 $(IMAGE_OUT_DIR)/testMisc.elf:\
 	$(OBJ_OUT_DIR)/testMisc.o 
 
-	$(CC) $(LDFLAGS) -o $@ $^ $(TINYUSB_OBJS) $(CMSIS_OBJS)	$(HAL_OBJS) 
+	$(CC) $(LDFLAGS) -T$(LINKERSCRIPT) -o $@ $^ $(TINYUSB_OBJS) $(CMSIS_OBJS)	$(HAL_OBJS) 
+
+$(IMAGE_OUT_DIR)/testGCF.elf:\
+	$(OBJ_OUT_DIR)/testGCF.o 
+
+	$(CC) $(LDFLAGS) -T$(LINKERSCRIPT_GCF) -o $@ $^ $(TINYUSB_OBJS) $(CMSIS_OBJS)	$(HAL_OBJS) 
 
 
 flashTX:testTX
