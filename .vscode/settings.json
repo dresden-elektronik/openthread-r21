@@ -13,6 +13,8 @@
         "samr21radio.h": "c",
         "samr21timer.h": "c",
         "string.h": "c",
-        "802_15_4_helper.h": "c"
+        "802_15_4_helper.h": "c",
+        "uart.h": "c",
+        "samr21.h": "c"
     }
 }

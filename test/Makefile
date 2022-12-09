@@ -91,6 +91,15 @@ testED:\
 	$(OBJ_OUT_DIR)/testED.o \
 	$(IMAGE_OUT_DIR)/testED.elf
 
+testMisc:\
+	samr21HAL \
+	third_party \
+	$(OBJ_OUT_DIR) \
+	$(IMAGE_OUT_DIR) \
+	$(OBJ_OUT_DIR)/testMisc.o \
+	$(IMAGE_OUT_DIR)/testMisc.elf
+
+
 
 $(OBJ_OUT_DIR):
 	$(MKDIR) -p $@
@@ -110,6 +119,10 @@ $(OBJ_OUT_DIR)/testED.o:\
 	./mainED.c 	
 	$(CC) $(CFLAGS) -o $@ $^
 
+$(OBJ_OUT_DIR)/testMisc.o:\
+	./mainMisc.c 	
+	$(CC) $(CFLAGS) -o $@ $^
+
 
 
 
@@ -126,6 +139,11 @@ $(IMAGE_OUT_DIR)/testTX.elf:\
 
 $(IMAGE_OUT_DIR)/testED.elf:\
 	$(OBJ_OUT_DIR)/testED.o 
+
+	$(CC) $(LDFLAGS) -o $@ $^ $(TINYUSB_OBJS) $(CMSIS_OBJS)	$(HAL_OBJS) 
+
+$(IMAGE_OUT_DIR)/testMisc.elf:\
+	$(OBJ_OUT_DIR)/testMisc.o 
 
 	$(CC) $(LDFLAGS) -o $@ $^ $(TINYUSB_OBJS) $(CMSIS_OBJS)	$(HAL_OBJS) 
 
@@ -153,6 +171,15 @@ flashED:testED
     	kill -TERM $$(cat ./OpenOCD_config/tempOcdInstance.pid) || true; \
 	fi;
 	rm ./OpenOCD_config/tempOcdInstance.pid
+
+flashMisc:testMisc
+	$(OCD) -f ./OpenOCD_config/ATMEL-ICE-OpenOCD-samr21e18a.cfg & echo $$! > ./OpenOCD_config/tempOcdInstance.pid
+	$(GDB) --init-eval-command='target extended-remote localhost:3333' $(IMAGE_OUT_DIR)/testMisc.elf --eval-command='load'
+	if [ -a ./OpenOCD_config/tempOcdInstance.pid ]; then \
+    	kill -TERM $$(cat ./OpenOCD_config/tempOcdInstance.pid) || true; \
+	fi;
+	rm ./OpenOCD_config/tempOcdInstance.pid
+
 
 third_party:
 	cd ../third_party && make

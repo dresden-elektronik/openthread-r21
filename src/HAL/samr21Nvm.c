@@ -7,6 +7,11 @@ void samr21NvmInit(){
 
 uint64_t samr21NvmGetIeeeAddr()
 {
-    return *( ( uint32_t * ) NVM_USER_ROW_IEEE_ADDR );
+    uint64_t res;
+
+    ((uint32_t *)(&res))[0] = ((uint32_t *) NVM_USER_ROW_IEEE_ADDR)[0];
+    ((uint32_t *)(&res))[1] = ((uint32_t *) NVM_USER_ROW_IEEE_ADDR)[0];
+
+    return res;
 }
 
