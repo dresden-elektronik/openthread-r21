@@ -72,7 +72,7 @@ testGCF:\
 	third_party \
 	$(OBJ_OUT_DIR) \
 	$(IMAGE_OUT_DIR) \
-	$(OBJ_OUT_DIR)/testTX.o \
+	$(OBJ_OUT_DIR)/testGCF.o \
 	$(IMAGE_OUT_DIR)/testGCF.elf
 
 testTX:\
