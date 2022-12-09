@@ -9,9 +9,11 @@ uint64_t samr21NvmGetIeeeAddr()
 {
     uint64_t res;
 
-    ((uint32_t *)(&res))[0] = ((uint32_t *) NVM_USER_ROW_IEEE_ADDR)[0];
-    ((uint32_t *)(&res))[1] = ((uint32_t *) NVM_USER_ROW_IEEE_ADDR)[0];
-
+    for (uint8_t i = 0; i < sizeof(uint64_t); i++)
+    {
+        ((uint8_t *)(&res))[0] = ((uint8_t *)NVM_USER_ROW_IEEE_ADDR)[0];
+    }
+    
     return res;
 }
 

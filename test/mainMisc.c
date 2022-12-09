@@ -115,7 +115,6 @@ int main(int argc, char const *argv[])
     samr21RadioChangeChannel(13);
 
 
-    tempFrame.header.lenght = 26 + IEEE_802_15_4_CRC_SIZE;
     char edDone[23] = "\n\rED on Ch.:[  ] = -";
     char edFailed[23]  = "\n\rED on Ch.:[  ] FAILED";
 
