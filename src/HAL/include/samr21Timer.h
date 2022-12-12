@@ -10,6 +10,15 @@
 
 void samr21TimerInit();
 
+void samr21Timer0Set(uint32_t value_us);
+void samr21Timer0Stop();
+
+void samr21Timer1Set(uint16_t value_us);
+void samr21Timer1Stop();
+
+void samr21Timer2Set(uint16_t value_us);
+void samr21Timer2Stop();
+
 //Used For OpenThread - Alarm (otPlatAlarm.c)
 void samr21Timer3Set(uint16_t value_us);
 void samr21Timer3Stop();

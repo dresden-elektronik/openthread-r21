@@ -3,7 +3,13 @@
 
 void samr21TimerInit(){
 
-    //Disable Module First
+    //Disable Modules First
+    TCC0->CTRLA.bit.ENABLE = 0;
+    while (TCC0->SYNCBUSY.bit.ENABLE);
+    TCC1->CTRLA.bit.ENABLE = 0;
+    while (TCC1->SYNCBUSY.bit.ENABLE);
+    TCC2->CTRLA.bit.ENABLE = 0;
+    while (TCC2->SYNCBUSY.bit.ENABLE);
     TC3->COUNT16.CTRLA.bit.ENABLE = 0;
     while (TC3->COUNT16.STATUS.bit.SYNCBUSY);
     TC4->COUNT16.CTRLA.bit.ENABLE = 0;
@@ -12,6 +18,12 @@ void samr21TimerInit(){
     while (TC5->COUNT16.STATUS.bit.SYNCBUSY);
 
     //Reset after
+    TCC0->CTRLA.bit.SWRST = 1;
+    while (TCC0->CTRLA.bit.SWRST || TCC0->SYNCBUSY.bit.SWRST);
+    TCC1->CTRLA.bit.SWRST = 1;
+    while (TCC1->CTRLA.bit.SWRST || TCC1->SYNCBUSY.bit.SWRST);
+    TCC2->CTRLA.bit.SWRST = 1;
+    while (TCC2->CTRLA.bit.SWRST || TCC2->SYNCBUSY.bit.SWRST);
     TC3->COUNT16.CTRLA.bit.SWRST = 1;
     while (TC3->COUNT16.CTRLA.bit.SWRST || TC3->COUNT16.STATUS.bit.SYNCBUSY);
     TC4->COUNT16.CTRLA.bit.SWRST = 1;
@@ -21,6 +33,67 @@ void samr21TimerInit(){
 
 
     //Setup TC Modules
+    TCC0->INTENSET.bit.OVF = 1;
+    TCC0->CTRLA.reg =
+        TCC_CTRLA_ENABLE
+        |TCC_CTRLA_RESOLUTION(TCC_CTRLA_RESOLUTION_NONE_Val)
+        |TCC_CTRLA_PRESCALER(TCC_CTRLA_PRESCALER_DIV1_Val)
+        |TCC_CTRLA_RUNSTDBY
+        |TCC_CTRLA_PRESCSYNC(TCC_CTRLA_PRESCSYNC_GCLK_Val)
+        //|TCC_CTRLA_ALOCK
+        //TCC_CTRLA_CPTEN0
+        //TCC_CTRLA_CPTEN1
+        //TCC_CTRLA_CPTEN2
+        //TCC_CTRLA_CPTEN3
+    ; 
+    while (TCC0->SYNCBUSY.bit.ENABLE);
+
+    TCC0->WAVE.reg =
+        TCC_WAVE_WAVEGEN(TCC_WAVE_WAVEGEN_MFRQ_Val)
+    ; 
+    while (TCC0->SYNCBUSY.bit.WAVE);
+
+    TCC1->INTENSET.bit.OVF = 1;
+    TCC1->CTRLA.reg =
+        TCC_CTRLA_ENABLE
+        |TCC_CTRLA_RESOLUTION(TCC_CTRLA_RESOLUTION_NONE_Val)
+        |TCC_CTRLA_PRESCALER(TCC_CTRLA_PRESCALER_DIV1_Val)
+        |TCC_CTRLA_RUNSTDBY
+        |TCC_CTRLA_PRESCSYNC(TCC_CTRLA_PRESCSYNC_GCLK_Val)
+        //|TCC_CTRLA_ALOCK
+        //TCC_CTRLA_CPTEN0
+        //TCC_CTRLA_CPTEN1
+        //TCC_CTRLA_CPTEN2
+        //TCC_CTRLA_CPTEN3
+    ; 
+    while (TCC1->SYNCBUSY.bit.ENABLE);
+
+    TCC1->WAVE.reg =
+        TCC_WAVE_WAVEGEN(TCC_WAVE_WAVEGEN_MFRQ_Val)
+    ; 
+    while (TCC1->SYNCBUSY.bit.WAVE);
+
+    TCC2->INTENSET.bit.OVF = 1;
+    TCC2->CTRLA.reg =
+        TCC_CTRLA_ENABLE
+        |TCC_CTRLA_RESOLUTION(TCC_CTRLA_RESOLUTION_NONE_Val)
+        |TCC_CTRLA_PRESCALER(TCC_CTRLA_PRESCALER_DIV1_Val)
+        |TCC_CTRLA_RUNSTDBY
+        |TCC_CTRLA_PRESCSYNC(TCC_CTRLA_PRESCSYNC_GCLK_Val)
+        //|TCC_CTRLA_ALOCK
+        //TCC_CTRLA_CPTEN0
+        //TCC_CTRLA_CPTEN1
+        //TCC_CTRLA_CPTEN2
+        //TCC_CTRLA_CPTEN3
+    ; 
+    while (TCC2->SYNCBUSY.bit.ENABLE);
+
+    TCC2->WAVE.reg =
+        TCC_WAVE_WAVEGEN(TCC_WAVE_WAVEGEN_MFRQ_Val)
+    ; 
+    while (TCC2->SYNCBUSY.bit.WAVE);
+
+
     TC3->COUNT16.INTENSET.bit.OVF = 1;
     TC3->COUNT16.CTRLA.reg =
         TC_CTRLA_ENABLE
@@ -54,8 +127,29 @@ void samr21TimerInit(){
     ; 
     while (TC5->COUNT16.STATUS.bit.SYNCBUSY);
 
+    //Configure TC/TCC Module Mode 
 
-    //Configure TC Module Mode 
+    TCC0->CTRLBSET.reg =
+        TCC_CTRLBSET_CMD_NONE
+        |TCC_CTRLBSET_DIR
+        |TCC_CTRLBSET_ONESHOT
+    ; 
+    while (TCC0->SYNCBUSY.bit.CTRLB);
+
+    TCC1->CTRLBSET.reg =
+        TCC_CTRLBSET_CMD_NONE
+        |TCC_CTRLBSET_DIR
+        |TCC_CTRLBSET_ONESHOT
+    ; 
+    while (TCC1->SYNCBUSY.bit.CTRLB);
+
+    TCC2->CTRLBSET.reg =
+        TCC_CTRLBSET_CMD_NONE
+        |TCC_CTRLBSET_DIR
+        |TCC_CTRLBSET_ONESHOT
+    ; 
+    while (TCC2->SYNCBUSY.bit.CTRLB);
+
     TC3->COUNT16.CTRLBSET.reg =
         TC_CTRLBSET_CMD_NONE
         |TC_CTRLBSET_DIR
@@ -77,14 +171,25 @@ void samr21TimerInit(){
     ;
     while (TC5->COUNT16.STATUS.bit.SYNCBUSY); 
 
-
     //clear pending interrupt in TC Module
+    TCC0->INTFLAG.bit.OVF = 1;
+    TCC1->INTFLAG.bit.OVF = 1;
+    TCC2->INTFLAG.bit.OVF = 1;
+
     TC3->COUNT16.INTFLAG.bit.OVF = 1;
     TC4->COUNT16.INTFLAG.bit.OVF = 1;
     TC5->COUNT16.INTFLAG.bit.OVF = 1;
     //enable interrupt in NVIC
 
+
+#ifdef __TESTBUILD__
+    NVIC_EnableIRQ(TCC0_IRQn);
+    NVIC_EnableIRQ(TCC1_IRQn);
+#endif
+
+//Used by Openthread Alarm
 #ifndef __TESTBUILD__
+    NVIC_EnableIRQ(TCC2_IRQn);
     NVIC_EnableIRQ(TC3_IRQn);
 #endif
 
@@ -92,8 +197,58 @@ void samr21TimerInit(){
     NVIC_EnableIRQ(TC5_IRQn);
 }
 
+
+void samr21Timer0Set(uint32_t value_us){
+    //while (TCC0->SYNCBUSY.bit.COUNT); 
+    TCC0->COUNT.reg = value_us;
+    
+
+    TCC0->CTRLBSET.reg =
+        TCC_CTRLBSET_CMD_RETRIGGER
+    ;   
+} 
+
+void samr21Timer0Stop(){ 
+    //while (TCC0->SYNCBUSY.bit.COUNT);
+    TCC0->CTRLBSET.reg =
+        TCC_CTRLBSET_CMD_STOP
+    ;
+}  
+
+void samr21Timer1Set(uint16_t value_us){ 
+    //while (TCC1->SYNCBUSY.bit.COUNT);
+    TCC1->COUNT.reg = value_us;
+
+
+    TCC1->CTRLBSET.reg =
+        TCC_CTRLBSET_CMD_RETRIGGER
+    ;   
+} 
+
+void samr21Timer1Stop(){ 
+    //TCC1->CTRLBSET.reg =
+        TCC_CTRLBSET_CMD_STOP
+    ;
+} 
+
+void samr21Timer2Set(uint16_t value_us){
+    //while (TCC2->SYNCBUSY.bit.COUNT); 
+    TCC2->COUNT.reg = value_us;
+    
+
+    TCC2->CTRLBSET.reg =
+        TCC_CTRLBSET_CMD_RETRIGGER
+    ;   
+} 
+
+void samr21Timer2Stop(){ 
+    TCC2->CTRLBSET.reg =
+        TCC_CTRLBSET_CMD_STOP
+    ;
+} 
+
 void samr21Timer3Set(uint16_t value_us){ 
-    while (TC3->COUNT16.STATUS.bit.SYNCBUSY);
+    //while (TC3->COUNT16.STATUS.bit.SYNCBUSY);
 
     TC3->COUNT16.COUNT.reg = value_us;
 
@@ -109,7 +264,7 @@ void samr21Timer3Stop(){
 }  
 
 void samr21Timer4Set(uint16_t value_us){ 
-    while (TC4->COUNT16.STATUS.bit.SYNCBUSY);
+    //while (TC4->COUNT16.STATUS.bit.SYNCBUSY);
 
     TC4->COUNT16.COUNT.reg = value_us;
 
@@ -125,7 +280,7 @@ void samr21Timer4Stop(){
 }  
 
 void samr21Timer5Set(uint16_t value_us){ 
-    while (TC5->COUNT16.STATUS.bit.SYNCBUSY);
+    //while (TC5->COUNT16.STATUS.bit.SYNCBUSY);
 
     TC5->COUNT16.COUNT.reg = value_us;
 
@@ -139,6 +294,27 @@ void samr21Timer5Stop(){
         TC_CTRLBSET_CMD_STOP
     ;
 }
+
+//MOVED TO TODO
+// void TCC0_Handler(){
+//     TCC0->INTFLAG.bit.OVF = 1;
+//     /*CODE*/
+// }
+//MOVED TO TODO
+
+//MOVED TO TODO
+// void TCC1_Handler(){
+//     TCC1->INTFLAG.bit.OVF = 1;
+//     /*CODE*/
+// }
+//MOVED TO TODO
+
+//MOVED TO TODO
+// void TCC2_Handler(){
+//     TCC2->INTFLAG.bit.OVF = 1;
+//     /*CODE*/
+// }
+//MOVED TO TODO
 
 //MOVED TO otPlatAlarm.c
 // void TC3_Handler(){

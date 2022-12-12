@@ -15,6 +15,21 @@
 
 
 void samr21DebugPortsInit(){
+
+        PORT->Group[0].DIRSET.reg= PORT_PA16;
+
+        //Setup Mux Settings
+        PORT->Group[0].WRCONFIG.reg =
+            PORT_WRCONFIG_HWSEL
+            |PORT_WRCONFIG_WRPINCFG
+            |PORT_WRCONFIG_WRPMUX
+            |PORT_WRCONFIG_PMUX(MUX_PA16H_GCLK_IO2)
+            //PORT_WRCONFIG_PULLEN
+            //|PORT_WRCONFIG_INEN
+            |PORT_WRCONFIG_PMUXEN
+            |PORT_WRCONFIG_PINMASK(PORT_PA16 >> 16) //upper Halfword
+        ;
+
         PORT->Group[0].DIRSET.reg= PORT_PA06;
 
         //Setup Mux Settings
@@ -88,12 +103,13 @@ void samr21DebugPortsInit(){
 }
 
 extern AT86RF233_REG_IRQ_STATUS_t     g_trxLastIrq;               //from samr21trx.c
+volatile bool tempLock = false;
 
 int main(int argc, char const *argv[])
 {
     samr21NvmInit();
     samr21PowerManagerInit();
-    samr21ClockInit();
+    samr21ClockTrxSrcInit();
     samr21TrxInterfaceInit();
 
     samr21TrxSetupMClk(0x5); //MCLK 1MHz -> 16 Mhz
@@ -120,13 +136,34 @@ int main(int argc, char const *argv[])
 
 
     // Time to connect to the USB CDC DT
-    for(uint32_t i = 0; i < 0xFFFFF; i++){
+    for(uint32_t i = 0; i < 0xFFFF; i++){
         samr21UsbEchoTask();
     }
 
+    
     while (true)
     {   
-        samr21UsbEchoTask();
+        PORT->Group[0].OUTSET.reg = PORT_PA06;
+
+        samr21Timer0Set(500);
+        tempLock=true;
+        while (tempLock);
+
+        PORT->Group[0].OUTCLR.reg = PORT_PA06;
+        samr21Timer1Set(500);
+        tempLock=true;
+        while (tempLock);
     }
 }
 
+
+
+void TCC0_Handler(){
+    TCC0->INTFLAG.bit.OVF = 1;
+    tempLock=false;
+}
+
+void TCC1_Handler(){
+    TCC1->INTFLAG.bit.OVF = 1;
+    tempLock=false;
+}

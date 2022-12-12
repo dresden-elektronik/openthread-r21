@@ -20,7 +20,10 @@ void samr21PowerManagerInit(){
     
         PM->APBCMASK.reg = 
             PM_APBCMASK_SERCOM4     // Turn on the interface to SERCOM4 
-            |PM_APBCMASK_TC3        // Turn on the interface to  TC4
+            |PM_APBCMASK_TCC0       // Turn on the interface to  TCC0 
+            |PM_APBCMASK_TCC1       // Turn on the interface to  TCC1 
+            |PM_APBCMASK_TCC2       // Turn on the interface to  TCC2 
+            |PM_APBCMASK_TC3        // Turn on the interface to  TC3
             |PM_APBCMASK_TC4        // Turn on the interface to  TC4
             |PM_APBCMASK_TC5        // Turn on the interface to  TC5
         ;

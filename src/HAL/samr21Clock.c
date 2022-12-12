@@ -7,27 +7,6 @@ uint32_t g_currentTrxClkCycle_ns = 1000; //1MHZ, used as external var
 uint32_t g_currentSpiClkCycle_ns = 2000; //500kHZ, used as external var 
 uint32_t g_currentCpuClkCycle_ns = 1000; //1MHZ, used as external var 
 
-void samr21ClockInit(){
-    
-    //TODO REALLY Should be Reset. MCU gets stuck here after Soft Reset
-
-    //Reset the GCLK after handoff from Bootloader
-    // GCLK->CTRL.reg = GCLK_CTRL_SWRST;
-    //     // Wait for WReset to finish
-    //     while (GCLK->STATUS.bit.SYNCBUSY);
-    //     while (GCLK->CTRL.bit.SWRST);
-
-    //Setup GENCLK1 to source MCLK from TRX
-    //Feed MCLK to SPI (for synchronous Transfer at 8MHz (16MHz / 2))
-    //Feed MCLK to RTC (16MHz)
-    samr21ClockTrxSrcInit();
-
-#ifdef _DEBUG
-    //Setup Pin PA16 & PA17 to output CLK auf TRX and DFLL
-    samr21ClockDebugOutputs();
-#endif
-}
-
 
 //Setup GCLKGEN 1 to be sourced form At86rf233 MCLK
 //Setup SERCOM4 (SPI <-> At86rf233) to use GCLKGEN 1 (MCLK) to enable synchronous Transfers
@@ -96,8 +75,8 @@ void samr21ClockTrxSrcInit(){
 
         //Setup GENDIV
         GCLK->GENDIV.reg = 
-            GCLK_GENDIV_ID(4)
-            |GCLK_GENDIV_DIV(0x16) //Use GCLKGEN 4 for RTC/Timer (16MHz -> 1Mhz (1us))
+            GCLK_GENDIV_ID(2)
+            |GCLK_GENDIV_DIV(16) //Use GCLKGEN 4 for RTC/Timer (16MHz -> 1Mhz (1us))
         ;
 
         //Wait for synchronization 
@@ -105,7 +84,7 @@ void samr21ClockTrxSrcInit(){
 
         //Setup GENCTRL
         GCLK->GENCTRL.reg = 
-            GCLK_GENCTRL_ID(4) // GCLKGEN4
+            GCLK_GENCTRL_ID(2) // GCLKGEN4
             |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_GCLKGEN1_Val)
             |GCLK_GENCTRL_RUNSTDBY
             //|GCLK_GENCTRL_DIVSEL
@@ -121,27 +100,37 @@ void samr21ClockTrxSrcInit(){
         GCLK->CLKCTRL.reg =
             //GCLK_CLKCTRL_WRTLOCK
             GCLK_CLKCTRL_CLKEN
-            |GCLK_CLKCTRL_GEN(4) // GCLKGEN1
+            |GCLK_CLKCTRL_GEN(2) // GCLKGEN2
             |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_RTC_Val)
         ;
         //Wait for synchronization 
         while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
 
-        //Use GCLKGEN 4 (1MHz) for TC3 (And TCC2, but unused)
+        //Use GCLKGEN 4 (1MHz) for TCC0 / TCC1
         GCLK->CLKCTRL.reg =
             //GCLK_CLKCTRL_WRTLOCK
             GCLK_CLKCTRL_CLKEN
-            |GCLK_CLKCTRL_GEN(4) // GCLKGEN1
+            |GCLK_CLKCTRL_GEN(2) // GCLKGEN1
+            |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TCC0_TCC1_Val)
+        ;
+        //Wait for synchronization 
+        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+
+        //Use GCLKGEN 4 (1MHz) for TCC2 / TC3 
+        GCLK->CLKCTRL.reg =
+            //GCLK_CLKCTRL_WRTLOCK
+            GCLK_CLKCTRL_CLKEN
+            |GCLK_CLKCTRL_GEN(2) // GCLKGEN1
             |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TCC2_TC3_Val)
         ;
         //Wait for synchronization 
         while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
 
-        //Use GCLKGEN 4 (1MHz) for TC 3/5
+        //Use GCLKGEN 4 (1MHz) for TC4 / TC5
         GCLK->CLKCTRL.reg =
             //GCLK_CLKCTRL_WRTLOCK
             GCLK_CLKCTRL_CLKEN
-            |GCLK_CLKCTRL_GEN(4) // GCLKGEN1
+            |GCLK_CLKCTRL_GEN(2) // GCLKGEN1
             |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TC4_TC5_Val)
         ;
         //Wait for synchronization 
@@ -262,66 +251,3 @@ void samr21ClockInitAfterTrxSetup(){
         //Wait for synchronization 
         while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );  
 }
-
-#ifdef _DEBUG
-void samr21ClockDebugOutputs(){
-    //Setup PIN PA17 as Clockoutput of MCLK from At86rf233 via GCLKGEN3
-        //Make Output
-        PORT->Group[0].DIRSET.reg= PORT_PA17;
-
-        //Setup Mux Settings
-        PORT->Group[0].WRCONFIG.reg =
-            PORT_WRCONFIG_HWSEL
-            |PORT_WRCONFIG_WRPINCFG
-            |PORT_WRCONFIG_WRPMUX
-            |PORT_WRCONFIG_PMUX(MUX_PA17H_GCLK_IO3)
-            //|PORT_WRCONFIG_INEN
-            //|PORT_WRCONFIG_PULLEN
-            |PORT_WRCONFIG_PMUXEN
-            |PORT_WRCONFIG_PINMASK(PORT_PA17 >> 16) //upper Halfword
-        ;
-
-    // //Setup PIN PA16 as Clockoutput of DFLL48M via GCLKGEN2
-    //     //Make Output
-    //     PORT->Group[0].DIRSET.reg= PORT_PA16;
-
-    //     //Setup Mux Settings
-    //     PORT->Group[0].WRCONFIG.reg =
-    //         PORT_WRCONFIG_HWSEL
-    //         |PORT_WRCONFIG_WRPINCFG
-    //         |PORT_WRCONFIG_WRPMUX
-    //         |PORT_WRCONFIG_PMUX(MUX_PA16H_GCLK_IO2)
-    //         //|PORT_WRCONFIG_INEN
-    //         //|PORT_WRCONFIG_PULLEN
-    //         |PORT_WRCONFIG_PMUXEN
-    //         |PORT_WRCONFIG_PINMASK(PORT_PA16 >> 16) //upper Halfword
-    //     ;
-
-    //     //Wait for synchronization 
-    //     while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
-
-    // //Setup GCLKGEN 2 as Output of DFLL48M     
-    //     //Setup GCLK DIV first
-    //     GCLK->GENDIV.reg = 
-    //         GCLK_GENDIV_ID(2) // GCLKGEN2
-    //         |GCLK_GENDIV_DIV(0)
-    //     ;
-
-    //     //Wait for synchronization 
-    //     while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
-
-    //     //Setup GCLK CTRL after
-    //     GCLK->GENCTRL.reg = 
-    //         GCLK_GENCTRL_ID(2) // GCLKGEN2
-    //         |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_DFLL48M_Val)
-    //         |GCLK_GENCTRL_RUNSTDBY
-    //         //|GCLK_GENCTRL_DIVSEL
-    //         |GCLK_GENCTRL_OE
-    //         |GCLK_GENCTRL_OOV
-    //         |GCLK_GENCTRL_GENEN
-    //     ;
-
-    //     //Wait for synchronization 
-    //     while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
-}
-#endif
