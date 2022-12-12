@@ -199,7 +199,7 @@ third_party:
 	cd ../third_party && make
 
 samr21HAL:
-	cd ../src && make DEFINES="-D__SAMR21E18A__ -D__TESTBUILD__"
+	cd ../src && make DEFINES="-D__SAMR21E18A__ -D__TESTBUILD__ -D_DEBUG"
 	 	
 $(OUT_DIR):
 	$(MKDIR) -p $@

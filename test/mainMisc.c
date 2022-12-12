@@ -144,10 +144,10 @@ int main(int argc, char const *argv[])
     while (true)
     {   
         PORT->Group[0].OUTSET.reg = PORT_PA06;
-
-        samr21Timer0Set(500);
+        samr21Timer0Set(1500);
         tempLock=true;
         while (tempLock);
+
 
         PORT->Group[0].OUTCLR.reg = PORT_PA06;
         samr21Timer1Set(500);

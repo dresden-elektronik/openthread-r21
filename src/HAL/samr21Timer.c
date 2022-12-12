@@ -199,26 +199,25 @@ void samr21TimerInit(){
 
 
 void samr21Timer0Set(uint32_t value_us){
-    //while (TCC0->SYNCBUSY.bit.COUNT); 
+    while (TCC0->SYNCBUSY.reg); 
     TCC0->COUNT.reg = value_us;
     
-
     TCC0->CTRLBSET.reg =
         TCC_CTRLBSET_CMD_RETRIGGER
     ;   
 } 
 
 void samr21Timer0Stop(){ 
-    //while (TCC0->SYNCBUSY.bit.COUNT);
+    while (TCC0->SYNCBUSY.reg);
+
     TCC0->CTRLBSET.reg =
         TCC_CTRLBSET_CMD_STOP
     ;
 }  
 
 void samr21Timer1Set(uint16_t value_us){ 
-    //while (TCC1->SYNCBUSY.bit.COUNT);
+   while (TCC1->SYNCBUSY.reg); 
     TCC1->COUNT.reg = value_us;
-
 
     TCC1->CTRLBSET.reg =
         TCC_CTRLBSET_CMD_RETRIGGER
@@ -226,29 +225,33 @@ void samr21Timer1Set(uint16_t value_us){
 } 
 
 void samr21Timer1Stop(){ 
-    //TCC1->CTRLBSET.reg =
+    while (TCC1->SYNCBUSY.reg);
+
+    TCC1->CTRLBSET.reg =
         TCC_CTRLBSET_CMD_STOP
     ;
 } 
 
 void samr21Timer2Set(uint16_t value_us){
-    //while (TCC2->SYNCBUSY.bit.COUNT); 
+    while (TCC0->SYNCBUSY.reg); 
+
     TCC2->COUNT.reg = value_us;
     
-
     TCC2->CTRLBSET.reg =
         TCC_CTRLBSET_CMD_RETRIGGER
     ;   
 } 
 
 void samr21Timer2Stop(){ 
+    while (TCC2->SYNCBUSY.reg); 
+
     TCC2->CTRLBSET.reg =
         TCC_CTRLBSET_CMD_STOP
     ;
 } 
 
 void samr21Timer3Set(uint16_t value_us){ 
-    //while (TC3->COUNT16.STATUS.bit.SYNCBUSY);
+    while (TC3->COUNT16.STATUS.bit.SYNCBUSY);
 
     TC3->COUNT16.COUNT.reg = value_us;
 
@@ -258,13 +261,15 @@ void samr21Timer3Set(uint16_t value_us){
 }   
 
 void samr21Timer3Stop(){ 
+    while (TC3->COUNT16.STATUS.bit.SYNCBUSY);
+
     TC3->COUNT16.CTRLBSET.reg =
         TC_CTRLBSET_CMD_STOP
     ;
 }  
 
 void samr21Timer4Set(uint16_t value_us){ 
-    //while (TC4->COUNT16.STATUS.bit.SYNCBUSY);
+    while (TC4->COUNT16.STATUS.bit.SYNCBUSY);
 
     TC4->COUNT16.COUNT.reg = value_us;
 
@@ -274,13 +279,15 @@ void samr21Timer4Set(uint16_t value_us){
 }   
 
 void samr21Timer4Stop(){ 
+    while (TC4->COUNT16.STATUS.bit.SYNCBUSY);
+
     TC4->COUNT16.CTRLBSET.reg =
         TC_CTRLBSET_CMD_STOP
     ;
 }  
 
 void samr21Timer5Set(uint16_t value_us){ 
-    //while (TC5->COUNT16.STATUS.bit.SYNCBUSY);
+    while (TC5->COUNT16.STATUS.bit.SYNCBUSY);
 
     TC5->COUNT16.COUNT.reg = value_us;
 
@@ -290,6 +297,8 @@ void samr21Timer5Set(uint16_t value_us){
 }   
 
 void samr21Timer5Stop(){ 
+    while (TC5->COUNT16.STATUS.bit.SYNCBUSY);
+    
     TC5->COUNT16.CTRLBSET.reg =
         TC_CTRLBSET_CMD_STOP
     ;
