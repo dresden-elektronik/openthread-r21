@@ -46,7 +46,9 @@ void samr21ClockTrxSrcInit(){
             |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_GCLKIN_Val)
             |GCLK_GENCTRL_RUNSTDBY
             //|GCLK_GENCTRL_DIVSEL
-            //|GCLK_GENCTRL_OE
+#ifdef _DEBUG
+            |GCLK_GENCTRL_OE
+#endif
             //|GCLK_GENCTRL_OOV
             |GCLK_GENCTRL_GENEN
         ;
@@ -88,7 +90,9 @@ void samr21ClockTrxSrcInit(){
             |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_GCLKGEN1_Val)
             |GCLK_GENCTRL_RUNSTDBY
             //|GCLK_GENCTRL_DIVSEL
+#ifdef _DEBUG
             |GCLK_GENCTRL_OE
+#endif
             //|GCLK_GENCTRL_OOV
             |GCLK_GENCTRL_GENEN
         ;
@@ -222,7 +226,9 @@ void samr21ClockInitAfterTrxSetup(){
             |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_DFLL48M_Val)
             |GCLK_GENCTRL_RUNSTDBY
             //|GCLK_GENCTRL_DIVSEL
-            //|GCLK_GENCTRL_OE
+#ifdef _DEBUG
+            |GCLK_GENCTRL_OE
+#endif
             //|GCLK_GENCTRL_OOV
             |GCLK_GENCTRL_GENEN
         ;
