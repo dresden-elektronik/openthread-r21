@@ -73,6 +73,7 @@ samr21HAL:\
 	$(HAL_OUT_DIR)/samr21Trx.o \
 	$(HAL_OUT_DIR)/samr21Nvm.o \
 	$(HAL_OUT_DIR)/samr21Usb.o \
+	$(HAL_OUT_DIR)/samr21Aes.o \
 	$(HAL_OUT_DIR)/samr21Clock.o 
 
 otPlatHAL:\
@@ -133,6 +134,11 @@ $(HAL_OUT_DIR)/samr21Usb.o:\
 	
 $(HAL_OUT_DIR)/samr21Clock.o:\
 	$(HAL_DIR)/samr21Clock.c 
+
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(HAL_OUT_DIR)/samr21Aes.o:\
+	$(HAL_DIR)/samr21Aes.c 
 
 	$(CC) $(CFLAGS) -o $@ $^
 

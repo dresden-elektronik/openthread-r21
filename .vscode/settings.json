@@ -16,6 +16,10 @@
         "802_15_4_helper.h": "c",
         "uart.h": "c",
         "samr21.h": "c",
-        "at86rf233.h": "c"
+        "at86rf233.h": "c",
+        "stdbool.h": "c",
+        "samr21aes.h": "c",
+        "samr21radiofsm.h": "c",
+        "stddef.h": "c"
     }
 }

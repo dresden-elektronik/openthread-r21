@@ -3,22 +3,19 @@
 #ifndef _SAMR21_AES_H_
 #define _SAMR21_AES_H_
 
-#define SIZE_AES_KEY_BIT    128
-#define SIZE_AES_KEY_BYTE   16
-
-#define SIZE_AES_TEXT_BIT    128
-#define SIZE_AES_TEXT_BYTE   16
+#define AES_ECB_ENCRYPTION_CMD  0x00
+#define AES_START_CMD           0x00
 
 #include "samr21.h"
 #include "samr21NopDelay.h"
+#include "samr21Trx.h"
 
 #include "at86rf233_Bitfield.h"
 #include "at86rf233.h"
 
+#include <stddef.h>
+
 void samr21AesKeySetup(uint8_t* key);
-
-void samr21AesEncrypt(uint8_t* data, uint8_t lenght);
-
-void samr21AesDecrypt(uint8_t* data, uint8_t lenght);
+void samr21AesEcbEncrypt(uint8_t* inDataBlock, uint8_t* outDataBlock, bool readOnly);
 
 #endif //_SAMR21_AES_H_

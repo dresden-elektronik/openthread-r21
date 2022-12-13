@@ -159,5 +159,30 @@ typedef union {
     //PLL_DCU_t
     //.....
 
+#define AT86RF233_AES_MODE
+typedef enum AT86RF233AesMode{
+    AT86RF233_AES_MODE_ECB     = 0x00,
+    AT86RF233_AES_MODE_KEY     = 0x01,
+    AT86RF233_AES_MODE_CBC     = 0x02
+}AT86RF233AesMode;
+
+typedef union {
+    struct{
+        uint8_t  reserved:3;
+        uint8_t  dir:1;
+        uint8_t  mode:3;
+        uint8_t  request:3;
+    }bit;
+    uint8_t reg;
+}AT86RF233_SRAM_REG_AES_CTRL_t;
+
+typedef union {
+    struct{
+        uint8_t  done:1;
+        uint8_t  reserved:6;
+        uint8_t  error:1;
+    }bit;
+    uint8_t reg;
+}AT86RF233_SRAM_REG_AES_STATUS_t;
 
 #endif //_AT86RF233_BITFIELD_H_

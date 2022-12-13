@@ -11,6 +11,7 @@
 #include "samr21Timer.h"
 #include "samr21Nvm.h"
 #include "samr21Usb.h"
+#include "samr21Aes.h"
 
 
 
@@ -140,14 +141,29 @@ int main(int argc, char const *argv[])
         samr21UsbEchoTask();
     }
 
+    uint8_t key[AES_BLOCK_SIZE] = {
+        0x5a, 0x69, 0x67, 0x42, 0x65, 0x65, 0x41, 0x6c, 0x6c, 0x69, 0x61, 0x6e, 0x63, 0x65, 0x30, 0x39
+    };
+
+    uint8_t input[AES_BLOCK_SIZE] = {
+        0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA
+    };
+
+    uint8_t output[AES_BLOCK_SIZE] = {0};
     
+    samr21AesKeySetup(key);
+
     while (true)
-    {   
+    {  
+        samr21AesEcbEncrypt(input, NULL, false);
         PORT->Group[0].OUTSET.reg = PORT_PA06;
         samr21Timer0Set(1500);
         tempLock=true;
         while (tempLock);
-
+        samr21AesEcbEncrypt(NULL, output, true);
 
         PORT->Group[0].OUTCLR.reg = PORT_PA06;
         samr21Timer1Set(500);

@@ -1,15 +1,10 @@
 //Author Eric Härtel @ dresden elektronik ingenieurtechnik gmbh © 2022
-#include "samr21.h"
-#include "samr21Radio.h"
-#include <stdbool.h>
-
 #ifndef _SAMR21_RADIO_FSM_H_
 #define _SAMR21_RADIO_FSM_H_
 
-#ifndef NULL
-	#define NULL 0
-#endif
-
+#include "samr21.h"
+#include <stdbool.h>
+#include <stddef.h>
 
 typedef enum RadioJobState{
     RADIO_JOB_STATE_IDLE                          = 0x00,
@@ -54,6 +49,8 @@ typedef enum RadioJobState{
     RADIO_JOB_STATE_ED_FAILED                     = 0xFB,
     MARKER_RADIO_JOB_STATES_END_OTHER_DONE        = 0xFF,
 } RadioJobState;
+
+#include "samr21Radio.h"
 
 typedef enum RadioEvent{
     RADIO_EVENT_NONE                          = 0x00,
