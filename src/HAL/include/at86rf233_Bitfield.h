@@ -171,7 +171,7 @@ typedef union {
         uint8_t  reserved:3;
         uint8_t  dir:1;
         uint8_t  mode:3;
-        uint8_t  request:3;
+        uint8_t  request:1;
     }bit;
     uint8_t reg;
 }AT86RF233_SRAM_REG_AES_CTRL_t;
