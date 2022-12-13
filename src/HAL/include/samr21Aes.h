@@ -17,5 +17,6 @@
 
 void samr21AesKeySetup(uint8_t* key);
 void samr21AesEcbEncrypt(uint8_t* inDataBlock, uint8_t* outDataBlock, bool readOnly);
+void samr21AesEcbEncryptBlocking(uint8_t* dataBlock);
 
 #endif //_SAMR21_AES_H_

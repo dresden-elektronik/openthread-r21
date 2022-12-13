@@ -211,3 +211,10 @@ int main(int argc, char const *argv[])
     }
 }
 
+void TCC0_Handler(){
+    TCC0->INTFLAG.bit.OVF = 1;
+}
+
+void TCC1_Handler(){
+    TCC1->INTFLAG.bit.OVF = 1;
+}

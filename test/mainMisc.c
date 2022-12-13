@@ -158,14 +158,17 @@ int main(int argc, char const *argv[])
 
     while (true)
     {  
-        samr21AesEcbEncrypt(input, NULL, false);
-        PORT->Group[0].OUTSET.reg = PORT_PA06;
         samr21Timer0Set(1500);
         tempLock=true;
         while (tempLock);
-        samr21AesEcbEncrypt(NULL, output, true);
 
-        PORT->Group[0].OUTCLR.reg = PORT_PA06;
+        uint8_t inout[AES_BLOCK_SIZE];
+        memcpy(inout, input, AES_BLOCK_SIZE);
+
+        PORT->Group[0].OUTSET.reg = PORT_PA06;
+        samr21AesEcbEncryptBlocking(inout);
+        PORT->Group[0].OUTCLR.reg = PORT_PA06;  
+        
         samr21Timer1Set(500);
         tempLock=true;
         while (tempLock);

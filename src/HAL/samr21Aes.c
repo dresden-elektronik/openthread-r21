@@ -38,7 +38,6 @@ void samr21AesKeySetup(uint8_t* key){
 }
 
 void samr21AesEcbEncrypt(uint8_t* inDataBlock, uint8_t* outDataBlock, bool readOnly){
-
     __disable_irq();
     samr21TrxSetSSel(true);
     samr21delayLoop(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
@@ -62,7 +61,7 @@ void samr21AesEcbEncrypt(uint8_t* inDataBlock, uint8_t* outDataBlock, bool readO
     for (uint8_t i = 0; i < AES_BLOCK_SIZE; i++)
     {
         //Send New Plaintext and Retrive last Ciphertext
-        samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES_FAST_ACCESS);
+        //samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES_FAST_ACCESS);
         if(outDataBlock){
             if(i != 0){
                 outDataBlock[i-1] = samr21TrxSpiTransceiveByteRaw( inDataBlock == NULL ? 0x00 : inDataBlock[i] );
@@ -85,10 +84,17 @@ void samr21AesEcbEncrypt(uint8_t* inDataBlock, uint8_t* outDataBlock, bool readO
         samr21TrxSpiTransceiveByteRaw( aesCtrl.reg );
     }
         
-
     samr21delayLoop(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
     samr21TrxSetSSel(false);
 
     __enable_irq();
 }
 
+void samr21AesEcbEncryptBlocking(uint8_t* dataBlock){
+
+    samr21AesEcbEncrypt(dataBlock, NULL, false);
+
+    samr21delaySysTick(350); // AES ECB takes 21 us
+
+    samr21AesEcbEncrypt(NULL, dataBlock, true);
+}
