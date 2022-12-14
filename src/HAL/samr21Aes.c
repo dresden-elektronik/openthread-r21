@@ -94,7 +94,7 @@ void samr21AesEcbEncryptBlocking(uint8_t* dataBlock){
 
     samr21AesEcbEncrypt(dataBlock, NULL, false);
 
-    samr21delaySysTick(350); // AES ECB takes 21 us
+    samr21delaySysTick(370); // AES ECB takes 21 us
 
     samr21AesEcbEncrypt(NULL, dataBlock, true);
 }
