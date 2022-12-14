@@ -9,19 +9,19 @@ void samr21AesKeySetup(uint8_t* key){
     __disable_irq();
     samr21TrxSetSSel(true);
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
+    samr21delaySysTick(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
 #endif
 
     //Send Read SRAM Command and get Status Byte (see r2 datasheet 35.4 Radio Transceiver Status Information)
     g_trxStatus.reg = samr21TrxSpiTransceiveByteRaw( AT86RF233_CMD_SRAM_WRITE );
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+    samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
 #endif
     samr21TrxSpiTransceiveByteRaw( AES_CTRL_REG );
 
     //Send KEY-MODE Command
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+    samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
 #endif
 
     AT86RF233_SRAM_REG_AES_CTRL_t temp_aesCtrl = {
@@ -35,13 +35,13 @@ void samr21AesKeySetup(uint8_t* key){
     for (uint8_t i = 0; i < AES_BLOCK_SIZE; i++)
     {
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-        samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+        samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
 #endif
         samr21TrxSpiTransceiveByteRaw( key[i] );
     }
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-        samr21delayLoop(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+        samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
 #endif
     samr21TrxSetSSel(false);
 
@@ -52,7 +52,7 @@ void samr21AesEcbEncrypt(uint8_t* inDataBlock, uint8_t* outDataBlock, bool readO
     __disable_irq();
     samr21TrxSetSSel(true);
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
+    samr21delaySysTick(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
 #endif
 
     //Send Read SRAM Command and get Status Byte (see r2 datasheet 35.4 Radio Transceiver Status Information)
@@ -60,13 +60,13 @@ void samr21AesEcbEncrypt(uint8_t* inDataBlock, uint8_t* outDataBlock, bool readO
      
     //Send Addr
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+    samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
 #endif
     samr21TrxSpiTransceiveByteRaw( AES_CTRL_REG );
 
     //Send ECB encription Command
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+    samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
 #endif
     AT86RF233_SRAM_REG_AES_CTRL_t aesCtrl = {
         .bit.dir = 0,
@@ -79,7 +79,7 @@ void samr21AesEcbEncrypt(uint8_t* inDataBlock, uint8_t* outDataBlock, bool readO
     {
         //Send New Plaintext and Retrive last Ciphertext
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-        samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES_FAST_ACCESS);
+        samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES_FAST_ACCESS);
 #endif
         if(outDataBlock){
             if(i != 0){
@@ -97,7 +97,7 @@ void samr21AesEcbEncrypt(uint8_t* inDataBlock, uint8_t* outDataBlock, bool readO
     aesCtrl.bit.request = !readOnly;
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+    samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
 #endif
     if(outDataBlock){
         outDataBlock[AES_BLOCK_SIZE-1] = samr21TrxSpiTransceiveByteRaw( aesCtrl.reg );
@@ -106,7 +106,7 @@ void samr21AesEcbEncrypt(uint8_t* inDataBlock, uint8_t* outDataBlock, bool readO
     }
         
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+    samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
 #endif
     samr21TrxSetSSel(false);
 

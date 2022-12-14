@@ -182,7 +182,7 @@ void samr21TrxSetupMClk(uint8_t clk){
     samr21TrxWriteRegister(TRX_CTRL_0_REG, g_trxCtrl0.reg);
 
     //Wait a bit for the  the Freq.-change to take place
-    samr21delayLoop(50);  
+    samr21delaySysTick(50);  
 }
 
 uint8_t samr21TrxReadRegister(uint8_t addr){
@@ -191,7 +191,7 @@ uint8_t samr21TrxReadRegister(uint8_t addr){
     //Enable Slave Select
     samr21TrxSetSSel(true);
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
+    samr21delaySysTick(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
 #endif
 
     //Buffer for return Value
@@ -200,7 +200,7 @@ uint8_t samr21TrxReadRegister(uint8_t addr){
     //Send Addr and get Status Byte (see r2 datasheet 35.4 Radio Transceiver Status Information)
     g_trxStatus.reg = samr21TrxSpiTransceiveByteRaw( (addr & 0x3F) | AT86RF233_CMD_REG_READ_MASK );
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+    samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
 #endif
 
     //Send Dummy Data
@@ -208,7 +208,7 @@ uint8_t samr21TrxReadRegister(uint8_t addr){
 
     //Disable Slave Select
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+    samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
 #endif
     samr21TrxSetSSel(false);
 
@@ -221,7 +221,7 @@ void samr21TrxWriteRegister(uint8_t addr, uint8_t data){
     //Enable Slave Select
     samr21TrxSetSSel(true);
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
+    samr21delaySysTick(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
 #endif
       
     //Send Addr and get Status Byte (see r2 datasheet 35.4 Radio Transceiver Status Information)
@@ -229,13 +229,13 @@ void samr21TrxWriteRegister(uint8_t addr, uint8_t data){
 
     //Send  Data
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+    samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
 #endif
     samr21TrxSpiTransceiveByteRaw(data);
 
     //Disable Slave Select
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+    samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
 #endif
     samr21TrxSetSSel(false);
     __enable_irq();
@@ -247,27 +247,27 @@ void samr21TrxReadFromSRam(uint8_t addr, uint8_t* readBuffer, uint8_t lenght){
     //Enable Slave Select
     samr21TrxSetSSel(true);
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
+    samr21delaySysTick(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
 #endif
     
     //Send Read SRAM Command and get Status Byte (see r2 datasheet 35.4 Radio Transceiver Status Information)
     g_trxStatus.reg = samr21TrxSpiTransceiveByteRaw( AT86RF233_CMD_SRAM_READ );
 
     //Send Address
-    //samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES_FAST_ACCESS);
+    //samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES_FAST_ACCESS);
     samr21TrxSpiTransceiveByteRaw( addr );
 
     //Download data
     for (uint8_t i = 0; i < lenght ; i++)
     {
         //wait a sec
-        //samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES_FAST_ACCESS);
+        //samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES_FAST_ACCESS);
         readBuffer[i] = samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE); 
     }
 
     //Disable Slave Select
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+    samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
 #endif
     samr21TrxSetSSel(false);
     __enable_irq();
@@ -279,7 +279,7 @@ void samr21TrxWriteToSRam(uint8_t addr, uint8_t* writeBuffer, uint8_t lenght){
     //Enable Slave Select
     samr21TrxSetSSel(true);
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-        samr21delayLoop(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
+        samr21delaySysTick(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
 #endif
 
     
@@ -288,7 +288,7 @@ void samr21TrxWriteToSRam(uint8_t addr, uint8_t* writeBuffer, uint8_t lenght){
 
     //Send Address
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES_FAST_ACCESS);
+    samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES_FAST_ACCESS);
 #endif
     samr21TrxSpiTransceiveByteRaw( addr );
 
@@ -296,7 +296,7 @@ void samr21TrxWriteToSRam(uint8_t addr, uint8_t* writeBuffer, uint8_t lenght){
     for (uint8_t i = 0; i < lenght ; i++)
     {
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-        samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES_FAST_ACCESS);
+        samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES_FAST_ACCESS);
 #endif
         samr21TrxSpiTransceiveByteRaw(writeBuffer[i]);
     }
@@ -304,7 +304,7 @@ void samr21TrxWriteToSRam(uint8_t addr, uint8_t* writeBuffer, uint8_t lenght){
 
     //Disable Slave Select
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+    samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
 #endif
     samr21TrxSetSSel(false);
     __enable_irq();
@@ -315,7 +315,7 @@ void samr21TrxUpdateStatus(){
     //Enable Slave Select
     samr21TrxSetSSel(true);
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
+    samr21delaySysTick(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
 #endif   
     
     //Send Dummy Data to get Status Byte (see r2 datasheet 35.4 Radio Transceiver Status Information)
@@ -323,7 +323,7 @@ void samr21TrxUpdateStatus(){
 
     //Disable Slave Select
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+    samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
 #endif
     samr21TrxSetSSel(false);
     __enable_irq();

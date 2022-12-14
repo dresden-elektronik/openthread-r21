@@ -621,7 +621,7 @@ void fsm_func_samr21RadioSendTXPayload()
 
     samr21TrxSetSSel(true);
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
+    samr21delaySysTick(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
 #endif
 
     // Transmission should have started here allrdy so trigger can be disabled
@@ -641,14 +641,14 @@ void fsm_func_samr21RadioSendTXPayload()
     for (int16_t i = 0; i <= (sf_ringBufferGetCurrent()->outboundFrame.header.lenght - IEEE_802_15_4_CRC_SIZE); i++)
     {
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-        samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+        samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
 #endif    
         samr21TrxSpiTransceiveByteRaw(sf_ringBufferGetCurrent()->outboundFrame.raw[i]);
     }
 
     // Disable Slave Select
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+    samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
 #endif
     samr21TrxSetSSel(false);
     __enable_irq();
@@ -752,14 +752,14 @@ void fsm_func_samr21RadioEvalAck()
 
     // Enable SPI Slave Select
     samr21TrxSetSSel(true);
-    samr21delayLoop(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
+    samr21delaySysTick(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
 
     // Send Read Frame Buffer Command and get Status Byte (see r21 datasheet 35.4 Radio Transceiver Status Information)
     g_trxStatus.reg = samr21TrxSpiTransceiveByteRaw(AT86RF233_CMD_FRAMEBUFFER_READ);
 
     // First Byte is the msg Lenght
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+    samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
 #endif
     buffer->inboundFrame.header.lenght = samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
 
@@ -773,19 +773,19 @@ void fsm_func_samr21RadioEvalAck()
     for (uint8_t i = 1; i <= (buffer->inboundFrame.header.lenght); i++)
     {
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-        samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+        samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
 #endif
         sf_ringBufferGetCurrent()->inboundFrame.raw[i] = samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
     }
 
     // 3 Byte after the msg Frame are LQI,RSSI and CRC Informations (see r21 datasheet 35.3.2 Frame Buffer Access Mode)
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+    samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
 #endif
     buffer->rxLQI = samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+    samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
 #endif
     buffer->rxRSSI = AT86RF233_RSSI_BASE_VAL + samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
 
@@ -793,7 +793,7 @@ void fsm_func_samr21RadioEvalAck()
 
     // Disable Slave Select
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+    samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
 #endif
 
     samr21TrxSetSSel(false);
@@ -840,7 +840,7 @@ void fsm_func_samr21RadioLiveRxParser()
     // Enable SPI Slave Select
     samr21TrxSetSSel(true);
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
+    samr21delaySysTick(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
 #endif
 
     // Send Read Frame Buffer Command and get Status Byte (see r21 datasheet 35.4 Radio Transceiver Status Information)
@@ -848,7 +848,7 @@ void fsm_func_samr21RadioLiveRxParser()
 
     // First Byte is the msg Lenght
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+    samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
 #endif
     buffer->inboundFrame.header.lenght = samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
     buffer->downloadedSize = 1;
@@ -859,7 +859,7 @@ void fsm_func_samr21RadioLiveRxParser()
         samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_MSG_INVALID);
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-        samr21delayLoop(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+        samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
 #endif
         samr21TrxSetSSel(false);
         __enable_irq();
@@ -872,7 +872,7 @@ void fsm_func_samr21RadioLiveRxParser()
         
         //(see r21 datasheet, 40.7 Frame Buffer Empty Indicator)
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-        samr21delayLoop(CPU_WAIT_CYCLE_FOR_FRAME_BUFFER_EMPTY_FLAG);
+        samr21delaySysTick(CPU_WAIT_CYCLE_FOR_FRAME_BUFFER_EMPTY_FLAG);
 #endif
         for(uint32_t timeout = 0; timeout < 0x005FFF; timeout++){
             if(!(PORT->Group[1].IN.reg & PORT_PB00)){
@@ -922,7 +922,7 @@ void fsm_func_samr21RadioLiveRxParser()
         //(see r21 datasheet, 40.7 Frame Buffer Empty Indicator)
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-        samr21delayLoop(CPU_WAIT_CYCLE_FOR_FRAME_BUFFER_EMPTY_FLAG);
+        samr21delaySysTick(CPU_WAIT_CYCLE_FOR_FRAME_BUFFER_EMPTY_FLAG);
 #endif
         for(uint32_t timeout = 0; timeout < 0x005FFF; timeout++){
             if(!(PORT->Group[1].IN.reg & PORT_PB00)){
@@ -943,7 +943,7 @@ void fsm_func_samr21RadioLiveRxParser()
                 samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_MSG_INVALID);
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-                samr21delayLoop(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+                samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
 #endif
                 samr21TrxSetSSel(false);
                 __enable_irq();
@@ -957,7 +957,7 @@ void fsm_func_samr21RadioLiveRxParser()
             if(((uint8_t*) &s_shortAddr)[i] != buffer->inboundFrame.raw[posDestinationAddr + i]){ //Little Endian Order
                 samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_MSG_INVALID);
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-                samr21delayLoop(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+                samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
 #endif
                 samr21TrxSetSSel(false);
                 __enable_irq();
@@ -974,7 +974,7 @@ void fsm_func_samr21RadioLiveRxParser()
                 samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_MSG_INVALID);
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-                samr21delayLoop(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+                samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
 #endif
                 samr21TrxSetSSel(false);
                 __enable_irq();
@@ -1022,7 +1022,7 @@ void fsm_func_samr21RadioLiveRxParser()
     while (buffer->downloadedSize <= buffer->inboundFrame.header.lenght)
     {
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-        samr21delayLoop(CPU_WAIT_CYCLE_FOR_FRAME_BUFFER_EMPTY_FLAG);
+        samr21delaySysTick(CPU_WAIT_CYCLE_FOR_FRAME_BUFFER_EMPTY_FLAG);
 #endif
         //(see r21 datasheet, 40.7 Frame Buffer Empty Indicator)
         for(uint32_t timeout = 0; timeout < 0x005FFF; timeout++){
@@ -1038,12 +1038,12 @@ void fsm_func_samr21RadioLiveRxParser()
 
     // 3 Byte after the msg Frame are LQI,RSSI and CRC Informations (see r21 datasheet 35.3.2 Frame Buffer Access Mode)
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+    samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
 #endif
     buffer->rxLQI = samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+    samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
 #endif
     buffer->rxRSSI = AT86RF233_RSSI_BASE_VAL + samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
 
@@ -1051,7 +1051,7 @@ void fsm_func_samr21RadioLiveRxParser()
 
     // Disable Slave Select
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+    samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
 #endif
     samr21TrxSetSSel(false);
     __enable_irq();
@@ -1100,7 +1100,7 @@ void fsm_func_samr21RadioSendAck()
     // Enable SPI Slave Select, to start uploading the Frame Payload in parallel while SHR is still being send
     samr21TrxSetSSel(true);
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
+    samr21delaySysTick(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
 #endif
     // Transmission should have started here allrdy so trigger can be disabled
     samr21TrxSetSLP_TR(false);
@@ -1141,13 +1141,13 @@ void fsm_func_samr21RadioSendAck()
     // Leave the Last 2 Bytes empty cause CRC is generated by the at86rf233
     for (int16_t i = 0; i <= (sf_ringBufferGetCurrent()->outboundFrame.header.lenght - IEEE_802_15_4_CRC_SIZE); i++)
     {
-        samr21delayLoop(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+        samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
         samr21TrxSpiTransceiveByteRaw(sf_ringBufferGetCurrent()->outboundFrame.raw[i]);
     }
 
     // Disable Slave Select
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delayLoop(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+    samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
 #endif
     samr21TrxSetSSel(false);
     __enable_irq();
