@@ -117,7 +117,9 @@ void samr21AesEcbEncryptBlocking(uint8_t* dataBlock){
 
     samr21AesEcbEncrypt(dataBlock, NULL, false);
 
-    samr21delaySysTick(370); // AES ECB takes 21 us
+    // AES ECB takes 21 us
+    // Considering SPI Delays we need to wait for ~12,5 us here
+    samr21delaySysTick(600); 
 
     samr21AesEcbEncrypt(NULL, dataBlock, true);
 }

@@ -362,12 +362,12 @@ void samr21TrxSetSLP_TR(bool enabled){
 uint8_t samr21TrxSpiTransceiveByteRaw(uint8_t data){
     while (!SERCOM4->SPI.INTFLAG.bit.DRE);
     //Put data into the tranmitt buffer to start transmission
-    PORT->Group[0].OUTTGL.reg= PORT_PA07;
+    //PORT->Group[0].OUTTGL.reg= PORT_PA07;
     SERCOM4->SPI.DATA.bit.DATA = data;
     
     while (!SERCOM4->SPI.INTFLAG.bit.TXC);
     while (!SERCOM4->SPI.INTFLAG.bit.RXC);
-    PORT->Group[0].OUTTGL.reg= PORT_PA07;
+    //PORT->Group[0].OUTTGL.reg= PORT_PA07;
 
     //return recived Answerto
     return SERCOM4->SPI.DATA.bit.DATA;

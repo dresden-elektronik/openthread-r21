@@ -40,8 +40,7 @@ INCDIRS=\
 	-I$(AT86RF233_INC_DIR) \
 	-I$(HAL_INC_DIR)
 	
-DEFINES= -D__SAMR21E18A__ -D__TESTBUILD__
-
+DEFINES= -D__SAMR21E18A__ -D__TESTBUILD__ -D_DEBUG 
 CFLAGS= \
 	-c \
 	-g \
@@ -199,7 +198,7 @@ third_party:
 	cd ../third_party && make
 
 samr21HAL:
-	cd ../src && make DEFINES="-D__SAMR21E18A__ -D__TESTBUILD__ -D_DEBUG"
+	cd ../src && make DEFINES="$(DEFINES)"
 	 	
 $(OUT_DIR):
 	$(MKDIR) -p $@
