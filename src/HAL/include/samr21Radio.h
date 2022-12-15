@@ -126,12 +126,12 @@ typedef struct{
 
     JobBuffer_t* samr21RadioGetNextFinishedJobBuffer();
 
-    bool samr21RadioAddShortAddrToPendingFrameTable(uint16_t shortAddr);
-    bool samr21RadioFindShortAddrInPendingFrameTable(uint16_t shortAddr, bool remove);
+    bool samr21RadioAddShortAddrToPendingFrameTable(uint8_t * shortAddr);
+    bool samr21RadioFindShortAddrInPendingFrameTable(uint8_t * shortAddr, bool remove);
     void samr21RadioClearShortAddrPendingFrameTable();
 
-    bool samr21RadioAddIeeeAddrToPendingFrameTable(uint64_t ieeeAddr);
-    bool samr21RadioFindIeeeAddrInPendingFrameTable(uint64_t ieeeAddr, bool remove);
+    bool samr21RadioAddIeeeAddrToPendingFrameTable(uint8_t * ieeeAddr);
+    bool samr21RadioFindIeeeAddrInPendingFrameTable(uint8_t * ieeeAddr, bool remove);
     void samr21RadioClearIeeeAddrPendingFrameTable();
 
 
@@ -168,4 +168,16 @@ typedef struct{
         void fsm_func_samr21EvalEd();
         void fsm_func_samr21EvalEdContinuation();
 
+//Filter and Parser funtions
+bool samr21RadioFilterPanId(uint8_t * panID);
+bool samr21RadioFilterShortAddr(uint8_t * ieeeAddr);
+bool samr21RadioFilterIeeeAddr(uint8_t * ieeeAddr);
+void samr21RadioParserGetAddrPositions(
+    FrameBuffer_t* frame,
+    uint8_t* posDestinationPanId,
+    uint8_t* posDestinationAddr,
+    uint8_t* posSourcePanId,
+    uint8_t* posSourceAddr,
+    uint8_t* posAddrHeaderTrail
+);
 #endif // _SAMR21_RADIO_H_

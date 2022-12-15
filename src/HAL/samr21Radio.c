@@ -462,21 +462,25 @@ JobBuffer_t* samr21RadioGetNextFinishedJobBuffer(){
 }
 
 
-bool samr21RadioAddShortAddrToPendingFrameTable(uint16_t shortAddr){
+bool samr21RadioAddShortAddrToPendingFrameTable(uint8_t* shortAddr){
     if(s_framePendingTableShortAddr.size >= SIZE_TABLE_FRAME_PENDING_SHORT_ADDR){
         //No Space left
         return false;
     }
 
-    s_framePendingTableShortAddr.addr[s_framePendingTableShortAddr.size++] = shortAddr;
+    ((uint8_t*) &(s_framePendingTableShortAddr.addr[s_framePendingTableShortAddr.size]))[0] = shortAddr[0];
+    ((uint8_t*) &(s_framePendingTableShortAddr.addr[s_framePendingTableShortAddr.size++]))[1] = shortAddr[1];
     return true;
 } 
 
-bool samr21RadioFindShortAddrInPendingFrameTable(uint16_t shortAddr, bool remove){
-    for (uint8_t i = 0; i < SIZE_TABLE_FRAME_PENDING_SHORT_ADDR; i++)
+bool samr21RadioFindShortAddrInPendingFrameTable(uint8_t* shortAddr, bool remove){
+    for (uint8_t i = 0; i < s_framePendingTableShortAddr.size; i++)
     {
-        if(s_framePendingTableShortAddr.addr[i] == shortAddr){
+        if(((uint8_t*) &(s_framePendingTableShortAddr.addr[i]))[0] != shortAddr[0]){
+            continue;
+        }
 
+        if(((uint8_t*) &(s_framePendingTableShortAddr.addr[i]))[1] != shortAddr[1]){
             if(remove){
                 s_framePendingTableShortAddr.addr[i] = s_framePendingTableShortAddr.addr[s_framePendingTableShortAddr.size--];
             }   
@@ -491,37 +495,38 @@ void samr21RadioClearShortAddrPendingFrameTable(){
     s_framePendingTableShortAddr.size = 0;
 } 
 
-bool samr21RadioAddIeeeAddrToPendingFrameTable(uint64_t ieeeAddr){
+bool samr21RadioAddIeeeAddrToPendingFrameTable(uint8_t * ieeeAddr){
     if(s_framePendingTableIeeeAddr.size >= SIZE_TABLE_FRAME_PENDING_IEEE_ADDR){
         //No Space left
         return false;
     }
-    s_framePendingTableIeeeAddr.addr[s_framePendingTableIeeeAddr.size++] = ieeeAddr;
+
+    for (uint8_t i = 0; i < sizeof(uint64_t); i++)
+    {
+        ((uint8_t*) &(s_framePendingTableIeeeAddr.addr[s_framePendingTableIeeeAddr.size]))[i] = ieeeAddr[i];
+    }
+    s_framePendingTableIeeeAddr.size++;
     return true;
 } 
 
-bool samr21RadioFindIeeeAddrInPendingFrameTable(uint64_t ieeeAddr, bool remove){
-
-    //Split the addr into 2 Half Words, cause the M0+ is 32 Bit based, so time can be saved
-    uint32_t addrLowerHalfWord = ((uint32_t*)(&ieeeAddr))[0];
-    uint32_t addrUpperHalfWord = ((uint32_t*)(&ieeeAddr))[1];
-
-    for (uint8_t i = 0; i < SIZE_TABLE_FRAME_PENDING_SHORT_ADDR; i++)
+bool samr21RadioFindIeeeAddrInPendingFrameTable(uint8_t* ieeeAddr, bool remove){
+    uint8_t i = 0;
+    while(i < s_framePendingTableIeeeAddr.size)
     {
-        //only check lower Halfword first to safe some Time
-        if(((uint32_t*)(&s_framePendingTableIeeeAddr.addr[i])[0]) != addrLowerHalfWord){
-            continue;     
-        }
-
-        //if the lower Halfword matches, the upper Halfword is also checked
-        if(((uint32_t*)(&s_framePendingTableIeeeAddr.addr[i])[1]) == addrUpperHalfWord){
-
-            if(remove){
-                s_framePendingTableIeeeAddr.addr[i] = s_framePendingTableIeeeAddr.addr[s_framePendingTableIeeeAddr.size--];
+        for (uint8_t j = 0; j < (sizeof(uint64_t)); j++)
+        {
+            if(((uint8_t*) &(s_framePendingTableIeeeAddr.addr[i]))[j] != ieeeAddr[j]){
+                goto nextEntry;
             }
-
-            return true;
         }
+
+        if(remove){
+            s_framePendingTableIeeeAddr.addr[i] = s_framePendingTableIeeeAddr.addr[s_framePendingTableIeeeAddr.size--];
+        }
+        return true;
+
+nextEntry:
+        i++;
     }
 
     //Address not found
@@ -889,49 +894,36 @@ void fsm_func_samr21RadioLiveRxParser()
             samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
     }
 
+    //Skip Addr Filtering in Promiscuous Mode
     if(s_promiscuousMode){
         goto downloadRemainingData;
     }
 
     //Extract Address Postion Infromation from recived Frame FCS
-    uint8_t posSourceAddr, posDestinationAddr, posSourcePanId, posDestinationPanId;
-    uint8_t curPosOffset = 4; // 1Byte PhyHeader, 2Byte FCF, 1Byte Sequenz Number
+    uint8_t 
+        posSourcePanId, 
+        posDestinationAddr,  
+        posDestinationPanId, 
+        posSourceAddr,
+        posAddrHeaderTrail
+    ;
 
-    //Destination PAN ID
-    posDestinationPanId = curPosOffset;
-    curPosOffset += sizeof(uint16_t);
-    
-    //Destination Addr
-    if(buffer->inboundFrame.header.frameControlField2.destinationAddressingMode){
-        posDestinationAddr = curPosOffset;
-    }
-    curPosOffset += 
-        (( buffer->inboundFrame.header.frameControlField2.destinationAddressingMode & 0b10 ) ? sizeof(uint16_t) : 0 );
-    curPosOffset += 
-        (( buffer->inboundFrame.header.frameControlField2.destinationAddressingMode & 0b01 ) ? ( sizeof(uint64_t) - sizeof(uint16_t) ) : 0 );
-
-
-    //Source PAN ID
-    if(!(buffer->inboundFrame.header.frameControlField1.panIdCompression)){
-        posSourceAddr = curPosOffset++;
-    }
-    //Source Addr
-    if(buffer->inboundFrame.header.frameControlField2.sourceAddressingMode){
-        posSourceAddr = curPosOffset;
-    }
-    curPosOffset += 
-        (( buffer->inboundFrame.header.frameControlField2.sourceAddressingMode & 0b10 ) ? sizeof(uint16_t) : 0 );
-    curPosOffset += 
-        (( buffer->inboundFrame.header.frameControlField2.sourceAddressingMode & 0b01 ) ? ( sizeof(uint64_t) - sizeof(uint16_t) ) : 0 );
+    samr21RadioParserGetAddrPositions( 
+        &(buffer->inboundFrame), 
+        &posDestinationPanId,
+        &posDestinationAddr,
+        &posSourcePanId,
+        &posSourceAddr,
+        &posAddrHeaderTrail
+    );
 
     // Download The Address Information data of the Frame 
-    while (buffer->downloadedSize < curPosOffset)
-    {
-        //(see r21 datasheet, 40.7 Frame Buffer Empty Indicator)
-
+    while (buffer->downloadedSize < posAddrHeaderTrail)
+    {   
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
         samr21delaySysTick(CPU_WAIT_CYCLE_FOR_FRAME_BUFFER_EMPTY_FLAG);
 #endif
+        //(see r21 datasheet, 40.7 Frame Buffer Empty Indicator)
         for(uint32_t timeout = 0; timeout < 0x005FFF; timeout++){
             if(!(PORT->Group[1].IN.reg & PORT_PB00)){
                 break;
@@ -943,88 +935,61 @@ void fsm_func_samr21RadioLiveRxParser()
             samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
     }
 
+
+
     if ((buffer->inboundFrame.header.frameControlField2.destinationAddressingMode == IEEE_802_15_4_ADDR_SHORT))
     {
-        for (uint8_t i = 0; i < sizeof(uint16_t); i++)
-        {
-            if(((uint8_t*) &s_panId)[i] != buffer->inboundFrame.raw[posDestinationPanId + i]){ //Little Endian Order
-                samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_MSG_INVALID);
+        if(!samr21RadioFilterPanId(&(buffer->inboundFrame.raw[posDestinationPanId]))){
+            samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_MSG_INVALID);
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-                samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+            samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
 #endif
-                samr21TrxSetSSel(false);
-                __enable_irq();
-                return;
-            }
-        } 
+            samr21TrxSetSSel(false);
+            __enable_irq();
+            return;
+        }
 
+        if(!samr21RadioFilterShortAddr(&(buffer->inboundFrame.raw[posDestinationAddr]))){
+            samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_MSG_INVALID);
 
-        for (uint8_t i = 0; i < sizeof(uint16_t); i++)
-        {
-            if(((uint8_t*) &s_shortAddr)[i] != buffer->inboundFrame.raw[posDestinationAddr + i]){ //Little Endian Order
-                samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_MSG_INVALID);
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-                samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+            samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
 #endif
-                samr21TrxSetSSel(false);
-                __enable_irq();
-                return;
-            }
-        } 
+            samr21TrxSetSSel(false);
+            __enable_irq();
+            return;
+        }
     }
 
     if (buffer->inboundFrame.header.frameControlField2.destinationAddressingMode == IEEE_802_15_4_ADDR_IEEE)
-    {
-        for (uint8_t i = 0; i < sizeof(uint64_t); i++)
-        {
-            if(((uint8_t*) &s_ieeeAddr)[i] != buffer->inboundFrame.raw[posDestinationAddr + i]){ //Little Endian Order
-                samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_MSG_INVALID);
+    {   
+        if(!samr21RadioFilterIeeeAddr(&(buffer->inboundFrame.raw[posDestinationAddr]))){
+            samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_MSG_INVALID);
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-                samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+            samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
 #endif
-                samr21TrxSetSSel(false);
-                __enable_irq();
-                return;
-            }
-        }   
+            samr21TrxSetSSel(false);
+            __enable_irq();
+            return;
+        }
     }
 
-    if(buffer->inboundFrame.header.frameControlField2.sourceAddressingMode == IEEE_802_15_4_ADDR_SHORT){
-
-        uint16_t shortAddr = buffer->inboundFrame.raw[posSourceAddr];//Little Endian Order
-        shortAddr += (buffer->inboundFrame.raw[posSourceAddr + 1]) << 8;
-
-        buffer->outboundFrame.header.frameControlField1.framePending = samr21RadioFindShortAddrInPendingFrameTable(shortAddr, false);
-
-        //Does not work Beacause of no support for unaligned accesses on the Cortex-M0 processor.
-        //(
-            
-            // sf_findShortAddrInPendingFrameTable(*((uint16_t *) &buffer->inboundFrame.raw[posSourceAddr]),  false ) ?
-            // 1 : 0
-        //);
+    if (buffer->inboundFrame.header.frameControlField2.sourceAddressingMode == IEEE_802_15_4_ADDR_SHORT)
+    {
+        buffer->outboundFrame.header.frameControlField1.framePending = 
+            samr21RadioFindShortAddrInPendingFrameTable(&(buffer->inboundFrame.raw[posSourceAddr]), false)
+        ;
     }
 
-    if(buffer->inboundFrame.header.frameControlField2.sourceAddressingMode == IEEE_802_15_4_ADDR_IEEE){
-        
-        uint64_t ieeeAddr = buffer->inboundFrame.raw[posSourceAddr];//Little Endian Order
-        ieeeAddr += (buffer->inboundFrame.raw[posSourceAddr+1]) << 8;
-        ieeeAddr += (buffer->inboundFrame.raw[posSourceAddr+2]) << 16;
-        ieeeAddr += (buffer->inboundFrame.raw[posSourceAddr+3]) << 24;
-        ieeeAddr += (buffer->inboundFrame.raw[posSourceAddr+4]) << 32;
-        ieeeAddr += (buffer->inboundFrame.raw[posSourceAddr+5]) << 40;
-        ieeeAddr += (buffer->inboundFrame.raw[posSourceAddr+6]) << 48;
-        ieeeAddr += (buffer->inboundFrame.raw[posSourceAddr+7]) << 56;
-        
-        buffer->outboundFrame.header.frameControlField1.framePending = samr21RadioFindIeeeAddrInPendingFrameTable(ieeeAddr, false);
-
-        //Does not work Because of no support for unaligned accesses on the Cortex-M0 processor.
-        // (
-            //sf_findIeeeAddrInPendingFrameTable( *((uint64_t *) &buffer->inboundFrame.raw[posSourceAddr]), false ) ?
-            //1 : 0
-        // );
+    if (buffer->inboundFrame.header.frameControlField2.sourceAddressingMode == IEEE_802_15_4_ADDR_IEEE)
+    {
+        buffer->outboundFrame.header.frameControlField1.framePending = 
+            samr21RadioFindIeeeAddrInPendingFrameTable(&(buffer->inboundFrame.raw[posSourceAddr]), false)
+        ;
     }
+
 
 downloadRemainingData:
     // Download The Remaining data of the Frame 
@@ -1042,7 +1007,8 @@ downloadRemainingData:
         //while (PORT->Group[1].IN.reg & PORT_PB00);
 
         buffer->inboundFrame.raw[buffer->downloadedSize++] =
-            samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
+            samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE)
+        ;
     }
 
     // 3 Byte after the msg Frame are LQI,RSSI and CRC Informations (see r21 datasheet 35.3.2 Frame Buffer Access Mode)
@@ -1159,6 +1125,38 @@ void fsm_func_samr21RadioSendAck()
     samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
 #endif
     samr21TrxSetSSel(false);
+
+    //Romve the framePending Entry after Ack transmission
+    if(buffer->outboundFrame.header.frameControlField1.framePending){
+
+        uint8_t 
+            posSourcePanId, 
+            posDestinationAddr,  
+            posDestinationPanId, 
+            posSourceAddr,
+            posAddrHeaderTrail
+        ;
+
+        samr21RadioParserGetAddrPositions( 
+            &(buffer->inboundFrame), 
+            &posDestinationPanId,
+            &posDestinationAddr,
+            &posSourcePanId,
+            &posSourceAddr,
+            &posAddrHeaderTrail
+        );
+
+        if (buffer->inboundFrame.header.frameControlField2.sourceAddressingMode == IEEE_802_15_4_ADDR_SHORT)
+        {
+            samr21RadioFindShortAddrInPendingFrameTable(&(buffer->inboundFrame.raw[posSourceAddr]), true);
+        }
+
+        if (buffer->inboundFrame.header.frameControlField2.sourceAddressingMode == IEEE_802_15_4_ADDR_IEEE)
+        {
+            samr21RadioFindIeeeAddrInPendingFrameTable(&(buffer->inboundFrame.raw[posSourceAddr]), true);
+        }
+    }
+    
     __enable_irq();
 
     // Queue Move to RX
@@ -1190,3 +1188,170 @@ void fsm_func_samr21EvalEdContinuation()
     samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_STOP_ED);
     return;
 }
+
+
+void samr21RadioParserGetAddrPositions(
+    FrameBuffer_t* frame,
+    uint8_t* posDestinationPanId,
+    uint8_t* posDestinationAddr,
+    uint8_t* posSourcePanId,
+    uint8_t* posSourceAddr,
+    uint8_t* posAddrHeaderTrail
+){ 
+    *posAddrHeaderTrail = 4; // 1Byte PhyHeader, 2Byte FCF, 1Byte Sequenz Number
+
+    
+parseDestinationPanId:
+    //(TABLE 7.2 IEEE 802.15.4-2015) 
+    if(frame->header.frameControlField2.destinationAddressingMode == IEEE_802_15_4_ADDR_SHORT){
+        if(
+            frame->header.frameControlField2.sourceAddressingMode == IEEE_802_15_4_ADDR_NONE
+            && frame->header.frameControlField1.panIdCompression
+        ){
+            //IEEE 802.15.4-2015 TABLE 7.2 column4
+            *posDestinationPanId = 0;
+            goto parseDestinationAddr; 
+        }
+        *posDestinationPanId = *posAddrHeaderTrail;
+        *posAddrHeaderTrail += sizeof(uint16_t);
+        goto parseDestinationAddr; 
+    }
+  
+    if(frame->header.frameControlField2.destinationAddressingMode == IEEE_802_15_4_ADDR_IEEE){
+        if(
+            frame->header.frameControlField2.sourceAddressingMode == IEEE_802_15_4_ADDR_NONE
+            && frame->header.frameControlField1.panIdCompression
+        ){
+            //IEEE 802.15.4-2015 TABLE 7.2 column4
+            *posDestinationPanId = 0;
+            goto parseDestinationAddr; 
+        }
+        if(
+            frame->header.frameControlField2.sourceAddressingMode == IEEE_802_15_4_ADDR_IEEE
+            && frame->header.frameControlField1.panIdCompression
+        ){
+            //IEEE 802.15.4-2015 TABLE 7.2 column8
+            *posDestinationPanId = 0;
+            goto parseDestinationAddr; 
+        }
+
+        *posDestinationPanId = *posAddrHeaderTrail;
+        *posAddrHeaderTrail += sizeof(uint16_t);
+        goto parseDestinationAddr;
+    }
+
+    //Destination Addr Mode == None    
+    if(
+        frame->header.frameControlField2.sourceAddressingMode == IEEE_802_15_4_ADDR_NONE
+        && frame->header.frameControlField1.panIdCompression
+    ){
+        //IEEE 802.15.4-2015 TABLE 7.2 column2
+        *posDestinationPanId = *posAddrHeaderTrail;
+        *posAddrHeaderTrail += sizeof(uint16_t);
+        goto parseDestinationAddr; 
+    }
+    *posDestinationPanId = 0;
+
+parseDestinationAddr:
+    if(frame->header.frameControlField2.destinationAddressingMode == IEEE_802_15_4_ADDR_SHORT ){
+        *posDestinationAddr = *posAddrHeaderTrail ;
+        *posAddrHeaderTrail += sizeof(uint16_t);
+        goto parseSourcePanId;
+    }
+    if(frame->header.frameControlField2.destinationAddressingMode == IEEE_802_15_4_ADDR_IEEE ){
+        *posDestinationAddr = *posAddrHeaderTrail ;
+        *posAddrHeaderTrail += sizeof(uint64_t);
+        goto parseSourcePanId;
+    }  
+    *posDestinationAddr = 0;
+
+parseSourcePanId:
+    if(!(frame->header.frameControlField1.panIdCompression)){
+        if(frame->header.frameControlField2.sourceAddressingMode == IEEE_802_15_4_ADDR_SHORT){
+            posSourcePanId = *posAddrHeaderTrail;
+            *posAddrHeaderTrail += sizeof(uint16_t);
+            goto parseSourceAddr;
+        }
+        if( 
+            frame->header.frameControlField2.sourceAddressingMode == IEEE_802_15_4_ADDR_IEEE
+            && frame->header.frameControlField2.destinationAddressingMode != IEEE_802_15_4_ADDR_IEEE
+        ){
+            posSourcePanId = *posAddrHeaderTrail;
+            *posAddrHeaderTrail += sizeof(uint16_t);
+            goto parseSourceAddr;
+        }
+        posSourcePanId = 0;
+    }
+
+
+parseSourceAddr:
+    if(frame->header.frameControlField2.sourceAddressingMode == IEEE_802_15_4_ADDR_SHORT ){
+        *posSourceAddr = *posAddrHeaderTrail ;
+        *posAddrHeaderTrail += sizeof(uint16_t);
+        return;
+    }
+    if(frame->header.frameControlField2.sourceAddressingMode == IEEE_802_15_4_ADDR_IEEE ){
+        *posSourceAddr = *posAddrHeaderTrail ;
+        *posAddrHeaderTrail += sizeof(uint64_t);
+        return;
+    }  
+    *posSourceAddr = 0;
+    return;
+}
+
+
+
+//Filter Functions
+bool samr21RadioFilterPanId(uint8_t * panID){
+filterBroadcast:
+
+    if(panID[0] < 0xfe){ 
+        goto filterPanId;
+    }
+    if(panID[1] != 0xff){ 
+        goto filterPanId;
+    }
+    return true;
+
+filterPanId:
+    if(panID[0] != ((uint8_t*) &s_panId)[0]){ 
+        return false;
+    }
+    if(panID[1] != ((uint8_t*) &s_panId)[1]){ 
+        return false;
+    }
+    return true;
+}
+
+bool samr21RadioFilterShortAddr(uint8_t * shortAddr){
+filterShortAddr:
+    if(shortAddr[0] != ((uint8_t*) &s_shortAddr)[0]){ 
+        return false;
+    }
+    if(shortAddr[1] != ((uint8_t*) &s_shortAddr)[1]){ 
+        return false;
+    }
+    return true;
+}
+
+
+bool samr21RadioFilterIeeeAddr(uint8_t * ieeeAddr){
+filterBroadcast:
+    for (uint8_t i = 0; i < sizeof(uint64_t); i++)
+    {
+        if(ieeeAddr[i] != 0xff){ 
+            goto filterIeeeId;
+        }
+    }
+    return true;
+
+filterIeeeId:
+    for (uint8_t i = 0; i < sizeof(uint16_t); i++)
+    {
+        if(ieeeAddr[i] != ((uint8_t*) &s_ieeeAddr)[i]){ //Little Endian Order
+            return false;
+        }
+    }
+    return true;
+}
+
