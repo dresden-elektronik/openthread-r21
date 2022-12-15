@@ -978,7 +978,7 @@ checkShortAddr:
 
     if (
         buffer->inboundFrame.header.frameControlField2.destinationAddressingMode == IEEE_802_15_4_ADDR_NONE
-        &&buffer->inboundFrame.header.frameControlField2.destinationSourceMode != IEEE_802_15_4_ADDR_NONE
+        &&buffer->inboundFrame.header.frameControlField2.destinationAddressingMode != IEEE_802_15_4_ADDR_NONE
         &&buffer->inboundFrame.header.frameControlField1.panIdCompression
     ){   
         if(!samr21RadioFilterIeeeAddr(&(buffer->inboundFrame.raw[posDestinationPanId]))){

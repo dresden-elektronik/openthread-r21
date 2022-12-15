@@ -13,14 +13,17 @@ uint32_t g_currentCpuClkCycle_ns = 1000; //1MHZ, used as external var
 void samr21ClockTrxSrcInit(){
         
         //Setup GCLKGEN 0 (CPU Clock) to Use the internal OSC8M
-        //This is needed cause the GCL SWRST would get stuck otherwise
+        //This is needed so a reliable Clock for the CPU is available while Clocks are being Setup
+
+        //Make sure OSC8M is enabled
+        SYSCTRL->OSC8M.bit.ENABLE = 1;
+
 
         //Setup GENDIV first
         GCLK->GENDIV.reg = 
             GCLK_GENDIV_ID(0) // GCLKGEN0
             |GCLK_GENDIV_DIV(0x0)
         ;
-
         //Wait for synchronization 
         while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
 
@@ -36,9 +39,8 @@ void samr21ClockTrxSrcInit(){
             //|GCLK_GENCTRL_OOV
             |GCLK_GENCTRL_GENEN
         ;
-
-        GCLK->CTRL.bit.SWRST = 1;
         while(GCLK->STATUS.bit.SYNCBUSY);
+
 
         //Setup PIN PC16 as Clockinput from MCLK from At86rf233
         //Make Input
