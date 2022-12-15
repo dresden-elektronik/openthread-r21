@@ -106,6 +106,7 @@ typedef struct{
     void samr21RadioChangeCsmaBackoffExponent(uint8_t minBE, uint8_t maxBE);
     void samr21RadioChangeNumTransmitRetrys(uint8_t numRetrys);
     void samr21RadioChangeNumBackoffsCsma(uint8_t numBackoffs);
+    void samr21RadioEnablePromiscuousMode(bool enable);
 
     void samr21RadioChangeState(RadioState newState, uint8_t channel);
     RadioState samr21RadioGetStatus();

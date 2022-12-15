@@ -85,6 +85,8 @@ static AT86RF233_REG_IRQ_MASK_t     s_irqMask =
 static uint8_t s_numMaxTransmissionRetrys = 3;
 static uint8_t s_numMaxCsmaBackoffs = 4;
 
+static bool s_promiscuousMode = false;
+
 static uint32_t s_csmaBackoffIntervallMin_us    = 16;   // SYMBOL_DURATION_802_15_4_us*((2^minBE)-1) (default: minBE = 1)
 static uint32_t s_csmaBackoffIntervallMax_us    = 240;  // SYMBOL_DURATION_802_15_4_us*((2^maxBE)-1) (default: maxBE = 4)
 static uint32_t s_csmaBackoffIntervallDiff_us   = 224; // sCsmaBackoffIntervallMax - sCsmaBackoffIntervallMax
@@ -314,7 +316,9 @@ void samr21RadioChangeNumTransmitRetrys(uint8_t numRetrys)
     s_numMaxTransmissionRetrys = numRetrys;
 }
 
-
+void samr21RadioEnablePromiscuousMode(bool enable){
+    s_promiscuousMode = enable;
+}
 
 /*------------------*/
 // Interface Functions
@@ -885,6 +889,10 @@ void fsm_func_samr21RadioLiveRxParser()
             samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
     }
 
+    if(s_promiscuousMode){
+        goto downloadRemainingData;
+    }
+
     //Extract Address Postion Infromation from recived Frame FCS
     uint8_t posSourceAddr, posDestinationAddr, posSourcePanId, posDestinationPanId;
     uint8_t curPosOffset = 4; // 1Byte PhyHeader, 2Byte FCF, 1Byte Sequenz Number
@@ -1018,6 +1026,7 @@ void fsm_func_samr21RadioLiveRxParser()
         // );
     }
 
+downloadRemainingData:
     // Download The Remaining data of the Frame 
     while (buffer->downloadedSize <= buffer->inboundFrame.header.lenght)
     {
@@ -1069,14 +1078,14 @@ void fsm_func_samr21RadioLiveRxParser()
     }
 
     // Check if Ack is needed
-    if (sf_ringBufferGetCurrent()->inboundFrame.header.frameControlField1.ackRequest)
+    if (sf_ringBufferGetCurrent()->inboundFrame.header.frameControlField1.ackRequest && !s_promiscuousMode)
     {
         samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_ACK_REQUESTED);
         return;
     }
 
     // No Ack needed 
-    // Abort sending Ack
+    // Abort preped trx, cause no Ack needs to be sended
     samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_RX_ON);
     samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_MSG_VALID);
     return;
