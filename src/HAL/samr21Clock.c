@@ -11,6 +11,34 @@ uint32_t g_currentCpuClkCycle_ns = 1000; //1MHZ, used as external var
 //Setup GCLKGEN 1 to be sourced form At86rf233 MCLK
 //Setup SERCOM4 (SPI <-> At86rf233) to use GCLKGEN 1 (MCLK) to enable synchronous Transfers
 void samr21ClockTrxSrcInit(){
+        
+        //Setup GCLKGEN 0 (CPU Clock) to Use the internal OSC8M
+        //This is needed cause the GCL SWRST would get stuck otherwise
+
+        //Setup GENDIV first
+        GCLK->GENDIV.reg = 
+            GCLK_GENDIV_ID(0) // GCLKGEN0
+            |GCLK_GENDIV_DIV(0x0)
+        ;
+
+        //Wait for synchronization 
+        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+
+        //Setup GENCTRL after
+        GCLK->GENCTRL.reg = 
+            GCLK_GENCTRL_ID(0) // GCLKGEN0
+            |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_OSC8M_Val)
+            |GCLK_GENCTRL_RUNSTDBY
+            //|GCLK_GENCTRL_DIVSEL
+#ifdef _DEBUG
+            |GCLK_GENCTRL_OE
+#endif
+            //|GCLK_GENCTRL_OOV
+            |GCLK_GENCTRL_GENEN
+        ;
+
+        GCLK->CTRL.bit.SWRST = 1;
+        while(GCLK->STATUS.bit.SYNCBUSY);
 
         //Setup PIN PC16 as Clockinput from MCLK from At86rf233
         //Make Input
