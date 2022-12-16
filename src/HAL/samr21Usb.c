@@ -2,6 +2,19 @@
 #include "samr21Usb.h"
 
 void samr21UsbInit(){
+
+    //Use GCLKGEN0 as Ref Freq for USB
+        GCLK->CLKCTRL.reg =
+            //GCLK_CLKCTRL_WRTLOCK
+            GCLK_CLKCTRL_CLKEN
+            |GCLK_CLKCTRL_GEN(0) // GCLKGEN0
+            |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_USB_Val)
+        ;
+        //Wait for synchronization 
+        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+
+    //Enable in Power Manger 
+        PM->APBBMASK.bit.USB_ = 1;
     //Setup Ports for USB
         //Setup PIN PA24 as USB D-
             //Make Input

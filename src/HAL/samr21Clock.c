@@ -3,16 +3,11 @@
 
 #include "samr21Clock.h"
 
-uint32_t g_currentTrxClkCycle_ns = 1000; //1MHZ, used as external var
-uint32_t g_currentSpiClkCycle_ns = 2000; //500kHZ, used as external var 
-uint32_t g_currentCpuClkCycle_ns = 1000; //1MHZ, used as external var 
-
-
 //Setup GCLKGEN 1 to be sourced form At86rf233 MCLK
 //Setup SERCOM4 (SPI <-> At86rf233) to use GCLKGEN 1 (MCLK) to enable synchronous Transfers
 void samr21ClockTrxSrcInit(){
 
-        //Deinit RTC first (to prevent an Error after a soft reset while modifying the clocksystem)
+        //Deinit Timer and Counter first (to prevent an Error after a soft reset while modifying the clocksystem)
         samr21RtcDeinit();
         samr21TimerDeinit();
   
@@ -217,17 +212,6 @@ void samr21ClockInitAfterTrxSetup(){
             |GCLK_GENCTRL_GENEN
         ;
 
-        //Wait for synchronization 
-        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
-        g_currentCpuClkCycle_ns = 21; //48Mhz = 20.833ns 
-
-    //Use GCLKGEN0 as Ref Freq for USB
-        GCLK->CLKCTRL.reg =
-            //GCLK_CLKCTRL_WRTLOCK
-            GCLK_CLKCTRL_CLKEN
-            |GCLK_CLKCTRL_GEN(0) // GCLKGEN0
-            |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_USB_Val)
-        ;
         //Wait for synchronization 
         while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
 }
