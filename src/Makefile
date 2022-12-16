@@ -64,7 +64,6 @@ all:\
 
 samr21HAL:\
 	$(HAL_OUT_DIR) \
-	$(HAL_OUT_DIR)/samr21PowerManager.o \
 	$(HAL_OUT_DIR)/samr21Radio.o \
 	$(HAL_OUT_DIR)/samr21RadioFSM.o \
 	$(HAL_OUT_DIR)/samr21Timer.o \
@@ -86,11 +85,6 @@ otPlatHAL:\
 	
 $(HAL_OUT_DIR):
 	$(MKDIR) -p $@
-
-$(HAL_OUT_DIR)/samr21PowerManager.o:\
-	$(HAL_DIR)/samr21PowerManager.c 
-	
-	$(CC) $(CFLAGS) -o $@ $^
 
 $(HAL_OUT_DIR)/samr21Radio.o:\
 	$(HAL_DIR)/samr21Radio.c 

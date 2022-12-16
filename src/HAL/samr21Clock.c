@@ -11,13 +11,18 @@ uint32_t g_currentCpuClkCycle_ns = 1000; //1MHZ, used as external var
 //Setup GCLKGEN 1 to be sourced form At86rf233 MCLK
 //Setup SERCOM4 (SPI <-> At86rf233) to use GCLKGEN 1 (MCLK) to enable synchronous Transfers
 void samr21ClockTrxSrcInit(){
-        
+
+        //Deinit RTC first (to prevent an Error after a soft reset while modifying the clocksystem)
+        samr21RtcDeinit();
+        samr21TimerDeinit();
+  
         //Setup GCLKGEN 0 (CPU Clock) to Use the internal OSC8M
         //This is needed so a reliable Clock for the CPU is available while Clocks are being Setup
 
         //Make sure OSC8M is enabled
         SYSCTRL->OSC8M.bit.ENABLE = 1;
 
+        samr21delaySysTick(100);
 
         //Setup GENDIV first
         GCLK->GENDIV.reg = 
@@ -40,6 +45,14 @@ void samr21ClockTrxSrcInit(){
             |GCLK_GENCTRL_GENEN
         ;
         while(GCLK->STATUS.bit.SYNCBUSY);
+
+        samr21delaySysTick(100);
+
+        GCLK->CTRL.reg = GCLK_CTRL_SWRST;
+
+        samr21delaySysTick(100);
+        //Wait for synchronization 
+        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
 
 
         //Setup PIN PC16 as Clockinput from MCLK from At86rf233
@@ -86,25 +99,6 @@ void samr21ClockTrxSrcInit(){
         //Wait for synchronization 
         while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
 
-        //Use GCLKGEN1 as core Clock for SPI At86rf233 (SERCOM4)
-        GCLK->CLKCTRL.reg =
-            //GCLK_CLKCTRL_WRTLOCK
-            GCLK_CLKCTRL_CLKEN
-            |GCLK_CLKCTRL_GEN(1) // GCLKGEN1
-            |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_SERCOM4_CORE_Val)
-        ;
-        //Wait for synchronization 
-        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
-
-        GCLK->CLKCTRL.reg =
-            //GCLK_CLKCTRL_WRTLOCK
-            GCLK_CLKCTRL_CLKEN
-            |GCLK_CLKCTRL_GEN(1) // GCLKGEN1
-            |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_SERCOMX_SLOW_Val)
-        ;
-        //Wait for synchronization 
-        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
-
         //Setup GENDIV
         GCLK->GENDIV.reg = 
             GCLK_GENDIV_ID(2)
@@ -127,46 +121,6 @@ void samr21ClockTrxSrcInit(){
             |GCLK_GENCTRL_GENEN
         ;
 
-        //Wait for synchronization 
-        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
-
-        //Use GCLKGEN 4 (1MHz) for RTC 
-        GCLK->CLKCTRL.reg =
-            //GCLK_CLKCTRL_WRTLOCK
-            GCLK_CLKCTRL_CLKEN
-            |GCLK_CLKCTRL_GEN(2) // GCLKGEN2
-            |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_RTC_Val)
-        ;
-        //Wait for synchronization 
-        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
-
-        //Use GCLKGEN 4 (1MHz) for TCC0 / TCC1
-        GCLK->CLKCTRL.reg =
-            //GCLK_CLKCTRL_WRTLOCK
-            GCLK_CLKCTRL_CLKEN
-            |GCLK_CLKCTRL_GEN(2) // GCLKGEN1
-            |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TCC0_TCC1_Val)
-        ;
-        //Wait for synchronization 
-        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
-
-        //Use GCLKGEN 4 (1MHz) for TCC2 / TC3 
-        GCLK->CLKCTRL.reg =
-            //GCLK_CLKCTRL_WRTLOCK
-            GCLK_CLKCTRL_CLKEN
-            |GCLK_CLKCTRL_GEN(2) // GCLKGEN1
-            |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TCC2_TC3_Val)
-        ;
-        //Wait for synchronization 
-        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
-
-        //Use GCLKGEN 4 (1MHz) for TC4 / TC5
-        GCLK->CLKCTRL.reg =
-            //GCLK_CLKCTRL_WRTLOCK
-            GCLK_CLKCTRL_CLKEN
-            |GCLK_CLKCTRL_GEN(2) // GCLKGEN1
-            |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TC4_TC5_Val)
-        ;
         //Wait for synchronization 
         while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
 }
@@ -276,14 +230,4 @@ void samr21ClockInitAfterTrxSetup(){
         ;
         //Wait for synchronization 
         while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
-
-    //Use GCLKGEN0 as core Clock for EIC (At86rf233, IRQ_Detect)
-        GCLK->CLKCTRL.reg =
-            //GCLK_CLKCTRL_WRTLOCK
-            GCLK_CLKCTRL_CLKEN
-            |GCLK_CLKCTRL_GEN(0) // GCLKGEN1
-            |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_EIC_Val)
-        ;
-        //Wait for synchronization 
-        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );  
 }

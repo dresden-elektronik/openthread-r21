@@ -9,6 +9,7 @@
 #define SAMR21_RTC_MAX_VALUE 0xFFFFFFFF
 
 void samr21RtcInit();
+void samr21RtcDeinit();
 
 uint32_t samr21RtcGetTimestamp();
 

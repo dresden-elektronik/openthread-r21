@@ -127,6 +127,15 @@ void samr21RadioInit()
     samr21RadioFsmChangeJobStatePointer(&(sf_ringBufferGetCurrent()->jobState));
 
     // Enable IRQ via EIC
+    //Use GCLKGEN0 as core Clock for EIC (At86rf233, IRQ_Detect)
+    GCLK->CLKCTRL.reg =
+        //GCLK_CLKCTRL_WRTLOCK
+        GCLK_CLKCTRL_CLKEN
+        |GCLK_CLKCTRL_GEN(0) // GCLKGEN1
+        |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_EIC_Val)
+    ;
+    //Wait for synchronization 
+    while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );  
     // Reset first and wait for reset to finish
     EIC->CTRL.bit.SWRST = 1;
     while (EIC->STATUS.bit.SYNCBUSY);
@@ -142,6 +151,7 @@ void samr21RadioInit()
     while (EIC->STATUS.bit.SYNCBUSY);
     while (!(EIC->CTRL.bit.ENABLE));
 
+    //cLEAR irq BEFORE ENABLING
     EIC->INTFLAG.bit.EXTINT0 = 1;
 
     //Read Once to clear all pending Interrupts

@@ -5,6 +5,7 @@
 
 #include "samr21.h"
 #include "samr21NopDelay.h"
+#include "samr21Rtc.h"
 
 void samr21ClockTrxSrcInit();
 

@@ -7,7 +7,6 @@
 #include "samr21Radio.h"
 #include "samr21Rtc.h"
 #include "samr21NopDelay.h"
-#include "samr21PowerManager.h"
 #include "samr21Timer.h"
 #include "samr21Nvm.h"
 #include "samr21Usb.h"
@@ -92,7 +91,7 @@ extern AT86RF233_REG_IRQ_STATUS_t     g_trxLastIrq;               //from samr21t
 int main(int argc, char const *argv[])
 {
     samr21NvmInit();
-    samr21PowerManagerInit();
+
     samr21ClockTrxSrcInit();
     samr21TrxInterfaceInit();
 

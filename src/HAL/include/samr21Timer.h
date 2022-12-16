@@ -9,6 +9,7 @@
 
 
 void samr21TimerInit();
+void samr21TimerDeinit();
 
 void samr21Timer0Set(uint32_t value_us);
 void samr21Timer0Stop();

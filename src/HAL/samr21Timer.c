@@ -3,6 +3,44 @@
 
 void samr21TimerInit(){
 
+    //Use GCLKGEN 2 (1MHz) for TCC0 / TCC1
+    GCLK->CLKCTRL.reg =
+        //GCLK_CLKCTRL_WRTLOCK
+        GCLK_CLKCTRL_CLKEN
+        |GCLK_CLKCTRL_GEN(2) // GCLKGEN1
+        |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TCC0_TCC1_Val)
+    ;
+    //Wait for synchronization 
+    while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+
+    //Use GCLKGEN 2 (1MHz) for TCC2 / TC3 
+    GCLK->CLKCTRL.reg =
+        //GCLK_CLKCTRL_WRTLOCK
+        GCLK_CLKCTRL_CLKEN
+        |GCLK_CLKCTRL_GEN(2) // GCLKGEN1
+        |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TCC2_TC3_Val)
+    ;
+    //Wait for synchronization 
+    while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+
+    //Use GCLKGEN 2 (1MHz) for TC4 / TC5
+    GCLK->CLKCTRL.reg =
+        //GCLK_CLKCTRL_WRTLOCK
+        GCLK_CLKCTRL_CLKEN
+        |GCLK_CLKCTRL_GEN(2) // GCLKGEN1
+        |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TC4_TC5_Val)
+    ;
+    //Wait for synchronization 
+    while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+
+    //Enable In Power Manger
+    PM->APBCMASK.bit.TCC0_ = 1;
+    PM->APBCMASK.bit.TCC1_ = 1;
+    PM->APBCMASK.bit.TCC2_ = 1;
+    PM->APBCMASK.bit.TC3_ = 1;
+    PM->APBCMASK.bit.TC4_ = 1;
+    PM->APBCMASK.bit.TC5_ = 1;
+
     //Disable Modules First
     TCC0->CTRLA.bit.ENABLE = 0;
     while (TCC0->SYNCBUSY.bit.ENABLE);
@@ -302,6 +340,81 @@ void samr21Timer5Stop(){
     TC5->COUNT16.CTRLBSET.reg =
         TC_CTRLBSET_CMD_STOP
     ;
+}
+
+void samr21TimerDeinit(){
+
+    //Stop All running timers
+    samr21Timer0Stop();
+    samr21Timer1Stop();
+    samr21Timer2Stop();
+    samr21Timer3Stop();
+    samr21Timer4Stop();
+    samr21Timer5Stop();
+
+    //Disable the Interrupts
+#ifdef __TESTBUILD__
+    NVIC_DisableIRQ(TCC0_IRQn);
+    NVIC_DisableIRQ(TCC1_IRQn);
+#endif
+
+#ifndef __TESTBUILD__
+    NVIC_DisableIRQ(TCC2_IRQn);
+    NVIC_DisableIRQ(TC3_IRQn);
+#endif
+
+    NVIC_DisableIRQ(TC4_IRQn);
+    NVIC_DisableIRQ(TC5_IRQn);
+
+    //Disble TCC Modules
+    TCC0->CTRLA.reg = TCC_CTRLA_RESETVALUE;
+    while (TCC0->SYNCBUSY.bit.ENABLE);
+    TCC1->CTRLA.reg = TCC_CTRLA_RESETVALUE;
+    while (TCC0->SYNCBUSY.bit.ENABLE);
+    TCC2->CTRLA.reg = TCC_CTRLA_RESETVALUE;
+    while (TCC0->SYNCBUSY.bit.ENABLE);
+    TC3->COUNT16.CTRLA.reg = TC_CTRLA_RESETVALUE;
+    while (TC3->COUNT16.STATUS.bit.SYNCBUSY);
+    TC4->COUNT16.CTRLA.reg = TC_CTRLA_RESETVALUE;
+    while (TC3->COUNT16.STATUS.bit.SYNCBUSY);
+    TC5->COUNT16.CTRLA.reg = TC_CTRLA_RESETVALUE;
+    while (TC3->COUNT16.STATUS.bit.SYNCBUSY);
+
+    //Disable RTC In Power Manger
+    PM->APBCMASK.bit.TCC0_ = 0;
+    PM->APBCMASK.bit.TCC1_ = 0;
+    PM->APBCMASK.bit.TCC2_ = 0;
+    PM->APBCMASK.bit.TC3_ = 0;
+    PM->APBCMASK.bit.TC4_ = 0;
+    PM->APBCMASK.bit.TC5_ = 0;
+
+    //Disable CLKGEN
+    GCLK->CLKCTRL.reg =
+        //GCLK_CLKCTRL_WRTLOCK
+        //GCLK_CLKCTRL_CLKEN
+        GCLK_CLKCTRL_GEN(2) // GCLKGEN1
+        |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TCC0_TCC1_Val)
+    ;
+    //Wait for synchronization 
+    while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+
+    GCLK->CLKCTRL.reg =
+        //GCLK_CLKCTRL_WRTLOCK
+        //GCLK_CLKCTRL_CLKEN
+        GCLK_CLKCTRL_GEN(2) // GCLKGEN1
+        |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TCC2_TC3_Val)
+    ;
+    //Wait for synchronization 
+    while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+
+    GCLK->CLKCTRL.reg =
+        //GCLK_CLKCTRL_WRTLOCK
+        //GCLK_CLKCTRL_CLKEN
+        GCLK_CLKCTRL_GEN(2) // GCLKGEN1
+        |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TC4_TC5_Val)
+    ;
+    //Wait for synchronization 
+    while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
 }
 
 //MOVED TO TODO

@@ -8,6 +8,29 @@ volatile AT86RF233_REG_TRX_CTRL_0_t    g_trxCtrl0;    //used as external var
 
 
 void samr21TrxInterfaceInit(){
+    //Setup Clocks for TRX-SPI
+        //Use GCLKGEN1 as core Clock for SPI At86rf233 (SERCOM4)
+        GCLK->CLKCTRL.reg =
+            //GCLK_CLKCTRL_WRTLOCK
+            GCLK_CLKCTRL_CLKEN
+            |GCLK_CLKCTRL_GEN(1) // GCLKGEN1
+            |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_SERCOM4_CORE_Val)
+        ;
+        //Wait for synchronization 
+        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+
+        GCLK->CLKCTRL.reg =
+            //GCLK_CLKCTRL_WRTLOCK
+            GCLK_CLKCTRL_CLKEN
+            |GCLK_CLKCTRL_GEN(1) // GCLKGEN1
+            |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_SERCOMX_SLOW_Val)
+        ;
+        //Wait for synchronization 
+        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+    
+    //Enable in Power manager
+        PM->APBCMASK.bit.SERCOM4_ = 1;
+
     //Setup Ports for TRX
         //Setup PIN PC19 as MISO <-> At86rf233 via SERCOM4
             //Make Input
