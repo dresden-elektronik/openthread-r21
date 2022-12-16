@@ -76,7 +76,7 @@ static AT86RF233_REG_IRQ_MASK_t     s_irqMask =
         .bit.rxStart = 1,
         .bit.trxEnd = 1,
         .bit.ccaEdDone = 1,
-        .bit.addressMatch = 1,
+        .bit.addressMatch = 0,
         .bit.bufferUnderRun = 1,
         .bit.batteryLow = 0
     };
@@ -437,7 +437,8 @@ bool samr21RadioStartEnergyDetection(uint8_t channel, uint16_t duration)
 
     // mark buffer 
     buffer->jobState = RADIO_JOB_STATE_ED_READY;
-    buffer->edTimeleft = duration;
+    buffer->edTimeleft = duration ;
+    buffer->edTimeleft *= NUM_ENERGY_DETECTION_SCANS_PER_MS;
     buffer->measuredEngeryLevel = 0;
     buffer->channel = channel;
 
@@ -596,8 +597,8 @@ void fsm_func_samr21StartEd()
     // Reset local copy of ccaRequest Bit
     s_phyCcCcaReg.bit.ccaRequest = 0;
 
-    //Queue the next ED allrdy (once per ms)
-    samr21Timer4Set(1000);
+    //Queue the next ED allrdy
+    samr21Timer4Set(TIME_UNTIL_NEXT_ENERGY_DETECTION_SCAN_us);
 }
 
 void fsm_func_samr21RadioEvalCCA()
@@ -640,7 +641,7 @@ void fsm_func_samr21RadioSendTXPayload()
 
     samr21TrxSetSSel(true);
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
+    samr21delaySysTick(CPU_WAIT_CYCLES_AFTER_SSEL_LOW);
 #endif
 
     // Transmission should have started here allrdy so trigger can be disabled
@@ -660,14 +661,14 @@ void fsm_func_samr21RadioSendTXPayload()
     for (int16_t i = 0; i <= (sf_ringBufferGetCurrent()->outboundFrame.header.lenght - IEEE_802_15_4_CRC_SIZE); i++)
     {
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-        samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+        samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
 #endif    
         samr21TrxSpiTransceiveByteRaw(sf_ringBufferGetCurrent()->outboundFrame.raw[i]);
     }
 
     // Disable Slave Select
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+    samr21delaySysTick(CPU_WAIT_CYCLES_BEFORE_SSEL_HIGH);
 #endif
     samr21TrxSetSSel(false);
     __enable_irq();
@@ -771,14 +772,14 @@ void fsm_func_samr21RadioEvalAck()
 
     // Enable SPI Slave Select
     samr21TrxSetSSel(true);
-    samr21delaySysTick(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
+    samr21delaySysTick(CPU_WAIT_CYCLES_AFTER_SSEL_LOW);
 
     // Send Read Frame Buffer Command and get Status Byte (see r21 datasheet 35.4 Radio Transceiver Status Information)
     g_trxStatus.reg = samr21TrxSpiTransceiveByteRaw(AT86RF233_CMD_FRAMEBUFFER_READ);
 
     // First Byte is the msg Lenght
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+    samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
 #endif
     buffer->inboundFrame.header.lenght = samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
 
@@ -792,19 +793,19 @@ void fsm_func_samr21RadioEvalAck()
     for (uint8_t i = 1; i <= (buffer->inboundFrame.header.lenght); i++)
     {
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-        samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+        samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
 #endif
         sf_ringBufferGetCurrent()->inboundFrame.raw[i] = samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
     }
 
     // 3 Byte after the msg Frame are LQI,RSSI and CRC Informations (see r21 datasheet 35.3.2 Frame Buffer Access Mode)
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+    samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
 #endif
     buffer->rxLQI = samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+    samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
 #endif
     buffer->rxRSSI = AT86RF233_RSSI_BASE_VAL + samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
 
@@ -812,7 +813,7 @@ void fsm_func_samr21RadioEvalAck()
 
     // Disable Slave Select
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+    samr21delaySysTick(CPU_WAIT_CYCLES_BEFORE_SSEL_HIGH);
 #endif
 
     samr21TrxSetSSel(false);
@@ -848,7 +849,8 @@ void fsm_func_samr21RadioTxAbort()
     __NOP();
 }
 
-void fsm_func_samr21RadioLiveRxParser()
+//Check the FCS only to plan futher frame handling
+void fsm_func_samr21RadioLiveRxParserStageFCF()
 {
     __disable_irq();
 
@@ -859,7 +861,7 @@ void fsm_func_samr21RadioLiveRxParser()
     // Enable SPI Slave Select
     samr21TrxSetSSel(true);
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
+    samr21delaySysTick(CPU_WAIT_CYCLES_AFTER_SSEL_LOW);
 #endif
 
     // Send Read Frame Buffer Command and get Status Byte (see r21 datasheet 35.4 Radio Transceiver Status Information)
@@ -867,31 +869,31 @@ void fsm_func_samr21RadioLiveRxParser()
 
     // First Byte is the msg Lenght
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+    samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
 #endif
     buffer->inboundFrame.header.lenght = samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
-    buffer->downloadedSize = 1;
-
-    
 
     if(buffer->inboundFrame.header.lenght > IEEE_802_15_4_PDSU_SIZE){
         samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_MSG_INVALID);
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-        samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+        samr21delaySysTick(CPU_WAIT_CYCLES_BEFORE_SSEL_HIGH);
 #endif
         samr21TrxSetSSel(false);
         __enable_irq();
         return;
     }
 
+    buffer->downloadedSize = 1;
+    buffer->frameIndex.curParserTrailPos = 4 // 1 Byte pdsu lenght, 2Byte FCF 1Byte Sequence Number
+
     // Download Recived Frame Till FCF
-    while (buffer->downloadedSize <  4) //1Byte PhyHeader, 2Byte FCF, 1Byte Sequenz Number
+    while (buffer->downloadedSize <  buffer->frameIndex.curParserTrailPos)
     { 
         
         //(see r21 datasheet, 40.7 Frame Buffer Empty Indicator)
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-        samr21delaySysTick(CPU_WAIT_CYCLE_FOR_FRAME_BUFFER_EMPTY_FLAG);
+        samr21delaySysTick(CPU_WAIT_CYCLES_FOR_FRAME_BUFFER_EMPTY_FLAG);
 #endif
         for(uint32_t timeout = 0; timeout < 0x005FFF; timeout++){
             if(!(PORT->Group[1].IN.reg & PORT_PB00)){
@@ -904,34 +906,42 @@ void fsm_func_samr21RadioLiveRxParser()
             samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
     }
 
-    //Skip Addr Filtering in Promiscuous Mode
-    if(s_promiscuousMode){
-        goto downloadRemainingData;
-    }
+    samr21RadioParserGetRelativeHeaderPositions( &(buffer->inboundFrame), &(buffer->frameIndex) );
 
-    //Extract Address Postion Infromation from recived Frame FCS
-    uint8_t 
-        posSourcePanId, 
-        posDestinationAddr,  
-        posDestinationPanId, 
-        posSourceAddr,
-        posAddrHeaderTrail
-    ;
+    //Queue Next Parser Action
+    samr21Timer4Set( buffer->frameIndex.curParserTrailPos * OCTET_DURATION_802_15_4_us);
 
-    samr21RadioParserGetAddrPositions( 
-        &(buffer->inboundFrame), 
-        &posDestinationPanId,
-        &posDestinationAddr,
-        &posSourcePanId,
-        &posSourceAddr,
-        &posAddrHeaderTrail
-    );
+#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
+        samr21delaySysTick(CPU_WAIT_CYCLES_BEFORE_SSEL_HIGH);
+#endif
+    samr21TrxSetSSel(false);
+    __enable_irq();
+}
 
-    // Download The Address Information data of the Frame 
-    while (buffer->downloadedSize < posAddrHeaderTrail)
+void fsm_func_samr21RadioLiveRxParserStageAddrAndSecurity()
+{
+    __disable_irq();
+
+    // add rx timestamp
+    JobBuffer_t * buffer = sf_ringBufferGetCurrent();
+
+    // Enable SPI Slave Select
+    samr21TrxSetSSel(true);
+#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
+    samr21delaySysTick(CPU_WAIT_CYCLES_AFTER_SSEL_LOW);
+#endif
+
+    // Send Read Frame Buffer Command and get Status Byte (see r21 datasheet 35.4 Radio Transceiver Status Information)
+    g_trxStatus.reg = samr21TrxSpiTransceiveByteRaw(AT86RF233_CMD_FRAMEBUFFER_READ);
+    
+    //Reset downloadedSize cause FrameBuffer Read Acces can only start at pos 0
+    buffer->downloadedSize = 0;
+
+    // Download Frame until All Addr Fields and the optional Security Control field are available
+    while (buffer->downloadedSize < buffer->frameIndex.curTrailPos)
     {   
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-        samr21delaySysTick(CPU_WAIT_CYCLE_FOR_FRAME_BUFFER_EMPTY_FLAG);
+        samr21delaySysTick(CPU_WAIT_CYCLES_FOR_FRAME_BUFFER_EMPTY_FLAG);
 #endif
         //(see r21 datasheet, 40.7 Frame Buffer Empty Indicator)
         for(uint32_t timeout = 0; timeout < 0x005FFF; timeout++){
@@ -944,6 +954,16 @@ void fsm_func_samr21RadioLiveRxParser()
         buffer->inboundFrame.raw[buffer->downloadedSize++] =
             samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
     }
+
+#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
+            samr21delaySysTick(CPU_WAIT_CYCLES_BEFORE_SSEL_HIGH);
+#endif
+    samr21TrxSetSSel(false);
+
+
+
+    __enable_irq();
+}
 
 
 
@@ -953,7 +973,7 @@ void fsm_func_samr21RadioLiveRxParser()
             samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_MSG_INVALID);
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-            samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+            samr21delaySysTick(CPU_WAIT_CYCLES_BEFORE_SSEL_HIGH);
 #endif
             samr21TrxSetSSel(false);
             __enable_irq();
@@ -964,7 +984,7 @@ checkShortAddr:
             samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_MSG_INVALID);
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-            samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+            samr21delaySysTick(CPU_WAIT_CYCLES_BEFORE_SSEL_HIGH);
 #endif
             samr21TrxSetSSel(false);
             __enable_irq();
@@ -978,7 +998,7 @@ checkShortAddr:
             samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_MSG_INVALID);
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-            samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+            samr21delaySysTick(CPU_WAIT_CYCLES_BEFORE_SSEL_HIGH);
 #endif
             samr21TrxSetSSel(false);
             __enable_irq();
@@ -995,7 +1015,7 @@ checkShortAddr:
             samr21RadioFsmQueueSoftEvent(RADIO_SOFTEVENT_MSG_INVALID);
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-            samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+            samr21delaySysTick(CPU_WAIT_CYCLES_BEFORE_SSEL_HIGH);
 #endif
             samr21TrxSetSSel(false);
             __enable_irq();
@@ -1023,7 +1043,7 @@ downloadRemainingData:
     while (buffer->downloadedSize <= buffer->inboundFrame.header.lenght)
     {
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-        samr21delaySysTick(CPU_WAIT_CYCLE_FOR_FRAME_BUFFER_EMPTY_FLAG);
+        samr21delaySysTick(CPU_WAIT_CYCLES_FOR_FRAME_BUFFER_EMPTY_FLAG);
 #endif
         //(see r21 datasheet, 40.7 Frame Buffer Empty Indicator)
         for(uint32_t timeout = 0; timeout < 0x005FFF; timeout++){
@@ -1040,12 +1060,12 @@ downloadRemainingData:
 
     // 3 Byte after the msg Frame are LQI,RSSI and CRC Informations (see r21 datasheet 35.3.2 Frame Buffer Access Mode)
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+    samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
 #endif
     buffer->rxLQI = samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+    samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
 #endif
     buffer->rxRSSI = AT86RF233_RSSI_BASE_VAL + samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
 
@@ -1053,7 +1073,7 @@ downloadRemainingData:
 
     // Disable Slave Select
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+    samr21delaySysTick(CPU_WAIT_CYCLES_BEFORE_SSEL_HIGH);
 #endif
     samr21TrxSetSSel(false);
     __enable_irq();
@@ -1102,7 +1122,7 @@ void fsm_func_samr21RadioSendAck()
     // Enable SPI Slave Select, to start uploading the Frame Payload in parallel while SHR is still being send
     samr21TrxSetSSel(true);
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
+    samr21delaySysTick(CPU_WAIT_CYCLES_AFTER_SSEL_LOW);
 #endif
     // Transmission should have started here allrdy so trigger can be disabled
     samr21TrxSetSLP_TR(false);
@@ -1114,7 +1134,7 @@ void fsm_func_samr21RadioSendAck()
     {
         
         samr21TrxSetSSel(false);
-        samr21delaySysTick(CPU_WAIT_CYCLE_AFTER_SSEL_LOW);
+        samr21delaySysTick(CPU_WAIT_CYCLES_AFTER_SSEL_LOW);
 
         //go Back to RX
         samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_RX_ON);
@@ -1143,13 +1163,13 @@ void fsm_func_samr21RadioSendAck()
     // Leave the Last 2 Bytes empty cause CRC is generated by the at86rf233
     for (int16_t i = 0; i <= (sf_ringBufferGetCurrent()->outboundFrame.header.lenght - IEEE_802_15_4_CRC_SIZE); i++)
     {
-        samr21delaySysTick(CPU_WAIT_CYCLE_BETWEEN_BYTES);
+        samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
         samr21TrxSpiTransceiveByteRaw(sf_ringBufferGetCurrent()->outboundFrame.raw[i]);
     }
 
     // Disable Slave Select
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH);
+    samr21delaySysTick(CPU_WAIT_CYCLES_BEFORE_SSEL_HIGH);
 #endif
     samr21TrxSetSSel(false);
 
@@ -1217,17 +1237,10 @@ void fsm_func_samr21EvalEdContinuation()
 }
 
 
-void samr21RadioParserGetAddrPositions(
+void samr21RadioParserGetRelativeHeaderPositions(
     FrameBuffer_t* frame,
-    uint8_t* posDestinationPanId,
-    uint8_t* posDestinationAddr,
-    uint8_t* posSourcePanId,
-    uint8_t* posSourceAddr,
-    uint8_t* posAddrHeaderTrail
+    FrameIndex_t*  frameIndex
 ){ 
-    *posAddrHeaderTrail = 4; // 1Byte PhyHeader, 2Byte FCF, 1Byte Sequenz Number
-
-    
 parseDestinationPanId:
     //(TABLE 7.2 IEEE 802.15.4-2015) 
     if(frame->header.frameControlField2.destinationAddressingMode == IEEE_802_15_4_ADDR_SHORT){
@@ -1236,11 +1249,11 @@ parseDestinationPanId:
             && frame->header.frameControlField1.panIdCompression
         ){
             //IEEE 802.15.4-2015 TABLE 7.2 column4
-            *posDestinationPanId = 0;
+            frameIndex->posDestinationPanId = 0;
             goto parseDestinationAddr; 
         }
-        *posDestinationPanId = *posAddrHeaderTrail;
-        *posAddrHeaderTrail += sizeof(uint16_t);
+        frameIndex->posDestinationPanId  = frameIndex->curParserTrailPos;
+        frameIndex->curParserTrailPos += sizeof(uint16_t);
         goto parseDestinationAddr; 
     }
   
@@ -1250,7 +1263,7 @@ parseDestinationPanId:
             && frame->header.frameControlField1.panIdCompression
         ){
             //IEEE 802.15.4-2015 TABLE 7.2 column4
-            *posDestinationPanId = 0;
+            frameIndex->posDestinationPanId = 0;
             goto parseDestinationAddr; 
         }
         if(
@@ -1258,12 +1271,11 @@ parseDestinationPanId:
             && frame->header.frameControlField1.panIdCompression
         ){
             //IEEE 802.15.4-2015 TABLE 7.2 column8
-            *posDestinationPanId = 0;
+            frameIndex->posDestinationPanId = 0;
             goto parseDestinationAddr; 
         }
-
-        *posDestinationPanId = *posAddrHeaderTrail;
-        *posAddrHeaderTrail += sizeof(uint16_t);
+        frameIndex->posDestinationPanId = frameIndex->curParserTrailPos;
+        frameIndex->curParserTrailPos += sizeof(uint16_t);
         goto parseDestinationAddr;
     }
 
@@ -1273,57 +1285,70 @@ parseDestinationPanId:
         && frame->header.frameControlField1.panIdCompression
     ){
         //IEEE 802.15.4-2015 TABLE 7.2 column2
-        *posDestinationPanId = *posAddrHeaderTrail;
-        *posAddrHeaderTrail += sizeof(uint16_t);
+        frameIndex->posDestinationPanId = frameIndex->curParserTrailPos;
+        frameIndex->curParserTrailPos += sizeof(uint16_t);
         goto parseDestinationAddr; 
     }
-    *posDestinationPanId = 0;
+    frameIndex->posDestinationPanId = 0;
 
 parseDestinationAddr:
     if(frame->header.frameControlField2.destinationAddressingMode == IEEE_802_15_4_ADDR_SHORT ){
-        *posDestinationAddr = *posAddrHeaderTrail ;
-        *posAddrHeaderTrail += sizeof(uint16_t);
+        frameIndex->posDestinationAddr = frameIndex->curParserTrailPos ;
+        frameIndex->curParserTrailPos += sizeof(uint16_t);
         goto parseSourcePanId;
     }
     if(frame->header.frameControlField2.destinationAddressingMode == IEEE_802_15_4_ADDR_IEEE ){
-        *posDestinationAddr = *posAddrHeaderTrail ;
-        *posAddrHeaderTrail += sizeof(uint64_t);
+        frameIndex->posDestinationAddr = frameIndex->curParserTrailPos ;
+        frameIndex->curParserTrailPos += sizeof(uint64_t);
         goto parseSourcePanId;
     }  
-    *posDestinationAddr = 0;
+    frameIndex->posDestinationAddr = 0;
 
 parseSourcePanId:
     if(!(frame->header.frameControlField1.panIdCompression)){
         if(frame->header.frameControlField2.sourceAddressingMode == IEEE_802_15_4_ADDR_SHORT){
-            posSourcePanId = *posAddrHeaderTrail;
-            *posAddrHeaderTrail += sizeof(uint16_t);
+            frameIndex->posSourcePanId = frameIndex->posAddrHeaderTrail;
+            frameIndex->curParserTrailPos += sizeof(uint16_t);
             goto parseSourceAddr;
         }
         if( 
             frame->header.frameControlField2.sourceAddressingMode == IEEE_802_15_4_ADDR_IEEE
             && frame->header.frameControlField2.destinationAddressingMode != IEEE_802_15_4_ADDR_IEEE
         ){
-            posSourcePanId = *posAddrHeaderTrail;
-            *posAddrHeaderTrail += sizeof(uint16_t);
+            frameIndex->posSourcePanId = frameIndex->posAddrHeaderTrail;
+            frameIndex->curParserTrailPos += sizeof(uint16_t);
             goto parseSourceAddr;
         }
-        posSourcePanId = 0;
+        frameIndex->posSourcePanId = 0;
     }
 
 
 parseSourceAddr:
     if(frame->header.frameControlField2.sourceAddressingMode == IEEE_802_15_4_ADDR_SHORT ){
-        *posSourceAddr = *posAddrHeaderTrail ;
-        *posAddrHeaderTrail += sizeof(uint16_t);
-        return;
+        frameIndex->posSourceAddr = frameIndex->curParserTrailPos ;
+        frameIndex->curParserTrailPos += sizeof(uint16_t);
+        goto parseSourceAddr;
     }
     if(frame->header.frameControlField2.sourceAddressingMode == IEEE_802_15_4_ADDR_IEEE ){
-        *posSourceAddr = *posAddrHeaderTrail ;
-        *posAddrHeaderTrail += sizeof(uint64_t);
-        return;
+        frameIndex->posSourceAddr = frameIndex->curParserTrailPos ;
+        frameIndex->curParserTrailPos += sizeof(uint64_t);
+        goto parseSourceAddr;
     }  
-    *posSourceAddr = 0;
-    return;
+    frameIndex->posSourceAddr = 0;
+
+SecurityControlField:
+    if(frame->header.frameControlField1.securityEnabled){
+        frameIndex->posSecurityControlField = (frameIndex->curParserTrailPos)++;
+        return;
+    }
+    frameIndex->posSecurityControlField = 0
+}
+
+void samr21RadioParserGetRelativeAuxSecurityHeaderPositions(
+    FrameBuffer_t* frame,
+    FrameIndex_t*  frameIndex
+){
+     
 }
 
 

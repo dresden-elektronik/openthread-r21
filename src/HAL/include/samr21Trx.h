@@ -10,12 +10,12 @@
 #include "at86rf233_Bitfield.h"
 #include "at86rf233.h"
 
-#define CPU_WAIT_CYCLE_AFTER_SSEL_LOW               9   // 187.5ns
-#define CPU_WAIT_CYCLE_BETWEEN_BYTES                12  // 250ns
-#define CPU_WAIT_CYCLE_BETWEEN_BYTES_FAST_ACCESS    24  // 500ns
-#define CPU_WAIT_CYCLE_SLP_TR_PULSE                 4   // 84ns
-#define CPU_WAIT_CYCLE_BEFORE_SSEL_HIGH             12  // 250ns
-#define CPU_WAIT_CYCLE_FOR_FRAME_BUFFER_EMPTY_FLAG  36  // 750ns
+#define CPU_WAIT_CYCLES_AFTER_SSEL_LOW              9   // 187.5ns
+#define CPU_WAIT_CYCLES_BETWEEN_BYTES               12  // 250ns
+#define CPU_WAIT_CYCLES_BETWEEN_BYTES_FAST_ACCESS   24  // 500ns
+#define CPU_WAIT_CYCLES_SLP_TR_PULSE                4   // 84ns
+#define CPU_WAIT_CYCLES_BEFORE_SSEL_HIGH            12  // 250ns
+#define CPU_WAIT_CYCLES_FOR_FRAME_BUFFER_EMPTY_FLAG 36  // 750ns
 
 #define AT86RF233_RSSI_BASE_VAL                     -94
 

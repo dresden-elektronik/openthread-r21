@@ -31,6 +31,14 @@
     #define SYMBOL_DURATION_802_15_4_us 16
 #endif
 
+#define OCTET_DURATION_802_15_4_us ( 8 * SYMBOL_DURATION_802_15_4_us )
+
+#ifndef NUM_ENERGY_DETECTION_SCANS_PER_MS
+    #define NUM_ENERGY_DETECTION_SCANS_PER_MS 4;
+#endif
+
+#define TIME_UNTIL_NEXT_ENERGY_DETECTION_SCAN_us (1000 / NUM_ENERGY_DETECTION_SCANS_PER_MS)
+
 typedef enum RadioState{
     RADIO_STATE_IDLE                          = 0x00,
     RADIO_STATE_SLEEP                         = 0x01,
@@ -51,40 +59,56 @@ typedef union
 
 }FrameBuffer_t;
 
+typedef struct
+{
+        uint8_t posDestinationPanId;
+        uint8_t posDestinationAddr;
+        uint8_t posSourcePanId;
+        uint8_t posSourceAddr;
+        uint8_t posSecurityControlField;
+        uint8_t posSecurityFrameCounter;
+        uint8_t posSecurityKeyIdentifier;
+        union{
+            uint8_t posBeginnPayload;
+            uint8_t curParserTrailPos;
+        };
+}FrameIndex_t;      
+
 
 
 typedef struct{
-    FrameBuffer_t           outboundFrame;
-    FrameBuffer_t           inboundFrame;
-
     
-    uint32_t                txTimestamp;
+    FrameBuffer_t           outboundFrame;  //Holds the raw Data of the Outgoing Frame (Send Frame, Ack Frame)  
+    FrameBuffer_t           inboundFrame;   //Holds the raw Data of the Incoming Frame (Recv Frame, Ack Frame)
 
+    FrameIndex_t            frameIndex;     //Holds the relative Position of the Addressing and Securtity Data-Fields
+
+    uint32_t                txTimestamp;    //Timestamp when Transmission of a frame or Ack started
     union{
-        uint32_t            rxTimestamp;
-        uint32_t            edTimeleft;
+        uint32_t            rxTimestamp;    //Timestamp when Reception of a frame or Ack started  
+        uint32_t            edTimeleft;     //Holds the Number (and Time in ( 1 / NUM_ENERGY_DETECTION_SCANS_PER_MS ms steps ) ) of remaining EnergyScans
     };
 
-    int8_t                  rxRSSI;
-    uint8_t                 rxLQI;
-    uint8_t                 channel;
-
+    int8_t                  rxRSSI;         //Holds RSSI of the recived Frame
+    uint8_t                 rxLQI;          //Holds LQI of the recived Frame
+    uint8_t                 channel;        //Holds the channel where the Transaction is happening
     union{
         //RX Operation
-        uint8_t             downloadedSize;
+        uint8_t             downloadedSize; //Holds the amount of RX-Data downloaded from the TRX
 
         //TX Operation
         struct         
         {
-            uint8_t csma:4;
-            uint8_t transmission:4;
+            uint8_t csma:4;                 //Holds the number of CSMA retrys left
+            uint8_t transmission:4;         //Holds the number of Retransmission retrys left
         }                   retrysLeft;
 
         //ED Operation
-        uint8_t              measuredEngeryLevel;
-    };      
+        uint8_t             measuredEngeryLevel;    //Holds the number of Retransmission retrys left
+    }; 
+                    
+    RadioJobState           jobState;       //Holds the current JobState of the Transmission in the Buffer
 
-    RadioJobState           jobState;
 }JobBuffer_t;
 
 //Config Functions
@@ -172,12 +196,5 @@ typedef struct{
 bool samr21RadioFilterPanId(uint8_t * panID);
 bool samr21RadioFilterShortAddr(uint8_t * ieeeAddr);
 bool samr21RadioFilterIeeeAddr(uint8_t * ieeeAddr);
-void samr21RadioParserGetAddrPositions(
-    FrameBuffer_t* frame,
-    uint8_t* posDestinationPanId,
-    uint8_t* posDestinationAddr,
-    uint8_t* posSourcePanId,
-    uint8_t* posSourceAddr,
-    uint8_t* posAddrHeaderTrail
-);
+void samr21RadioParserGetRelativeMacHeaderPositions(FrameBuffer_t* frame, FrameIndex_t*  frameIndex);
 #endif // _SAMR21_RADIO_H_
