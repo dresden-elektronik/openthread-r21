@@ -20,6 +20,16 @@
         "stdbool.h": "c",
         "samr21aes.h": "c",
         "samr21radiofsm.h": "c",
-        "stddef.h": "c"
+        "stddef.h": "c",
+        "samr21radioaddrmatch.h": "c",
+        "samr21radioedhandler.h": "c",
+        "samr21radiotrxregcopy.h": "c",
+        "samr21radioirqhandler.h": "c",
+        "samr21radiobuffer.h": "c",
+        "samr21radioctrl.h": "c",
+        "samr21radioparser.h": "c",
+        "samr21radiovars.h": "c",
+        "otultilwrapper_macframe.h": "c",
+        "radio.h": "c"
     }
 }

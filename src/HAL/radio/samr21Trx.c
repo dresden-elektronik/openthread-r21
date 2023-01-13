@@ -1,11 +1,9 @@
 //Author Eric Härtel @ dresden elektronik ingenieurtechnik gmbh © 2022
 #include "samr21Trx.h"
 
-//Local Register Copys of At86rf233 to save some Read Acceses
-volatile AT86RF233_REG_TRX_STATUS_t    g_trxStatus;   //used as external var
-volatile AT86RF233_REG_IRQ_STATUS_t    g_trxLastIrq;  //used as external var         
-volatile AT86RF233_REG_TRX_CTRL_0_t    g_trxCtrl0;    //used as external var
 
+
+static volatile bool s_spiActive;
 
 void samr21TrxInterfaceInit(){
     //Setup Clocks for TRX-SPI
@@ -194,7 +192,10 @@ void samr21TrxInterfaceInit(){
         // Wait for SERCOM4 to setup
         while (SERCOM4->SPI.SYNCBUSY.reg);
 
-
+    //Write predefined Operating-Values to Config Registers of AT86rf233 
+        samr21TrxWriteRegister(TRX_CTRL_1_REG,  g_trxCtrl1.reg);
+        samr21TrxWriteRegister(PHY_TX_PWR_REG,  g_phyTxPwr.reg);
+        samr21TrxWriteRegister(IRQ_MASK_REG,    g_irqMask.reg);
 }
 
 void samr21TrxSetupMClk(uint8_t clk){
@@ -209,128 +210,31 @@ void samr21TrxSetupMClk(uint8_t clk){
 }
 
 uint8_t samr21TrxReadRegister(uint8_t addr){
-    __disable_irq();
-    
-    //Enable Slave Select
-    samr21TrxSetSSel(true);
-#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLES_AFTER_SSEL_LOW);
-#endif
 
-    //Buffer for return Value
-    uint8_t rVal;
-        
-    //Send Addr and get Status Byte (see r2 datasheet 35.4 Radio Transceiver Status Information)
-    g_trxStatus.reg = samr21TrxSpiTransceiveByteRaw( (addr & 0x3F) | AT86RF233_CMD_REG_READ_MASK );
+    samr21TrxSpiStartAccess(AT86RF233_CMD_REG_READ_MASK, addr);
+
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
     samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
 #endif
 
-    //Send Dummy Data
-    rVal = samr21TrxSpiTransceiveByteRaw(0x0);
+    uint8_t rVal = samr21TrxSpiReadByteRaw();
 
-    //Disable Slave Select
-#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLES_BEFORE_SSEL_HIGH);
-#endif
-    samr21TrxSetSSel(false);
+    samr21TrxSpiCloseAccess();
 
-    __enable_irq();
     return rVal;
 }
 
 void samr21TrxWriteRegister(uint8_t addr, uint8_t data){
-    __disable_irq();
-    //Enable Slave Select
-    samr21TrxSetSSel(true);
-#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLES_AFTER_SSEL_LOW);
-#endif
-      
-    //Send Addr and get Status Byte (see r2 datasheet 35.4 Radio Transceiver Status Information)
-    g_trxStatus.reg = samr21TrxSpiTransceiveByteRaw( (addr & 0x3F ) | AT86RF233_CMD_REG_WRITE_MASK );
 
-    //Send  Data
+    samr21TrxSpiStartAccess(AT86RF233_CMD_REG_WRITE_MASK, addr);
+
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
     samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
 #endif
+
     samr21TrxSpiTransceiveByteRaw(data);
 
-    //Disable Slave Select
-#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLES_BEFORE_SSEL_HIGH);
-#endif
-    samr21TrxSetSSel(false);
-    __enable_irq();
-}
-
-void samr21TrxReadFromSRam(uint8_t addr, uint8_t* readBuffer, uint8_t lenght){
-    
-    __disable_irq();
-    //Enable Slave Select
-    samr21TrxSetSSel(true);
-#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLES_AFTER_SSEL_LOW);
-#endif
-    
-    //Send Read SRAM Command and get Status Byte (see r2 datasheet 35.4 Radio Transceiver Status Information)
-    g_trxStatus.reg = samr21TrxSpiTransceiveByteRaw( AT86RF233_CMD_SRAM_READ );
-
-    //Send Address
-    //samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES_FAST_ACCESS);
-    samr21TrxSpiTransceiveByteRaw( addr );
-
-    //Download data
-    for (uint8_t i = 0; i < lenght ; i++)
-    {
-        //wait a sec
-        //samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES_FAST_ACCESS);
-        readBuffer[i] = samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE); 
-    }
-
-    //Disable Slave Select
-#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLES_BEFORE_SSEL_HIGH);
-#endif
-    samr21TrxSetSSel(false);
-    __enable_irq();
-}
-
-void samr21TrxWriteToSRam(uint8_t addr, uint8_t* writeBuffer, uint8_t lenght){
-    
-    __disable_irq();
-    //Enable Slave Select
-    samr21TrxSetSSel(true);
-#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-        samr21delaySysTick(CPU_WAIT_CYCLES_AFTER_SSEL_LOW);
-#endif
-
-    
-    //Send Write SRAM Command and get Status Byte (see r21 datasheet 35.4 Radio Transceiver Status Information)
-    g_trxStatus.reg = samr21TrxSpiTransceiveByteRaw( AT86RF233_CMD_SRAM_WRITE );
-
-    //Send Address
-#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES_FAST_ACCESS);
-#endif
-    samr21TrxSpiTransceiveByteRaw( addr );
-
-    //Upload data
-    for (uint8_t i = 0; i < lenght ; i++)
-    {
-#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-        samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES_FAST_ACCESS);
-#endif
-        samr21TrxSpiTransceiveByteRaw(writeBuffer[i]);
-    }
-
-
-    //Disable Slave Select
-#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLES_BEFORE_SSEL_HIGH);
-#endif
-    samr21TrxSetSSel(false);
-    __enable_irq();
+    samr21TrxSpiCloseAccess();
 }
 
 void samr21TrxUpdateStatus(){
@@ -352,14 +256,52 @@ void samr21TrxUpdateStatus(){
     __enable_irq();
 }
 
-void samr21TrxSetSSel(bool enabled){
-    //Pin PB31 == SSEL
-    //Active Low
-    if(enabled){
-        PORT->Group[1].OUTCLR.reg = 1 << 31;
+void samr21TrxSpiStartAccess(uint8_t command, uint8_t addr){
+    //Wait for other ongoing SPI Access to End
+    while (s_spiActive);
+
+    __disable_irq();
+    s_spiActive = true;
+    PORT->Group[1].OUTCLR.reg = 1 << 31; //SSel Low Active
+
+#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
+    samr21delaySysTick(CPU_WAIT_CYCLES_AFTER_SSEL_LOW);
+#endif
+
+    //Register Read/Write
+    if(command & AT86RF233_CMD_REG_READ_MASK){
+        g_trxStatus.reg = samr21TrxSpiTransceiveByteRaw( ( addr & 0x3F ) | command );
         return;
     }
-    PORT->Group[1].OUTSET.reg = 1 << 31;
+
+    //Framebuffer Access
+    if(command & AT86RF233_CMD_FRAMEBUFFER_READ){
+        g_trxStatus.reg = samr21TrxSpiTransceiveByteRaw(command);
+        return;
+    }
+
+    //SRAM Access
+    g_trxStatus.reg = samr21TrxSpiTransceiveByteRaw(command);
+
+#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
+    samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
+#endif
+
+    samr21TrxSpiTransceiveByteRaw(addr);
+}
+
+void samr21TrxSpiCloseAccess(){
+    PORT->Group[1].OUTSET.reg = 1 << 31;//SSel Low Active
+
+#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
+    samr21delaySysTick(CPU_WAIT_CYCLES_AFTER_SSEL_LOW);
+#endif
+    s_spiActive = false;
+    __enable_irq();
+}
+
+bool samr21TrxSpiBusy(){
+    return s_spiActive;
 }
 
 void samr21TrxSetRSTN(bool enabled){
@@ -394,9 +336,44 @@ uint8_t samr21TrxSpiTransceiveByteRaw(uint8_t data){
 
     //return recived Answerto
     return SERCOM4->SPI.DATA.bit.DATA;
+}
 
+void samr21TrxSpiTransceiveBytesRaw(uint8_t *inData, uint8_t *outData, uint8_t len){
+    for (uint8_t i = 0; i < len; i++)
+    {
+
+#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
+        samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
+#endif       
+
+        if(!outData){
+            samr21TrxSpiTransceiveByteRaw(inData[i]);
+            continue;
+        }
+ 
+        outData[i] = samr21TrxSpiTransceiveByteRaw(inData != NULL ? inData[i] : SPI_DUMMY_BYTE);
+    } 
+}
+
+uint8_t  samr21TrxSpiReadByteRaw(){
+    return samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
 }
 
 
-
+uint8_t samr21TrxGetRandomCrumb()
+{
+    return (samr21TrxReadRegister(PHY_RSSI_REG) >> 5) & 0b00000011;
+}
+uint8_t samr21TrxGetRandomNibble()
+{
+    return ((samr21TrxReadRegister(PHY_RSSI_REG) >> 5) & 0b00000011) | ((samr21TrxReadRegister(PHY_RSSI_REG) >> 3) & 0b00001100);
+}
+uint8_t samr21TrxGetRandomByte()
+{
+    uint8_t rVal = (samr21TrxReadRegister(PHY_RSSI_REG) & 0x60) >> 5;
+    rVal |= (samr21TrxReadRegister(PHY_RSSI_REG) & 0x60) >> 3;
+    rVal |= (samr21TrxReadRegister(PHY_RSSI_REG) & 0x60) >> 1;
+    rVal |= (samr21TrxReadRegister(PHY_RSSI_REG) & 0x60) << 1;
+    return rVal;
+}
 

@@ -113,8 +113,7 @@ void samr21AesEcbEncrypt(uint8_t* inDataBlock, uint8_t* outDataBlock, bool readO
     __enable_irq();
 }
 
-void samr21AesCbcEncrypt(uint8_t* inDataBlock, uint8_t* outDataBlock, bool readOnly){
-    __disable_irq();
+void samr21AesCbcEncrypt(uint8_t* inDataBlock, uint8_t inDataLenght ,uint8_t* outDataBlock, bool readOnly){
     samr21TrxSetSSel(true);
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
     samr21delaySysTick(CPU_WAIT_CYCLES_AFTER_SSEL_LOW);
@@ -155,7 +154,14 @@ void samr21AesCbcEncrypt(uint8_t* inDataBlock, uint8_t* outDataBlock, bool readO
             }
         } 
         else {
-            samr21TrxSpiTransceiveByteRaw( inDataBlock == NULL ? 0x00 : inDataBlock[i] );
+
+            if(i < inDataLenght){
+                samr21TrxSpiTransceiveByteRaw( inDataBlock == NULL ? 0x00 : inDataBlock[i] );
+            }
+            else{
+                samr21TrxSpiTransceiveByteRaw( 0x00 );
+            }
+            
         }
     }
 
@@ -174,9 +180,9 @@ void samr21AesCbcEncrypt(uint8_t* inDataBlock, uint8_t* outDataBlock, bool readO
     samr21delaySysTick(CPU_WAIT_CYCLES_BEFORE_SSEL_HIGH);
 #endif
     samr21TrxSetSSel(false);
-
-    __enable_irq();
 }
+
+
 
 void samr21AesEcbEncryptBlocking(uint8_t* dataBlock){
 

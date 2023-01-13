@@ -5,6 +5,7 @@
 
 #define AES_ECB_ENCRYPTION_CMD  0x00
 #define AES_START_CMD           0x00
+#define CPU_DELAY_CYCLES_AES    700
 
 #include "samr21.h"
 #include "samr21NopDelay.h"
@@ -18,7 +19,7 @@
 void samr21AesKeySetup(uint8_t* key);
 
 void samr21AesEcbEncrypt(uint8_t* inDataBlock, uint8_t* outDataBlock, bool readOnly);
-void samr21AesCbcEncrypt(uint8_t* inDataBlock, uint8_t* outDataBlock, bool readOnly);
+void samr21AesCbcEncrypt(uint8_t* inDataBlock, uint8_t inDataLenght, uint8_t* outDataBlock, bool readOnly);
 
 void samr21AesEcbEncryptBlocking(uint8_t* dataBlock);
 

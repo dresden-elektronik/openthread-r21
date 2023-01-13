@@ -13,4 +13,5 @@ void samr21RtcDeinit();
 
 uint32_t samr21RtcGetTimestamp();
 
+void samr21RtcSetWakeUpTimestamp(uint32_t wakeUpTime);
 #endif //_SAMR21_RTC_H_          

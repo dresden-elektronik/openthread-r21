@@ -44,6 +44,9 @@ void samr21RtcInit(){
 }
 
 void samr21RtcDeinit(){
+    //Disable IRQ
+    NVIC_DisableIRQ(RTC_IRQn);
+
     //Disable permanent Sync with COUT Register
     RTC->MODE0.READREQ.reg = 0x00;
     samr21delaySysTick(100);
@@ -67,3 +70,17 @@ void samr21RtcDeinit(){
 uint32_t samr21RtcGetTimestamp(){
     return RTC->MODE0.COUNT.reg;
 }
+
+void samr21RtcSetWakeUpTimestamp(uint32_t wakeUpTime){
+    RTC->MODE0.COMP[0].reg = wakeUpTime;
+    RTC->MODE0.INTENFLAG.bit.CMP0 = 1;
+    RTC->MODE0.INTENSET.bit.CMP0 = 1;
+    NVIC_EnableIRQ(RTC_IRQn);
+}
+
+//MOVED TO RADIO RX HANDLER FOR CSL
+// void RTC_Handler(){
+//     RTC->MODE0.INTENFLAG.bit.CMP0 = 1;
+//     RTC->MODE0.INTENCLR.bit.CMP0 = 1;
+//     NVIC_DisableIRQ(RTC_IRQn);
+// }

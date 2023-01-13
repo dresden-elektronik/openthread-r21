@@ -7,6 +7,8 @@
 #include "samr21NopDelay.h"
 #include <stdbool.h>
 
+
+#include "samr21RadioTrxRegCopy.h"
 #include "at86rf233_Bitfield.h"
 #include "at86rf233.h"
 
@@ -18,6 +20,14 @@
 #define CPU_WAIT_CYCLES_FOR_FRAME_BUFFER_EMPTY_FLAG 36  // 750ns
 
 #define AT86RF233_RSSI_BASE_VAL                     -94
+
+#define AT86RF233_SPI_TIME_PER_BYTE_us              2
+#define AT86RF233_SPI_INIT_TIME_FRAMEBUFFER_us      3
+#define AT86RF233_SPI_INIT_TIME_REG_us              3
+#define AT86RF233_SPI_INIT_TIME_SRAM_us             5
+
+#define AT86RF233_FRAMEBUFFER_MISC_SIZE             3
+
 
 #define SPI_DUMMY_BYTE                              0x00
 
@@ -40,8 +50,8 @@ void samr21TrxUpdateStatus();
 uint8_t samr21TrxReadRegister(uint8_t addr);
 void samr21TrxWriteRegister(uint8_t addr, uint8_t data);
 
-void samr21TrxWriteToSRam(uint8_t addr, uint8_t* writeBuffer, uint8_t lenght);
-void samr21TrxReadFromSRam(uint8_t addr, uint8_t* readBuffer, uint8_t lenght);
+void samr21TrxSpiStartAccess(uint8_t command, uint8_t addr);
+void samr21TrxSpiCloseAccess();
 
 void samr21TrxSetSSel(bool enabled);
 void samr21TrxSetRSTN(bool enabled);
@@ -49,5 +59,10 @@ void samr21TrxSetSLP_TR(bool enabled);
 
 //Sends a Byte via SPI and simultaneously Recives one
 uint8_t samr21TrxSpiTransceiveByteRaw(uint8_t data);
+void samr21TrxSpiTransceiveBytesRaw(uint8_t *inData, uint8_t *outData, uint8_t len);
+uint8_t samr21TrxSpiReadByteRaw();
 
+uint8_t samr21TrxGetRandomCrumb();
+uint8_t samr21TrxGetRandomNibble();
+uint8_t samr21TrxGetRandomByte();
 #endif // _SAMR21_TRX_H_
