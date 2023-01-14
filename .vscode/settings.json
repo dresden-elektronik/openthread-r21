@@ -31,5 +31,6 @@
         "samr21radiovars.h": "c",
         "otultilwrapper_macframe.h": "c",
         "radio.h": "c"
-    }
+    },
+    "cmake.configureOnOpen": false
 }

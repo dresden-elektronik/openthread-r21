@@ -22,7 +22,11 @@
 #define RX_BACKOFF_BEFORE_FIRST_FRAMEBUFFER_ACCESS 100
 #define RX_FRAMEBUFFER_ACCESS_HEADROOM_us   64
 
-
+#ifdef OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
+    #define VENDOR_OUI_THREAD_COMPANY_ID    0xeab89b
+    #define ENH_ACK_PROBING_IE              0x00          
+#endif
+    
 typedef enum RxStatus
 {
     RX_STATUS_IDLE             =0x00,
@@ -35,6 +39,7 @@ typedef enum RxStatus
 
     RX_STATUS_SENDING_ACK           ,
     RX_STATUS_SENDING_ENH_ACK       ,
+    RX_STATUS_SENDING_ACK_WAIT_TRX_END,
     RX_STATUS_DONE             =0xF0,
     RX_STATUS_FAILED                
 } RxStatus;
