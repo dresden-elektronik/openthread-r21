@@ -175,6 +175,51 @@ uint16_t samr21RadioCtrlCslGetPhase()
     return (uint16_t)(diff / OT_US_PER_TEN_SYMBOLS + 1);
 }
 
+void samr21RadioCtrlSetIdle()
+{
+
+    if (
+        s_radioState == SAMR21_RADIO_STATE_DISABLED || s_radioState == SAMR21_RADIO_STATE_SLEEP || s_radioState == SAMR21_RADIO_STATE_INVALID)
+    {
+        if (s_radioState == SAMR21_RADIO_STATE_INVALID)
+        {
+            s_radioState = SAMR21_RADIO_STATE_DISABLED;
+        }
+        samr21RadioRemoveEventHandler();
+        g_irqMask = (AT86RF233_REG_IRQ_MASK_t){
+            .bit.pllLock = 0,
+            .bit.pllUnlock = 0,
+            .bit.rxStart = 0,
+            .bit.trxEnd = 0,
+            .bit.ccaEdDone = 0,
+            .bit.addressMatch = 0,
+            .bit.bufferUnderRun = 0,
+            .bit.batteryLow = 0};
+        samr21TrxWriteRegister(IRQ_MASK_REG, g_irqMask.reg);
+        samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_TRX_OFF);
+        return;
+    }
+    
+    g_irqMask = (AT86RF233_REG_IRQ_MASK_t){
+        .bit.pllLock = 0,
+        .bit.pllUnlock = 0,
+        .bit.rxStart = 1,
+        .bit.trxEnd = 1,
+        .bit.ccaEdDone = 0,
+        .bit.addressMatch = 0,
+        .bit.bufferUnderRun = 1,
+        .bit.batteryLow = 0};
+    samr21TrxWriteRegister(IRQ_MASK_REG, g_irqMask.reg);
+    
+    samr21RadioSetEventHandler(&samr21RadioRxEventHandler);
+    
+    samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_RX_ON);
+    
+    if(s_radioState == SAMR21_RADIO_STATE_TRANSMIT){
+        s_radioState = SAMR21_RADIO_STATE_RECEIVE;
+    }
+}
+
 void samr21RadioCtrlSetMacKeys(
 
     uint8_t        aKeyId,

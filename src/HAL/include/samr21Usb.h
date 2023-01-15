@@ -1,9 +1,10 @@
 //Author Eric Härtel @ dresden elektronik ingenieurtechnik gmbh © 2022
-#include "samr21.h"
+
 
 #ifndef _SAMR21_USB_H_
 #define _SAMR21_USB_H_
 
+#include "samr21.h"
 #include "tusb.h"
 
 void samr21UsbInit();

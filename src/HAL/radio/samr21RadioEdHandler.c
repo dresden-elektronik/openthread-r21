@@ -132,17 +132,6 @@ void samr21RadioEdCleanup(){
     s_edStatus = ED_STATUS_IDLE;
 
     // Set relevant IRQ Mask to return to Recive State
-    g_irqMask = (AT86RF233_REG_IRQ_MASK_t){
-        .bit.pllLock = 0,
-        .bit.pllUnlock = 0,
-        .bit.rxStart = 1,
-        .bit.trxEnd = 0,
-        .bit.ccaEdDone = 0,
-        .bit.addressMatch = 0,
-        .bit.bufferUnderRun = 0,
-        .bit.batteryLow = 0
-    };
 
-    samr21RadioSetEventHandler(&samr21RadioTxEventHandler);
-
+    samr21RadioCtrlSetIdle();
 }
