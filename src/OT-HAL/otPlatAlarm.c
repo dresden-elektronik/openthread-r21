@@ -9,29 +9,30 @@
 
 #define MICRO_SECS_PER_MILLI_SEC 1000
 
+otInstance *s_instance = NULL;
 
 void otPlatAlarmMilliStartAt(otInstance *aInstance, uint32_t aT0, uint32_t aDt)
 {
-    OT_UNUSED_VARIABLE(aInstance);
-    samr21Timer3Set( ( aDt - ( samr21RtcGetTimestamp() - aT0 ) ) * MICRO_SECS_PER_MILLI_SEC );
+    s_instance = aInstance;
+    samr21Timer1Set( ( aDt - ( samr21RtcGetTimestamp() - aT0 ) ) * MICRO_SECS_PER_MILLI_SEC );
 }
 
 void otPlatAlarmMicroStartAt(otInstance *aInstance, uint32_t aT0, uint32_t aDt)
 {
-    OT_UNUSED_VARIABLE(aInstance);
-    samr21Timer2Set( ( aDt - ( samr21RtcGetTimestamp() - aT0 ) ) );
+    s_instance = aInstance;
+    samr21Timer0Set( ( aDt - ( samr21RtcGetTimestamp() - aT0 ) ) );
 }
 
 void otPlatAlarmMilliStop(otInstance *aInstance)
 {
-    OT_UNUSED_VARIABLE(aInstance);
-    samr21Timer3Stop();
+    s_instance = aInstance;
+    samr21Timer1Stop();
 }
 
 void otPlatAlarmMicroStop(otInstance *aInstance)
 {
-    OT_UNUSED_VARIABLE(aInstance);
-    samr21Timer2Stop();
+    s_instance = aInstance;
+    samr21Timer0Stop();
 }
 
 uint32_t otPlatAlarmMilliGetNow(void)
@@ -44,18 +45,12 @@ uint32_t otPlatAlarmMicroGetNow(void)
     return samr21RtcGetTimestamp();
 }
 
-void TC3_Handler(){
-    TC3->COUNT16.INTFLAG.bit.OVF = 1;
-    s_alarmFired = true;
+void TCC0_Handler(){
+    TCC0->INTFLAG.bit.OVF = 1;
+    otPlatAlarmMilliFired(s_instance);
+}
 
-#if OPENTHREAD_CONFIG_DIAG_ENABLE
-        if (otPlatDiagModeGet())
-        {
-            otPlatDiagAlarmFired(aInstance);
-        }
-        else
-#endif
-        {
-            otPlatAlarmMilliFired(aInstance);
-        }
+void TCC1_Handler(){
+    TCC1->INTFLAG.bit.OVF = 1;
+    otPlatAlarmMilliFired(s_instance);
 }
