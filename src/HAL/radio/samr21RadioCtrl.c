@@ -88,7 +88,7 @@ void samr21RadioDeinitIrq()
     //Disable EIC in Power Manager
     PM->APBAMASK.bit.EIC_ = 0;
 
-    s_radioState = SAMR21_RADIO_STATE_DISABLED;;
+    s_radioState = SAMR21_RADIO_STATE_DISABLED;
 }
 
 void samr21RadioCtrlSetState(Samr21RadioState State){
@@ -175,7 +175,8 @@ uint16_t samr21RadioCtrlCslGetPhase()
     return (uint16_t)(diff / OT_US_PER_TEN_SYMBOLS + 1);
 }
 
-void samr21RadioCtrlSetIdle()
+//return true if rxHandler is active after call
+Samr21RadioState samr21RadioCtrlReturnToLastHandler()
 {
 
     if (
@@ -197,7 +198,7 @@ void samr21RadioCtrlSetIdle()
             .bit.batteryLow = 0};
         samr21TrxWriteRegister(IRQ_MASK_REG, g_irqMask.reg);
         samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_TRX_OFF);
-        return;
+        return s_radioState;
     }
     
     g_irqMask = (AT86RF233_REG_IRQ_MASK_t){
@@ -218,6 +219,8 @@ void samr21RadioCtrlSetIdle()
     if(s_radioState == SAMR21_RADIO_STATE_TRANSMIT){
         s_radioState = SAMR21_RADIO_STATE_RECEIVE;
     }
+
+    return true;
 }
 
 void samr21RadioCtrlSetMacKeys(

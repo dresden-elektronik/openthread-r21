@@ -44,14 +44,6 @@ otRadioFrame* samr21RadioTxGetOtBuffer();
 otRadioFrame* samr21RadioTxGetAckOtBuffer();
 bool samr21RadioTxSetup();
 
-//Operation Functions
-void samr21RadioTxStart();
-void samr21RadioTxStartCCA();
-void samr21RadioTxEvalCCA();
-void samr21RadioTxStartTransmission();
-void samr21RadioTxPrepareAckReception();
-void samr21RadioTxAckReceptionStarted();
-void samr21RadioTxAckReceptionDone();
 
 //IRQ-Handler
 void samr21RadioTxEventHandler();
