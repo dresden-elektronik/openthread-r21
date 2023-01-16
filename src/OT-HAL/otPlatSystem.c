@@ -32,7 +32,6 @@ void otSysInit(int argc, char *argv[])
 
     samr21UsbInit();
 
-    samr21RadioInit(); 
 }
 
 bool otSysPseudoResetWasRequested(void)
@@ -47,6 +46,5 @@ void otSysDeinit(void)
 
 void otSysProcessDrivers(otInstance *aInstance)
 {
-    samr21OtPlatAlarmTask(aInstance);
     samr21OtPlatUsbTask();
 }

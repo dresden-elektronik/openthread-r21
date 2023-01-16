@@ -2,8 +2,11 @@
 
 #include "openthread/platform/radio.h"
 
-#include "samr21Trx.h"
-#include "samr21Radio.h"
+#include "samr21RadioCtrl.h"
+#include "samr21RadioRxHandler.h"
+#include "samr21RadioTxHandler.h"
+#include "samr21RadioEdHandler.h"
+#include "samr21RadioAddrMatch.h"
 #include "samr21Nvm.h"
 
 extern AT86RF233_REG_TRX_STATUS_t   g_trxStatus;  // from samr21trx.c
@@ -23,65 +26,35 @@ void otPlatRadioGetIeeeEui64(otInstance *aInstance, uint8_t *aIeeeEui64)
 otRadioState otPlatRadioGetState(otInstance *aInstance)
 {
     OT_UNUSED_VARIABLE(aInstance);
-
-    uint8_t status = samr21RadioGetStatus();
-
-    switch (status){
-        case RADIO_STATE_IDLE:
-            return OT_RADIO_STATE_DISABLED;
-
-        case RADIO_STATE_SLEEP:
-            return OT_RADIO_STATE_SLEEP;
-        
-        case RADIO_STATE_RX:
-            return OT_RADIO_STATE_RECEIVE;
-
-        case RADIO_STATE_TX:
-            return OT_RADIO_STATE_TRANSMIT;
-        
-        default:
-            return OT_RADIO_STATE_INVALID;
-    }
+    return (otRadioState) samr21RadioCtrlGetState();
 }
 
 void otPlatRadioSetExtendedAddress(otInstance *aInstance, const otExtAddress *aAddress)
 {
     OT_UNUSED_VARIABLE(aInstance);
-
-    samr21RadioTurnTrxOff();
-
-    samr21RadioSetIeeeAddr(aAddress->m8);
-
-    samr21RadioTurnTrxOn();
+    samr21RadioSetIeeeAddr(aAddress);
 }
 
 void otPlatRadioSetShortAddress(otInstance *aInstance, uint16_t aAddress)
 {
     OT_UNUSED_VARIABLE(aInstance);
 
-    samr21RadioTurnTrxOff();
-
-    samr21RadioSetShortAddr(&aAddress);
-
-    samr21RadioTurnTrxOn();
+    samr21RadioSetShortAddr(aAddress);
 }
 
 void otPlatRadioSetPanId(otInstance *aInstance, uint16_t aPanId)
 {
     OT_UNUSED_VARIABLE(aInstance);
 
-    samr21RadioTurnTrxOff();
-
-    samr21RadioSetPanId(&aPanId);
-
-    samr21RadioTurnTrxOn();
+    samr21RadioSetPanId(aPanId);
 }
 
 otError otPlatRadioEnable(otInstance *aInstance)
 {
     OT_UNUSED_VARIABLE(aInstance);
 
-    samr21RadioTurnTrxOn();
+    //Always on, cause the TRX-Clock is used as the ref Clock for the MCU-Clocks
+    samr21RadioCtrlSetState(SAMR21_RADIO_STATE_SLEEP);
 
     return OT_ERROR_NONE;
 }
@@ -90,7 +63,8 @@ otError otPlatRadioDisable(otInstance *aInstance)
 {
     OT_UNUSED_VARIABLE(aInstance);
 
-    samr21RadioTurnTrxOff();
+    //Always on, cause the TRX-Clock is used as the ref Clock for the MCU-Clocks
+    samr21RadioCtrlSetState(SAMR21_RADIO_STATE_DISABLED);
 
     return OT_ERROR_NONE;
 }
@@ -99,7 +73,7 @@ otError otPlatRadioSetCcaEnergyDetectThreshold(otInstance *aInstance, int8_t aTh
 {
     OT_UNUSED_VARIABLE(aInstance);
 
-    samr21RadioSetCcaThreshold(aThreshold);
+    samr21RadioCtrlSetCcaThreshold(aThreshold);
 
     return OT_ERROR_NONE;
 }
@@ -108,7 +82,7 @@ otError otPlatRadioGetCcaEnergyDetectThreshold(otInstance *aInstance, int8_t *aT
 {
     OT_UNUSED_VARIABLE(aInstance);
 
-    *(aThreshold) = samr21RadioGetCurrentCcaThreshold();
+    *(aThreshold) = samr21RadioCtrlGetCurrentCcaThreshold();
 
     return OT_ERROR_NONE;
 }
@@ -117,7 +91,7 @@ otError otPlatRadioGetTransmitPower(otInstance *aInstance, int8_t *aPower)
 {
     OT_UNUSED_VARIABLE(aInstance);
 
-    *(aPower) = samr21RadioGetTxPower();
+    *(aPower) = samr21RadioCtrlGetTxPower();
 }
 
 otError otPlatRadioSetTransmitPower(otInstance *aInstance, int8_t aPower)
@@ -138,11 +112,61 @@ int8_t otPlatRadioGetReceiveSensitivity(otInstance *aInstance)
 
 bool otPlatRadioIsEnabled(otInstance *aInstance)
 {
+    Samr21RadioState state = samr21RadioCtrlGetState();
+    
     if (
-        g_trxStatus.bit.trxStatus == TRX_STATUS_TRX_OFF
-        || g_trxStatus.bit.trxStatus == TRX_STATUS_P_ON
+        state == SAMR21_RADIO_STATE_DISABLED
+        || state == SAMR21_RADIO_STATE_INVALID
     ){
         return false;
     }
     return true;
 }
+
+otRadioCaps otPlatRadioGetCaps(otInstance *aInstance){
+    
+    OT_UNUSED_VARIABLE(aInstance);
+
+    return 
+        OT_RADIO_CAPS_ACK_TIMEOUT 
+        | OT_RADIO_CAPS_ENERGY_SCAN 
+        | OT_RADIO_CAPS_TRANSMIT_RETRIES
+        | OT_RADIO_CAPS_CSMA_BACKOFF   
+        | OT_RADIO_CAPS_SLEEP_TO_TX    
+        | OT_RADIO_CAPS_TRANSMIT_SEC   
+        | OT_RADIO_CAPS_TRANSMIT_TIMING
+        | OT_RADIO_CAPS_RECEIVE_TIMING
+    ;
+} 
+
+otError otPlatRadioSetFemLnaGain(otInstance *aInstance, int8_t aGain){
+
+    OT_UNUSED_VARIABLE(aInstance);
+    OT_UNUSED_VARIABLE(aGain);
+
+    return OT_ERROR_NOT_IMPLEMENTED;
+}
+
+otError otPlatRadioGetFemLnaGain(otInstance *aInstance, int8_t *aGain){
+
+    OT_UNUSED_VARIABLE(aInstance);
+    OT_UNUSED_VARIABLE(aGain);
+
+    return OT_ERROR_NOT_IMPLEMENTED;
+}
+
+void otPlatRadioSetPromiscuous(otInstance *aInstance, bool aEnable){
+
+    OT_UNUSED_VARIABLE(aInstance);
+
+    samr21RadioCtrlSetPromiscuousMode(aEnable);
+}
+
+
+bool otPlatRadioSetPromiscuous(otInstance *aInstance){
+
+    OT_UNUSED_VARIABLE(aInstance);
+
+    return samr21RadioCtrlGetPromiscuousMode();
+}
+
