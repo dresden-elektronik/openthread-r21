@@ -30,7 +30,9 @@
         "samr21radioparser.h": "c",
         "samr21radiovars.h": "c",
         "otultilwrapper_macframe.h": "c",
-        "radio.h": "c"
+        "radio.h": "c",
+        "samr21radiotxhandler.h": "c",
+        "samr21radiorxhandler.h": "c"
     },
     "cmake.configureOnOpen": false
 }

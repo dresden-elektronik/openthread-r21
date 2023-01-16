@@ -1,4 +1,12 @@
-//Author Eric Härtel @ dresden elektronik ingenieurtechnik gmbh © 2022
+/*
+ * Copyright (c) 2023 dresden elektronik ingenieurtechnik gmbh.
+ * All rights reserved.
+ *
+ * The software in this package is published under the terms of the BSD
+ * style license a copy of which has been included with this distribution in
+ * the LICENSE.txt file.
+ *
+ */
 #ifndef _SAMR21_RADIO_IRQ_HANDLER_H_
 #define _SAMR21_RADIO_IRQ_HANDLER_H_
 
@@ -21,7 +29,10 @@ typedef enum{
     //From Timer Modules
     TIMER_EVENT_3_TRIGGER               = 0x11,
     TIMER_EVENT_4_TRIGGER               = 0x12,
-    TIMER_EVENT_5_TRIGGER               = 0x13
+    TIMER_EVENT_5_TRIGGER               = 0x13,
+
+    //From RTC Alarm Module
+    RTC_EVENT_ALARM_TRIGGER             = 0x21
 } IrqEvent;
 
 

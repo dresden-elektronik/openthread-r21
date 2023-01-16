@@ -1,4 +1,12 @@
-// Author Eric Härtel @ dresden elektronik ingenieurtechnik gmbh © 2022
+/*
+ * Copyright (c) 2023 dresden elektronik ingenieurtechnik gmbh.
+ * All rights reserved.
+ *
+ * The software in this package is published under the terms of the BSD
+ * style license a copy of which has been included with this distribution in
+ * the LICENSE.txt file.
+ *
+ */
 #ifndef _SAMR21_RADIO_RX_HANDLER_H_
 #define _SAMR21_RADIO_RX_HANDLER_H_
 
@@ -30,8 +38,6 @@
 typedef enum RxStatus
 {
     RX_STATUS_IDLE = 0x00,
-    RX_STATUS_SETUP,
-    RX_STATUS_WAIT_FOR_DELAYED_START,
 
     RX_STATUS_RECIVING_FCF,
     RX_STATUS_RECIVING_ADDR_FIELD,
@@ -41,7 +47,6 @@ typedef enum RxStatus
     RX_STATUS_SENDING_ENH_ACK,
     RX_STATUS_SENDING_ACK_WAIT_TRX_END,
     RX_STATUS_DONE = 0xF0,
-    RX_STATUS_FAILED
 } RxStatus;
 
 typedef struct RxBuffer
@@ -55,27 +60,22 @@ typedef struct RxBuffer
 } RxBuffer;
 
 // Init
-void samr21RadioRxResetBuffer();
+void samr21RadioRxResetAllBuffer();
+void samr21RadioRxResetBuffer(RxBuffer * buffer);
+
+void samr21RadioRxAbort();
+bool samr21RadioRxBusy();
 
 // Interface to Openthread
 RxBuffer *samr21RadioRxGetPendingRxBuffer();
-bool samr21RadioRxSetup(uint8_t channel, uint32_t duration, uint32_t startTime);
+void samr21RadioRxSetup(uint8_t channel, uint32_t duration, uint32_t startTime);
 
-// Operation Functions
-void samr21RadioTxStart();
-void samr21RadioTxStartCCA();
-void samr21RadioTxEvalCCA();
-void samr21RadioTxStartTransmission();
-void samr21RadioTxPrepareAckReception();
-void samr21RadioTxAckReceptionStarted();
-void samr21RadioTxAckReceptionDone();
 
 // IRQ-Handler
-void samr21RadioTxEventHandler();
+void samr21RadioRxEventHandler();
 
 // Callback
-void cb_samr21RadioTxDone(otRadioFrame *txFrameBuffer, otRadioFrame *txAckFrameBuffer);
-void cb_samr21RadioTxStarted(otRadioFrame *txFrameBuffer);
-void cb_samr21RadioTxFailed(otRadioFrame *txFrameBuffer, RxStatus failedAt);
+void cb_samr21RadioRxDone(RxBuffer* buffer);
+void cb_samr21RadioRxRecivedNothing();
 
 #endif //_SAMR21_RADIO_RX_HANDLER_H_

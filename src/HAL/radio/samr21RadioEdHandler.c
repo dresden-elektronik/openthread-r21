@@ -1,28 +1,102 @@
-//Author Eric Härtel @ dresden elektronik ingenieurtechnik gmbh © 2022
+/*
+ * Copyright (c) 2023 dresden elektronik ingenieurtechnik gmbh.
+ * All rights reserved.
+ *
+ * The software in this package is published under the terms of the BSD
+ * style license a copy of which has been included with this distribution in
+ * the LICENSE.txt file.
+ *
+ */
 #include "samr21RadioEdHandler.h"
 
 static uint32_t s_edScansLeft;
 static uint8_t s_maxEdLevel;
 
-static EdStatus s_edStatus = ED_STATUS_IDLE;
+static bool s_edDone = false;
 
-bool samr21RadioEdSetup(uint8_t channel, uint16_t duration_ms)
+
+
+//Called at the beginning of each ED
+static void samr21RadioEdStartScan()
+{   
+    if(s_edDone){
+        samr21RadioEdCleanup();
+        return;
+    }
+    //Add a Timeout in case something goes wrong
+    samr21Timer4Set(0xFF);
+
+    // Prepare CCA Measurment
+    g_phyCcCcaReg.bit.ccaRequest = 1;
+
+    // Start CCA Measurment
+    samr21TrxWriteRegister(PHY_CC_CCA_REG, g_phyCcCcaReg.reg);
+
+    // Reset local copy of ccaRequest Bit
+    g_phyCcCcaReg.bit.ccaRequest = 0;
+
+}
+
+//Called after a RADIO_EVENT_IRQ_CCA_ED_DONE
+static void samr21RadioEdEval()
 {
-    if(s_edStatus != ED_STATUS_IDLE){
+    samr21Timer4Stop();
+
+    uint8_t edReading = samr21TrxReadRegister(PHY_ED_LEVEL_REG);
+
+    if(s_maxEdLevel < edReading){
+        s_maxEdLevel = edReading;
+    }
+
+    samr21RadioEdStartScan();    
+}
+
+static void samr21RadioEdCleanup(){
+    samr21RadioCtrlReturnToLastHandler();
+    cb_samr21RadioEdDone(AT86RF233_RSSI_BASE_VAL + s_maxEdLevel);
+}
+
+void samr21RadioEdEventHandler(IrqEvent event)
+{
+    switch (event)
+    {
+    case TRX_EVENT_CCA_ED_DONE:
+        //Scan Done
+        samr21RadioEdEval();
+        return;
+
+    case TIMER_EVENT_4_TRIGGER:
+        if(s_edDone){
+            samr21RadioEdCleanup();
+            return;
+        }
+
+        samr21RadioEdStartScan();    
+        return;
+
+    case RTC_EVENT_ALARM_TRIGGER:
+        //Timeout
+        s_edDone = true;
+        return;
+
+    default:
+        return;
+    }
+}
+
+bool samr21RadioEdStart(uint8_t channel, uint16_t duration_ms)
+{
+    if(!s_edDone){
         return false;
     }
 
     samr21RadioRemoveEventHandler();
 
     //Reset relevant Timer
-    samr21Timer5Stop();
-    samr21Timer3Stop();
-
-
-    s_edStatus = ED_STATUS_SETUP;
-    s_edScansLeft = duration_ms * NUM_ENERGY_DETECTION_SCANS_PER_MS;
+    samr21Timer4Stop();
+    
+    s_edDone = false;
     s_maxEdLevel = 0;
-    samr21RadioCtrlSetState(SAMR21_RADIO_STATE_RECEIVE);
 
     // Set relevant IRQ Mask
     g_irqMask = (AT86RF233_REG_IRQ_MASK_t){
@@ -50,88 +124,13 @@ bool samr21RadioEdSetup(uint8_t channel, uint16_t duration_ms)
         }
     }
 
-    samr21RadioSetEventHandler(&samr21RadioEdEventHandler);
+    samr21RtcSetAlarm(samr21RtcGetTimestamp() + ( duration_ms * 1000 ) ); //1000us in 1 ms 
 
-    //Timeout timer
-    samr21Timer5Set(0xFFFF);
-
-    samr21RadioStartEd();
+    samr21RadioEdStartScan();
 
     return true;
 }
 
-void samr21RadioEdEventHandler(IrqEvent event)
-{
-    switch (event)
-    {
-
-    case TIMER_EVENT_3_TRIGGER:
-        //Next Scan
-        samr21RadioEdStartScan();
-        return;
-
-    case TRX_EVENT_CCA_ED_DONE:
-        //Scan Done
-        samr21RadioEdEval();
-        return;
-
-    case TIMER_EVENT_5_TRIGGER:
-        //Timeout
-        samr21RadioEdCleanup();
-        return;
-
-    default:
-        return;
-    }
-}
-
-
-//Called at the beginning of each ED
-void samr21RadioEdStartScan()
-{   
-    // Prepare CCA Measurment
-    g_phyCcCcaReg.bit.ccaRequest = 1;
-
-    // Start CCA Measurment
-    samr21TrxWriteRegister(PHY_CC_CCA_REG, g_phyCcCcaReg.reg);
-    s_edStatus = ED_STATUS_WAIT_FOR_RESULT;
-
-    // Reset local copy of ccaRequest Bit
-    g_phyCcCcaReg.bit.ccaRequest = 0;
-
-    //Queue the next ED allrdy
-    if (--s_edScansLeft){
-        samr21Timer3Set(TIME_UNTIL_NEXT_ENERGY_DETECTION_SCAN_us);
-    }
-}
-
-//Called after a RADIO_EVENT_IRQ_CCA_ED_DONE
-void samr21RadioEdEval()
-{   
-    uint8_t edReading = samr21TrxReadRegister(PHY_ED_LEVEL_REG);
-
-    if(s_maxEdLevel < edReading){
-        s_maxEdLevel = edReading;
-    }
-
-    if(s_edScansLeft > 0){
-        s_edStatus = ED_STATUS_WAIT_FOR_NEXT_SCAN;
-        return;
-    }
-    s_edStatus = ED_STATUS_DONE;
-    samr21RadioEdCleanup();
-}
-
-void samr21RadioEdCleanup(){
-    samr21Timer5Stop();
-    samr21Timer3Stop();
-
-    samr21RadioRemoveEventHandler();
-    
-    cb_samr21RadioEdDone(AT86RF233_RSSI_BASE_VAL + s_maxEdLevel);
-    s_edStatus = ED_STATUS_IDLE;
-
-    // Set relevant IRQ Mask to return to Recive State
-
-    samr21RadioCtrlSetIdle();
+int8_t samr21RadioEdGetLastResult(){
+    return AT86RF233_RSSI_BASE_VAL + s_maxEdLevel;
 }

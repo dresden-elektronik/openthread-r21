@@ -1,4 +1,12 @@
-// Author Eric Härtel @ dresden elektronik ingenieurtechnik gmbh © 2022
+/*
+ * Copyright (c) 2023 dresden elektronik ingenieurtechnik gmbh.
+ * All rights reserved.
+ *
+ * The software in this package is published under the terms of the BSD
+ * style license a copy of which has been included with this distribution in
+ * the LICENSE.txt file.
+ *
+ */
 #include "samr21RadioTxHandler.h"
 
 static TxStatus s_txStatus = TX_STATUS_IDLE;
@@ -106,12 +114,13 @@ bool samr21RadioTxSetup()
             return true;
         }
     }
+
 txStart:
     samr21RadioTxStart();
     return true;
 }
 
-void samr21RadioTxStart()
+static void samr21RadioTxStart()
 {
     s_numCsmaBackoffs = 0;
     s_numTransmissionRetrys = 0;
@@ -119,7 +128,7 @@ void samr21RadioTxStart()
     samr21RadioTxStartCCA();
 }
 
-void samr21RadioTxStartCCA()
+static void samr21RadioTxStartCCA()
 {
     s_txStatus = TX_STATUS_CCA;
 
@@ -146,7 +155,7 @@ void samr21RadioTxStartCCA()
     samr21Timer4Set(TIMEOUT_CCA_us);
 }
 
-void samr21RadioTxEvalCCA()
+static void samr21RadioTxEvalCCA()
 {
     // Clear CCA TimeoutTimer
     samr21Timer4Stop();
@@ -172,7 +181,7 @@ void samr21RadioTxEvalCCA()
     samr21RadioTxCleanup(false);
 }
 
-void samr21RadioTxStartTransmission()
+static void samr21RadioTxStartTransmission()
 {
     s_txStatus = TX_STATUS_SENDING_UPLOADING;
 
@@ -453,14 +462,14 @@ void samr21RadioTxStartTransmission()
     s_txStatus = TX_STATUS_SENDING_WAIT_TRX_END;
 }
 
-void samr21RadioTxPrepareAckReception()
+static void samr21RadioTxPrepareAckReception()
 {
     samr21Timer4Stop();
     s_txStatus = TX_STATUS_WAIT_FOR_ACK;
     samr21Timer4Set(g_txAckTimeout_us);
 }
 
-void samr21RadioTxAckReceptionStarted()
+static void samr21RadioTxAckReceptionStarted()
 {
     samr21Timer4Stop();
     s_txAckFrame.mInfo.mRxInfo.mTimestamp = samr21RtcGetTimestamp();
@@ -470,7 +479,7 @@ void samr21RadioTxAckReceptionStarted()
     samr21Timer4Set(IEEE_802_15_4_24GHZ_TIME_PER_OCTET_us * IEEE_802_15_4_FRAME_SIZE);
 }
 
-void samr21RadioTxAckReceptionDone()
+static void samr21RadioTxAckReceptionDone()
 {
     // Clear Timeout for Ack Reception
     samr21Timer4Stop();

@@ -1,4 +1,12 @@
-//Author Eric Härtel @ dresden elektronik ingenieurtechnik gmbh © 2022
+/*
+ * Copyright (c) 2023 dresden elektronik ingenieurtechnik gmbh.
+ * All rights reserved.
+ *
+ * The software in this package is published under the terms of the BSD
+ * style license a copy of which has been included with this distribution in
+ * the LICENSE.txt file.
+ *
+ */
 #include "samr21Rtc.h"
 
 
@@ -71,14 +79,14 @@ uint32_t samr21RtcGetTimestamp(){
     return RTC->MODE0.COUNT.reg;
 }
 
-void samr21RtcSetWakeUpTimestamp(uint32_t wakeUpTime){
-    RTC->MODE0.COMP[0].reg = wakeUpTime;
+void samr21RtcSetAlarm(uint32_t alarmTimestamp){
+    RTC->MODE0.COMP[0].reg = alarmTimestamp;
     RTC->MODE0.INTENFLAG.bit.CMP0 = 1;
     RTC->MODE0.INTENSET.bit.CMP0 = 1;
     NVIC_EnableIRQ(RTC_IRQn);
 }
 
-//MOVED TO RADIO RX HANDLER FOR CSL
+//MOVED TO RADIO IRQ HANDLER
 // void RTC_Handler(){
 //     RTC->MODE0.INTENFLAG.bit.CMP0 = 1;
 //     RTC->MODE0.INTENCLR.bit.CMP0 = 1;

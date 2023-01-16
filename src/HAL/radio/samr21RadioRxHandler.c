@@ -1,87 +1,38 @@
-// Author Eric Härtel @ dresden elektronik ingenieurtechnik gmbh © 2022
+/*
+ * Copyright (c) 2023 dresden elektronik ingenieurtechnik gmbh.
+ * All rights reserved.
+ *
+ * The software in this package is published under the terms of the BSD
+ * style license a copy of which has been included with this distribution in
+ * the LICENSE.txt file.
+ *
+ */
 #include "samr21RadioRxHandler.h"
 
 static RxBuffer s_rxBuffer[NUM_SAMR21_RX_BUFFER];
 static uint8_t s_activeRxBuffer = 0;
 
 volatile bool s_rxSlottedActive = false;
+uint32_t s_recivedFramesWhileSlotActive;
 uint32_t s_slottedListeningDuration_us;
 uint8_t s_slottedListeningChannel;
 
 volatile bool s_rxAbort = false;
 volatile bool s_rxHandlerActive = false;
 
-static 
 
 static uint8_t s_ackEncryptionMask[(IEEE_802_15_4_FRAME_SIZE / AES_BLOCK_SIZE)][AES_BLOCK_SIZE];
 
-bool samr21RadioRxBusy()
-{
-    return s_rxHandlerActive;
-}
-
-bool samr21RadioRxAbort()
-{
-    if (samr21RadioRxBusy())
-    {
-        s_rxAbort = true;
-
-        while (s_rxHandlerActive)
-            ;
-        return true;
-    }
-    return false;
-}
-
-void samr21RadioRxResetBuffer()
-{
-    for (uint16_t i = 0; i < NUM_SAMR21_RX_BUFFER; i++)
-    {
-        s_rxBuffer[i].status = RX_STATUS_IDLE;
-        s_rxBuffer[i].otFrame.mPsdu = &s_rxBuffer[i].rxFramePsdu[1];
-    }
-
-    s_activeRxBuffer = 0;
-}
-
-RxBuffer *samr21RadioRxGetPendingRxBuffer()
-{
-    for (uint16_t i = 0; i < NUM_SAMR21_RX_BUFFER; i++)
-    {
-        if (s_rxBuffer[i].status >= RX_STATUS_DONE)
-        {
-            return &s_rxBuffer[i];
-        }
-    }
-    return NULL;
-}
-
-bool samr21RadioRxSetup(uint8_t channel, uint32_t duration, uint32_t startTime)
-{
-    if (duration)
-    {
-        s_slottedListeningChannel = channel;
-        s_slottedListeningDuration_us = duration;
-        samr21RtcSetWakeUpTimestamp(startTime);
-        return;
-    }
-
-    samr21RadioRxStart(channel);
-    return true;
-}
-
-void samr21RadioRxStart(uint8_t channel)
+static void samr21RadioRxStart(uint8_t channel)
 {
 
     // Set Timer for listening duration
     if (s_slottedListeningDuration_us)
     {
         s_rxSlottedActive = true;
-        samr21RtcSetWakeUpTimestamp(samr21RtcGetTimestamp() + s_slottedListeningDuration_us);
+        samr21RtcSetAlarm(samr21RtcGetTimestamp() + s_slottedListeningDuration_us);
     }
 
-    // Abort the current Transmisson (prevent retrys)
-    samr21RadioTxAbort();
 
     // Check if theres already an ongoing Reception
     if (s_rxHandlerActive)
@@ -90,7 +41,7 @@ void samr21RadioRxStart(uint8_t channel)
         {
             return; // TRX is allrdy setup for reception on the desired channel
         }
-        samr21RadioRxAbort();
+        samr21RadioRxCleanup(false);
     }
 
     g_irqMask = (AT86RF233_REG_IRQ_MASK_t){
@@ -134,7 +85,7 @@ void samr21RadioRxStart(uint8_t channel)
     s_rxAbort = false;
 }
 
-void samr21RadioRxReceptionStarted()
+static void samr21RadioRxReceptionStarted()
 {
     s_rxBuffer[s_activeRxBuffer].status = RX_STATUS_RECIVING_FCF;
     s_rxBuffer[s_activeRxBuffer].otFrame.mInfo.mRxInfo.mTimestamp =
@@ -143,7 +94,7 @@ void samr21RadioRxReceptionStarted()
     samr21Timer4Set(RX_BACKOFF_BEFORE_FIRST_FRAMEBUFFER_ACCESS);
 }
 
-void samr21RadioRxDownloadFCF()
+static void samr21RadioRxDownloadFCF()
 {
     samr21TrxSpiStartAccess(AT86RF233_CMD_FRAMEBUFFER_READ, 0);
 
@@ -168,12 +119,12 @@ void samr21RadioRxDownloadFCF()
         uint32_t timeout = 0xFFFF;
         //(see r21 datasheet, 40.7 Frame Buffer Empty Indicator)
         samr21delaySysTick(CPU_WAIT_CYCLES_FOR_FRAME_BUFFER_EMPTY_FLAG);
-        while ((PORT->Group[1].IN.reg & PORT_PB00) && timeout)
+        while ((PORT->Group[1].IN.reg & PORT_PB00) && timeout && !s_rxAbort)
         {
             timeout--;
         }
 
-        if (timeout)
+        if (timeout && !s_rxAbort)
         {
             buffer->otFrame.mPsdu[numDownloadedPdsuBytes++] =
                 samr21TrxSpiReadByteRaw();
@@ -270,7 +221,7 @@ void samr21RadioRxDownloadFCF()
     samr21Timer4Set(nextAction_us);
 }
 
-void samr21RadioRxDownloadAddrField()
+static void samr21RadioRxDownloadAddrField()
 {
     samr21TrxSpiStartAccess(AT86RF233_CMD_FRAMEBUFFER_READ, 0);
 
@@ -295,12 +246,12 @@ void samr21RadioRxDownloadAddrField()
         uint32_t timeout = 0xFFFF;
         //(see r21 datasheet, 40.7 Frame Buffer Empty Indicator)
         samr21delaySysTick(CPU_WAIT_CYCLES_FOR_FRAME_BUFFER_EMPTY_FLAG);
-        while ((PORT->Group[1].IN.reg & PORT_PB00) && timeout)
+        while ((PORT->Group[1].IN.reg & PORT_PB00) && timeout && !s_rxAbort)
         {
             timeout--;
         }
 
-        if (timeout)
+        if (timeout && !s_rxAbort)
         {
             buffer->otFrame.mPsdu[numDownloadedPdsuBytes++] =
                 samr21TrxSpiReadByteRaw();
@@ -314,7 +265,7 @@ void samr21RadioRxDownloadAddrField()
     }
     samr21TrxSpiCloseAccess();
 
-    if (!otMacFrameDoesAddrMatch(
+    if (!g_promiscuousMode && !otMacFrameDoesAddrMatch(
             &(buffer->otFrame),
             g_panId,
             g_shortAddr,
@@ -339,7 +290,7 @@ void samr21RadioRxDownloadAddrField()
     samr21Timer4Set(nextAction_us);
 }
 
-void samr21RadioRxDownloadRemaining()
+static void samr21RadioRxDownloadRemaining()
 {
     samr21TrxSpiStartAccess(AT86RF233_CMD_FRAMEBUFFER_READ, 0);
 
@@ -364,12 +315,12 @@ void samr21RadioRxDownloadRemaining()
         uint32_t timeout = 0xFFFF;
         //(see r21 datasheet, 40.7 Frame Buffer Empty Indicator)
         samr21delaySysTick(CPU_WAIT_CYCLES_FOR_FRAME_BUFFER_EMPTY_FLAG);
-        while ((PORT->Group[1].IN.reg & PORT_PB00) && timeout)
+        while ((PORT->Group[1].IN.reg & PORT_PB00) && timeout && !s_rxAbort)
         {
             timeout--;
         }
 
-        if (timeout)
+        if (timeout && !s_rxAbort)
         {
             buffer->otFrame.mPsdu[numDownloadedPdsuBytes++] =
                 samr21TrxSpiReadByteRaw();
@@ -405,6 +356,11 @@ void samr21RadioRxDownloadRemaining()
         return;
     }
 
+    if(g_promiscuousMode){
+        samr21RadioCleanup(true);
+        return;
+    }
+
     if (otMacFrameIsAckRequested(&(buffer->otFrame)))
     {
 
@@ -421,7 +377,7 @@ void samr21RadioRxDownloadRemaining()
     }
 }
 
-void samr21RadioRxSendEnhAck()
+static void samr21RadioRxSendEnhAck()
 {
     while (g_trxStatus.bit.trxStatus != TRX_STATUS_PLL_ON)
     {
@@ -694,7 +650,7 @@ void samr21RadioRxSendEnhAck()
             {
                 while (samr21RadioAesBusy())
                     ;
-                samr21RadioAesCbcEncrypt(s_cbcBlock, AES_BLOCK_SIZE, NULL);
+                samr21RadioAesCbcEncrypt(cbcBlock, AES_BLOCK_SIZE, NULL);
                 cbcBlockLength = 0;
             }
 
@@ -739,10 +695,11 @@ void samr21RadioRxSendEnhAck()
     buffer->status = RX_STATUS_SENDING_ACK_WAIT_TRX_END;
 }
 
-
-
-void samr21RadioRxSendAck()
+static void samr21RadioRxSendImmAck()
 {
+    // Timout-Timer
+    samr21Timer4Set((IEEE_802_15_4_FRAME_SIZE * 2) * IEEE_802_15_4_24GHZ_TIME_PER_OCTET_us);
+
     RxBuffer *buffer = &s_rxBuffer[s_activeRxBuffer];
     buffer->status = RX_STATUS_SENDING_ACK;
 
@@ -762,22 +719,187 @@ void samr21RadioRxSendAck()
     // Start Trasmission in advance, there is some spare time while the Preamble and SFD is transmitted
     samr21TrxSetSLP_TR(true);
 
-    // Timout-Timer
-    samr21Timer4Set((IEEE_802_15_4_FRAME_SIZE * 2) * IEEE_802_15_4_24GHZ_TIME_PER_OCTET_us);
-
     samr21TrxSpiStartAccess(AT86RF233_CMD_FRAMEBUFFER_WRITE, NULL);
     samr21TrxSetSLP_TR(false);
     samr21TrxSpiTransceiveBytesRaw(ackFrame.mPsdu[-1], NULL, ackFrame.mLength - 1); // -2 FCS +1 PhyLen
     samr21TrxSpiCloseSpiAccess();
+
+    buffer->status = RX_STATUS_SENDING_ACK_WAIT_TRX_END;
 }
 
-void RTC_Handler()
-{
-    RTC->MODE0.INTENFLAG.bit.CMP0 = 1;
-    RTC->MODE0.INTENCLR.bit.CMP0 = 1;
-    NVIC_DisableIRQ(RTC_IRQn);
+static void samr21RadioCleanup(bool success){
+    samr21Timer4Stop();
 
-    if (s_rxBuffer[(s_activeRxBuffer + 1) % NUM_SAMR21_RX_BUFFER].status == RX_STATUS_WAIT_FOR_DELAYED_START)
+    __disable_irq();
+    RxBuffer *bufferDone = &s_rxBuffer[s_activeRxBuffer];
+  
+    if (success)
     {
+        bufferDone->status = RX_STATUS_DONE;
+        s_activeRxBuffer = ( s_activeRxBuffer + 1 ) % NUM_SAMR21_RX_BUFFER;
+        if (s_rxSlottedActive){
+            s_recivedFramesWhileSlotActive++;
+        }
+    }
+
+exit:
+    samr21RadioRxResetBuffer(&s_rxBuffer[s_activeRxBuffer]);
+    
+    if(s_rxAbort){
+        samr21Timer4Stop();
+        samr21RadioRemoveEventHandler();
+        s_rxHandlerActive = false;
+        __enable_irq();
+        return;
+    }
+    
+    __enable_irq();
+
+    if(success){
+        cb_samr21RadioRxDone(bufferDone);
+    }
+}
+
+bool samr21RadioRxBusy()
+{
+    return s_rxHandlerActive;
+}
+
+void samr21RadioRxAbort()
+{
+    if (samr21RadioRxBusy())
+    {
+        s_rxAbort = true;
+
+        while (s_rxHandlerActive)
+            ;
+        return;
+    }
+}
+
+void samr21RadioRxResetAllBuffer()
+{
+    for (uint16_t i = 0; i < NUM_SAMR21_RX_BUFFER; i++)
+    {
+        samr21RadioRxResetBuffer(&s_rxBuffer[i]);
+    }
+
+    s_activeRxBuffer = 0;
+}
+
+void samr21RadioRxResetBuffer(RxBuffer * buffer)
+{
+    memset(buffer,0x00,sizeof(RxBuffer));
+    buffer->status = RX_STATUS_IDLE;
+    buffer->otFrame.mPsdu = &buffer->rxFramePsdu[1];
+}
+
+RxBuffer *samr21RadioRxGetPendingRxBuffer()
+{
+    for (uint16_t i = 0; i < NUM_SAMR21_RX_BUFFER; i++)
+    {
+        if (s_rxBuffer[i].status >= RX_STATUS_DONE)
+        {
+            return &s_rxBuffer[i];
+        }
+    }
+    return NULL;
+}
+
+void samr21RadioRxSetup(uint8_t channel, uint32_t duration, uint32_t startTime)
+{
+    // Abort the current Transmisson (prevent retrys)
+    samr21RadioTxAbort();
+
+    if (duration || startTime)
+    {
+        s_slottedListeningChannel = channel;
+        s_slottedListeningDuration_us = duration;
+
+        if(startTime - samr21RtcGetTimestamp() > 0x000FFFFF) //overflow, cause time is negative
+        {
+            samr21RadioRxStart(channel);
+            return;            
+        }
+
+        samr21RtcSetAlarm(startTime);
+        return;
+    }
+
+    samr21RadioRxStart(channel);
+    return;
+}
+
+
+void samr21RadioRxEventHandler(IrqEvent event)
+{
+    if(s_rxAbort){
+        samr21RadioRxCleanup(false);
+        return;
+    }
+    
+    RxBuffer *buffer = &s_rxBuffer[s_activeRxBuffer];
+
+    switch (event)
+    {
+    case TIMER_EVENT_4_TRIGGER:
+
+        if (buffer->status == RX_STATUS_RECIVING_FCF)
+        {
+            samr21RadioRxDownloadFCF();
+            return;
+        }
+
+        if (buffer->status == RX_STATUS_RECIVING_ADDR_FIELD)
+        {
+            samr21RadioRxDownloadAddrField();
+            return;
+        }
+
+        // Timeout Something went wrong
+        samr21RadioTxCleanup(false);
+        return;
+
+    case TRX_EVENT_RX_START:
+        if (buffer->status == RX_STATUS_IDLE)
+        {
+            samr21RadioRxReceptionStarted();
+        }
+        return;
+
+    case TRX_EVENT_TRX_END:
+        if (buffer->status == RX_STATUS_SENDING_ACK_WAIT_TRX_END)
+        {
+            samr21RadioRxCleanup(true);
+        }
+        return;
+
+    case RTC_EVENT_ALARM_TRIGGER:
+        if (!s_rxSlottedActive)
+        {
+            samr21RadioRxStart(s_slottedListeningChannel);
+            return;
+        }
+
+        //Wait for current Reception to finish
+        while (
+            s_rxBuffer[s_activeRxBuffer].status != RX_STATUS_IDLE && s_rxBuffer[s_activeRxBuffer].status != RX_STATUS_DONE)
+        ;
+        
+        s_rxSlottedActive = false;
+        s_slottedListeningChannel = 0;
+        s_slottedListeningDuration_us = 0;
+    
+        
+        s_rxHandlerActive = ( samr21RadioCtrlReturnToLastHandler() == SAMR21_RADIO_STATE_RECEIVE ? true : false );
+
+        if (!s_recivedFramesWhileSlotActive)
+        {
+            cb_samr21RadioRxRecivedNothing();
+        }
+
+        s_recivedFramesWhileSlotActive = 0;
+    default:
+        return;
     }
 }
