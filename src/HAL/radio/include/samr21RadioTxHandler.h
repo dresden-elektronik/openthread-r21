@@ -59,6 +59,6 @@ void samr21RadioTxEventHandler();
 //Callback
  void cb_samr21RadioTxDone(otRadioFrame* txFrameBuffer, otRadioFrame* txAckFrameBuffer);
  void cb_samr21RadioTxStarted(otRadioFrame* txFrameBuffer);
- void cb_samr21RadioTxFailed(otRadioFrame* txFrameBuffer);
+ void cb_samr21RadioTxFailed(otRadioFrame* txFrameBuffer, TxStatus failedAt);
 
 #endif //_SAMR21_RADIO_TX_HANDLER_H_

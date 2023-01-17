@@ -54,6 +54,7 @@ typedef struct RxBuffer
     RxStatus status;
     otRadioFrame otFrame;
     uint8_t rxFramePsdu[IEEE_802_15_4_FRAME_SIZE];
+    otRadioFrame otAck;
     uint8_t rxAckPsdu[IEEE_802_15_4_FRAME_SIZE];
     uint8_t neededPdsuSizeForNextAction;
     bool framePending;
@@ -65,6 +66,8 @@ void samr21RadioRxResetBuffer(RxBuffer * buffer);
 
 void samr21RadioRxAbort();
 bool samr21RadioRxBusy();
+
+bool samr21RadioRxIsReceiveSlotPlanned();
 
 // Interface to Openthread
 RxBuffer *samr21RadioRxGetPendingRxBuffer();

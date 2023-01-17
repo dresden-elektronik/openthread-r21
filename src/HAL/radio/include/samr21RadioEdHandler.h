@@ -43,6 +43,6 @@ bool samr21RadioEdStart(uint8_t channel, uint16_t duration_ms);
 void samr21RadioEdEventHandler(IrqEvent event);
 
 //Callback
-void cb_samr21RadioEdDone(int8_t);
+void cb_samr21RadioEdDone(int8_t rssi);
 
 #endif //_SAMR21_RADIO_ED_HANDLER_H_

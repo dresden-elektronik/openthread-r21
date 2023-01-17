@@ -183,7 +183,6 @@ uint16_t samr21RadioCtrlCslGetPhase()
     return (uint16_t)(diff / OT_US_PER_TEN_SYMBOLS + 1);
 }
 
-//return true if rxHandler is active after call
 Samr21RadioState samr21RadioCtrlReturnToLastHandler()
 {
 
