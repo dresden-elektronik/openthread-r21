@@ -62,11 +62,8 @@ static void samr21RadioRxStart(uint8_t channel)
     // Prepare RX-Buffer
     if (s_rxBuffer[s_activeRxBuffer].status != RX_STATUS_IDLE)
     {
-        __disable_irq();
-        uint16_t nextBuffer = (s_activeRxBuffer + 1) % NUM_SAMR21_RX_BUFFER;
-        s_rxBuffer[nextBuffer].status = RX_STATUS_IDLE;
-        s_activeRxBuffer = nextBuffer;
-        __enable_irq();
+        s_activeRxBuffer = ( s_activeRxBuffer + 1 ) % NUM_SAMR21_RX_BUFFER;
+        samr21RadioRxResetBuffer(&s_rxBuffer[s_activeRxBuffer]);
     }
 
     // Check and enforce that the Transciver is in recive state
@@ -79,10 +76,6 @@ static void samr21RadioRxStart(uint8_t channel)
         }
     }
 
-    void samr21RadioSetEventHandler(&samr21RadioRxEventHandler);
-
-    s_rxHandlerActive = true;
-    s_rxAbort = false;
 }
 
 static void samr21RadioRxReceptionStarted()
@@ -393,7 +386,6 @@ static void samr21RadioRxSendEnhAck()
     samr21Timer4Set((IEEE_802_15_4_FRAME_SIZE * 2) * IEEE_802_15_4_24GHZ_TIME_PER_OCTET_us);
 
 
-    otRadioFrame ackFrame = {.mPsdu = &(buffer->rxAckPsdu[1])};
 
     uint8_t ieData[IEEE_802_15_4_PDSU_SIZE];
     uint8_t ieDataLen = 0;
@@ -440,19 +432,27 @@ static void samr21RadioRxSendEnhAck()
         buffer->framePending,
         ieData,
         ieDataLen,
-        &ackFrame);
+        &buffer->otAck);
 
-    ackFrame.mPsdu[-1] = ackFrame.mLength;
+    buffer->otFrame.mInfo.mRxInfo.mAckedWithFramePending = buffer->framePending;
+    buffer->otAck.mPsdu[-1] = buffer->otAck.mLength;
 
-    uint8_t securityLevel = otMacFrameGetSecurityLevel(&ackFrame);
+    uint8_t securityLevel = otMacFrameGetSecurityLevel(&buffer->otAck);
 
     if(!securityLevel){
         samr21TrxSpiStartAccess(AT86RF233_CMD_FRAMEBUFFER_WRITE, NULL);
         samr21TrxSetSLP_TR(false);
-        samr21TrxSpiTransceiveBytesRaw(ackFrame.mPsdu[-1], NULL,ackFrame.mLength-1); // -2 FCS +1 PhyLen
+        samr21TrxSpiTransceiveBytesRaw(buffer->otAck.mPsdu[-1], NULL,buffer->otAck.mLength-1); // -2 FCS +1 PhyLen
         samr21TrxSpiCloseSpiAccess();
+        
+        buffer->otFrame.mInfo.mRxInfo.mAckedWithSecEnhAck = false;
+        buffer->otFrame.mInfo.mRxInfo.mAckFrameCounter = 0;
+        buffer->otFrame.mInfo.mRxInfo.mAckKeyId = 0;
+        
         return;
     }
+
+    buffer->otFrame.mInfo.mRxInfo.mAckedWithSecEnhAck = true;
   
     uint16_t payloadLenght;
     uint16_t headerLength;
@@ -471,9 +471,9 @@ static void samr21RadioRxSendEnhAck()
     uint8_t cbcBlock[AES_BLOCK_SIZE];
     uint8_t ackEncryptionMask[IEEE_802_15_4_FRAME_SIZE];
 
-    uint8_t keyId = otMacFrameGetKeyId(&ackFrame);
+    uint8_t keyId = otMacFrameGetKeyId(&buffer->otAck);
 
-    otMacGenerateNonce(&ackFrame, (uint8_t *)(&g_extAddr), ackNonce);
+    otMacGenerateNonce(&buffer->otAck, (uint8_t *)(&g_extAddr), ackNonce);
 
     if (keyId == g_currKeyId)
     {
@@ -493,6 +493,8 @@ static void samr21RadioRxSendEnhAck()
         return;
     }
 
+    buffer->otFrame.mInfo.mRxInfo.mAckKeyId = keyId;
+
     ackNonce[(AES_BLOCK_SIZE - 2)] = 0; // Always 0 cause max nonce-ctr == 8 (FRAME_SIZE / BLOCKSIZE)
     ackNonce[(AES_BLOCK_SIZE - 1)] = 1; // The first Nonce for Payload encryption has CTR value 1
 
@@ -502,21 +504,24 @@ static void samr21RadioRxSendEnhAck()
     numProcessedEncryptionBlocks = 0;
 
     // Needed for Calculation of Unsecured Header size
-    pPayload = otMacFrameGetPayload(&ackFrame);
-    headerLength = (uint32_t)pPayload - (uint32_t)ackFrame.mPsdu;
-    otMacFrameSetFrameCounter(&ackFrame, g_macFrameCounter++);
+    pPayload = otMacFrameGetPayload(&buffer->otAck);
+    headerLength = (uint32_t)pPayload - (uint32_t)buffer->otAck.mPsdu;
 
+    __disable_irq();
+    buffer->otFrame.mInfo.mRxInfo.mAckFrameCounter = g_macFrameCounter ;
+    otMacFrameSetFrameCounter(&buffer->otAck, g_macFrameCounter++);
+    __enable_irq();
 
     samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, 0x00);
-    samr21TrxSpiTransceiveBytesRaw(&ackFrame.mPsdu[-1], NULL, headerLength + 1); // phyLen not in pdsuLen
+    samr21TrxSpiTransceiveBytesRaw(&buffer->otAck.mPsdu[-1], NULL, headerLength + 1); // phyLen not in pdsuLen
     numBytesPdsuUploaded = headerLength;
     samr21TrxSpiCloseSpiAccess();
 
 
     /******************************Encrypt and Upload Payload (AES CTR)************************************/
 
-    payloadLenght = otMacFrameGetPayloadLength(&ackFrame);
-    footerLenght = otMacFrameGetFooterLength(&ackFrame);
+    payloadLenght = otMacFrameGetPayloadLength(&buffer->otAck);
+    footerLenght = otMacFrameGetFooterLength(&buffer->otAck);
 
     uint8_t numRequiredEncryptionBlocks = payloadLenght / AES_BLOCK_SIZE;
 
@@ -546,12 +551,12 @@ static void samr21RadioRxSendEnhAck()
             if (securityLevel >= 0b100)
             {
                 samr21TrxSpiTransceiveByteRaw(
-                    ackFrame.mPsdu[numBytesPdsuUploaded++] ^ ackEncryptionMask[1 + numProcessedEncryptionBlocks][i]);
+                    buffer->otAck.mPsdu[numBytesPdsuUploaded++] ^ ackEncryptionMask[1 + numProcessedEncryptionBlocks][i]);
             }
             else
             {
                 samr21TrxSpiTransceiveByteRaw(
-                    ackFrame.mPsdu[numBytesPdsuUploaded++]);
+                    buffer->otAck.mPsdu[numBytesPdsuUploaded++]);
             }
         }
 
@@ -579,12 +584,12 @@ static void samr21RadioRxSendEnhAck()
             if (securityLevel >= 0b100)
             {
                 samr21TrxSpiTransceiveByteRaw(
-                    ackFrame.mPsdu[numBytesPdsuUploaded++] ^ ackEncryptionMask[1 + numProcessedEncryptionBlocks][i]);
+                    buffer->otAck.mPsdu[numBytesPdsuUploaded++] ^ ackEncryptionMask[1 + numProcessedEncryptionBlocks][i]);
             }
             else
             {
                 samr21TrxSpiTransceiveByteRaw(
-                    ackFrame.mPsdu[numBytesPdsuUploaded++]);
+                    buffer->otAck.mPsdu[numBytesPdsuUploaded++]);
             }
 
             // Break if entire payload is uploaded
@@ -599,8 +604,8 @@ static void samr21RadioRxSendEnhAck()
     /******************************Authenicate Payload and upload (encrypted) MIC (CBC-MAC)************************************/
     if (footerLenght > 2)
     { // MIC requested
-        pHeader = otMacFrameGetHeader(&ackFrame);
-        pFooter = otMacFrameGetFooter(&ackFrame);
+        pHeader = otMacFrameGetHeader(&buffer->otAck);
+        pFooter = otMacFrameGetFooter(&buffer->otAck);
 
         uint8_t cbcBlockLength;
         uint8_t micSize = footerLenght - 2;
@@ -681,12 +686,12 @@ static void samr21RadioRxSendEnhAck()
             if (securityLevel >= 0b100)
             {
                 samr21TrxSpiTransceiveByteRaw(
-                    ackFrame.mPsdu[numBytesPdsuUploaded++] ^ ackEncryptionMask[0][i]);
+                    buffer->otAck.mPsdu[numBytesPdsuUploaded++] ^ ackEncryptionMask[0][i]);
             }
             else
             {
                 samr21TrxSpiTransceiveByteRaw(
-                    ackFrame.mPsdu[numBytesPdsuUploaded++]);
+                    buffer->otAck.mPsdu[numBytesPdsuUploaded++]);
             }
         }
         samr21TrxSpiCloseAccess();
@@ -703,13 +708,13 @@ static void samr21RadioRxSendImmAck()
     RxBuffer *buffer = &s_rxBuffer[s_activeRxBuffer];
     buffer->status = RX_STATUS_SENDING_ACK;
 
-    otRadioFrame ackFrame = {.mPsdu = &(buffer->rxAckPsdu[1])};
+   
 
     otMacFrameGenerateImmAck(
         &(buffer->otFrame),
         buffer->framePending,
-        &ackFrame);
-    buffer->rxAckPsdu[0] = ackFrame.mLength;
+        &buffer->otAck);
+    buffer->rxAckPsdu[0] = buffer->otAck.mLength;
 
     while (g_trxStatus.bit.trxStatus != TRX_STATUS_PLL_ON)
     {
@@ -721,13 +726,18 @@ static void samr21RadioRxSendImmAck()
 
     samr21TrxSpiStartAccess(AT86RF233_CMD_FRAMEBUFFER_WRITE, NULL);
     samr21TrxSetSLP_TR(false);
-    samr21TrxSpiTransceiveBytesRaw(ackFrame.mPsdu[-1], NULL, ackFrame.mLength - 1); // -2 FCS +1 PhyLen
+    samr21TrxSpiTransceiveBytesRaw(buffer->otAck.mPsdu[-1], NULL, buffer->otAck.mLength - 1); // -2 FCS +1 PhyLen
     samr21TrxSpiCloseSpiAccess();
+
+    buffer->otFrame.mInfo.mRxInfo.mAckedWithFramePending = buffer->framePending;
+    buffer->otFrame.mInfo.mRxInfo.mAckedWithSecEnhAck = false;
+    buffer->otFrame.mInfo.mRxInfo.mAckFrameCounter = 0;
+    buffer->otFrame.mInfo.mRxInfo.mAckKeyId = 0;
 
     buffer->status = RX_STATUS_SENDING_ACK_WAIT_TRX_END;
 }
 
-static void samr21RadioCleanup(bool success){
+static void samr21RadioRxCleanup(bool success){
     samr21Timer4Stop();
 
     __disable_irq();
@@ -735,6 +745,8 @@ static void samr21RadioCleanup(bool success){
   
     if (success)
     {
+
+
         bufferDone->status = RX_STATUS_DONE;
         s_activeRxBuffer = ( s_activeRxBuffer + 1 ) % NUM_SAMR21_RX_BUFFER;
         if (s_rxSlottedActive){
@@ -765,6 +777,10 @@ bool samr21RadioRxBusy()
     return s_rxHandlerActive;
 }
 
+bool samr21RadioRxIsReceiveSlotPlanned(){
+    return s_slottedListeningDuration_us;
+}
+
 void samr21RadioRxAbort()
 {
     if (samr21RadioRxBusy())
@@ -789,9 +805,12 @@ void samr21RadioRxResetAllBuffer()
 
 void samr21RadioRxResetBuffer(RxBuffer * buffer)
 {
+    __disable_irq();
     memset(buffer,0x00,sizeof(RxBuffer));
     buffer->status = RX_STATUS_IDLE;
     buffer->otFrame.mPsdu = &buffer->rxFramePsdu[1];
+    buffer->otAck.mPsdu = &(buffer->rxAckPsdu[1]);
+    __enable_irq();
 }
 
 RxBuffer *samr21RadioRxGetPendingRxBuffer()
@@ -810,6 +829,10 @@ void samr21RadioRxSetup(uint8_t channel, uint32_t duration, uint32_t startTime)
 {
     // Abort the current Transmisson (prevent retrys)
     samr21RadioTxAbort();
+
+    void samr21RadioSetEventHandler(&samr21RadioRxEventHandler);
+    s_rxHandlerActive = true;
+    s_rxAbort = false;
 
     if (duration || startTime)
     {
@@ -857,7 +880,7 @@ void samr21RadioRxEventHandler(IrqEvent event)
         }
 
         // Timeout Something went wrong
-        samr21RadioTxCleanup(false);
+        samr21RadioRxCleanup(false);
         return;
 
     case TRX_EVENT_RX_START:
