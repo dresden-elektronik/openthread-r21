@@ -14,8 +14,8 @@ add_library(openthread-r21
     HAL/radio/samr21RadioTxHandler.c
     HAL/radio/samr21RadioVars.c
     HAL/radio/samr21Trx.c
-    OT-Utils/link_metric.cpp
-    OT-Utils/otUtilWrapper_macFrame.c
+    OT-Utils/link_metrics.cpp
+    OT-Utils/otUtilWrapper_macFrame.cpp
     OT-Utils/soft_source_match_table.c
 )
 
@@ -28,8 +28,7 @@ target_include_directories(openthread-r21
         OT-Utils/include        
 )
 
-set_target_properties(
-    openthread-r21
+set_target_properties(openthread-r21
     PROPERTIES
         C_STANDARD 99
         CXX_STANDARD 11

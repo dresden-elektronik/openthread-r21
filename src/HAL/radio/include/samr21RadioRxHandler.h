@@ -23,7 +23,7 @@
 #include "samr21Timer.h"
 
 #include "openthread/platform/radio.h"
-#include "otUltilWrapper_macFrame.h"
+#include "otUtilWrapper_macFrame.h"
 
 #define NUM_SAMR21_RX_BUFFER 4
 
@@ -35,7 +35,7 @@
 #define ENH_ACK_PROBING_IE 0x00
 #endif
 
-typedef enum RxStatus
+typedef enum dkcdksdkj
 {
     RX_STATUS_IDLE = 0x00,
 
@@ -49,7 +49,7 @@ typedef enum RxStatus
     RX_STATUS_DONE = 0xF0,
 } RxStatus;
 
-typedef struct RxBuffer
+typedef struct dwcewcwefccec
 {
     RxStatus status;
     otRadioFrame otFrame;

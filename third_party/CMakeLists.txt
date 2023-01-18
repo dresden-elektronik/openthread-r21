@@ -1,32 +1,32 @@
 
 add_library(samr21-CMSIS
-    CMSIS/r21/source/system_samr21.c
-    CMSIS/r21/source/gcc/startup_samr21.c
+    ${PROJECT_SOURCE_DIR}/third_party/CMSIS/r21/source/system_samr21.c
+    ${PROJECT_SOURCE_DIR}/third_party/CMSIS/r21/source/gcc/startup_samr21.c
 )
 
 add_library(samr21-tusb
-    tinyusb/src/tusb.c 
-    tinyusb/src/device/usbd.c
-    tinyusb/src/device/usbd_control.c 
-    tinyusb/src/common/tusb_fifo.c 
-    tinyusb/src/class/cdc/cdc_device.c 
-    tinyusb_conf/usb_descriptors.c 
-    tinyusb_modified/src/portable/microchip/samr/dcd_samr.c
+    ${PROJECT_SOURCE_DIR}/third_party/tinyusb/src/tusb.c 
+    ${PROJECT_SOURCE_DIR}/third_party/tinyusb/src/device/usbd.c
+    ${PROJECT_SOURCE_DIR}/third_party/tinyusb/src/device/usbd_control.c 
+    ${PROJECT_SOURCE_DIR}/third_party/tinyusb/src/common/tusb_fifo.c 
+    ${PROJECT_SOURCE_DIR}/third_party/tinyusb/src/class/cdc/cdc_device.c 
+    ${PROJECT_SOURCE_DIR}/third_party/tinyusb_config/usb_descriptors.c 
+    ${PROJECT_SOURCE_DIR}/third_party/tinyusb_modified/src/portable/microchip/samr/dcd_samr.c
 )
 
 target_include_directories(samr21-tusb
     PUBLIC
-        tinyusb/src
-        tinyusb_conf
+        ${PROJECT_SOURCE_DIR}/third_party/tinyusb/src
+        ${PROJECT_SOURCE_DIR}/third_party/tinyusb_config
 )
 
 target_include_directories(samr21-CMSIS
     PUBLIC
-        CMSIS/r21/source
-        CMSIS/r21/include
-        CMSIS/core
-        ATMEL/LINKER
-        ATMEL/AT86RF233
+        ${PROJECT_SOURCE_DIR}/third_party/CMSIS/r21/source
+        ${PROJECT_SOURCE_DIR}/third_party/CMSIS/r21/include
+        ${PROJECT_SOURCE_DIR}/third_party/CMSIS/core
+        ${PROJECT_SOURCE_DIR}/third_party/ATMEL/LINKER
+        ${PROJECT_SOURCE_DIR}/third_party/ATMEL/AT86RF233
 )
 
 if(OT_CFLAGS MATCHES "-pedantic-errors")

@@ -56,3 +56,5 @@ void samr21RadioCtrlUpdateCslSampleTime(uint32_t cslSampleTime);
 uint16_t samr21RadioCtrlCslGetPhase();
 
 Samr21RadioState samr21RadioCtrlReturnToLastHandler();
+
+#endif

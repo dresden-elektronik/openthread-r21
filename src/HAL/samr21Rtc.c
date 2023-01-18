@@ -81,7 +81,7 @@ uint32_t samr21RtcGetTimestamp(){
 
 void samr21RtcSetAlarm(uint32_t alarmTimestamp){
     RTC->MODE0.COMP[0].reg = alarmTimestamp;
-    RTC->MODE0.INTENFLAG.bit.CMP0 = 1;
+    RTC->MODE0.INTFLAG.bit.CMP0 = 1;
     RTC->MODE0.INTENSET.bit.CMP0 = 1;
     NVIC_EnableIRQ(RTC_IRQn);
 }

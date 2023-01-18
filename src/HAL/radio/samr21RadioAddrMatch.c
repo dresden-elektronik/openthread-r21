@@ -59,8 +59,8 @@ bool samr21RadioMatchesShortAddr(uint8_t* addr){
 }
 bool samr21RadioMatchesPanId(uint8_t* panid){
     if(
-        (((uint8_t *)(&s_panId))[0] != panid[0])
-        || (((uint8_t *)(&s_panId))[1] != panid[1])
+        (((uint8_t *)(&g_panId))[0] != panid[0])
+        || (((uint8_t *)(&g_panId))[1] != panid[1])
     ){
         return false;
     }

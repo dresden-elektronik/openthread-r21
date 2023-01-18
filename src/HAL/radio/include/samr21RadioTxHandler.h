@@ -23,7 +23,7 @@
 #include "samr21Timer.h"
 
 #include "openthread/platform/radio.h"
-#include "otUltilWrapper_macFrame.h"
+#include "otUtilWrapper_macFrame.h"
 
 #define TIMEOUT_CCA_us 100
 
