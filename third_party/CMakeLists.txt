@@ -36,15 +36,13 @@ endif()
 target_link_libraries(samr21-CMSIS
     PUBLIC
         -T${PROJECT_SOURCE_DIR}/third_party/ATMEL/LINKER/samr21e18a_flash.ld
-        samr21-tusb
     PRIVATE
         ot-config
 )
 
 target_link_libraries(samr21-tusb
-    PUBLIC
-        samr21-CMSIS
     PRIVATE
+        samr21-CMSIS
         ot-config
 )
 
