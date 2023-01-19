@@ -11,7 +11,8 @@
 #define _SAMR21_RADIO_AES_H_
 
 #include <stddef.h>
-
+#include <stdbool.h>
+#include <stdint.h>
 
 #include "samr21RadioTrxRegCopy.h"
 #include "samr21RadioVars.h"

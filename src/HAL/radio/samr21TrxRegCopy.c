@@ -7,7 +7,8 @@
  * the LICENSE.txt file.
  *
  */
-#include "samr21RadioTrxRegCopy.h"
+#include "at86rf233_Bitfield.h"
+#include "at86rf233.h"
 //Local Register Copys of At86rf233 to save some Read Acceses
 volatile AT86RF233_REG_TRX_STATUS_t     g_trxStatus;   //used as external var
 volatile AT86RF233_REG_IRQ_STATUS_t     g_trxLastIrq;  //used as external var         

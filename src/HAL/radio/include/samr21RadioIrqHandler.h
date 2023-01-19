@@ -10,10 +10,15 @@
 #ifndef _SAMR21_RADIO_IRQ_HANDLER_H_
 #define _SAMR21_RADIO_IRQ_HANDLER_H_
 
+#include <stddef.h>
+#include <stdbool.h>
+#include <stdint.h>
+
 #include "samr21.h"
 #include "at86rf233_Bitfield.h"
 #include "at86rf233.h"
 #include "samr21RadioTrxRegCopy.h"
+#include "samr21Trx.h"
 
 typedef enum{
     //From TRX (AT86rf233)

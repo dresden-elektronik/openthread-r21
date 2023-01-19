@@ -26,7 +26,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "mac_frame.h"
+#include "otUtilWrapper_macFrame.h"
 
 #include <assert.h>
 #include "mac/mac_frame.hpp"

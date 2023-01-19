@@ -13,7 +13,11 @@
 
 #include "samr21.h"
 #include "samr21NopDelay.h"
+
+#include <stddef.h>
 #include <stdbool.h>
+#include <stdint.h>
+
 
 
 #include "samr21RadioTrxRegCopy.h"

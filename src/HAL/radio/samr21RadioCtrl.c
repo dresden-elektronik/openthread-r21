@@ -22,7 +22,7 @@ void samr21RadioInitIrq()
         samr21TrxUpdateStatus();
     }
 
-    samr21RadioRxResetBuffer();
+    samr21RadioRxResetAllBuffer();
     
 
     //Enable EIC in Power Manager
@@ -107,6 +107,16 @@ Samr21RadioState samr21RadioCtrlGetState(){
     return s_radioState;
 }
 
+int8_t samr21RadioCtrlGetRssi(){
+    if(
+        g_trxStatus.bit.trxStatus != TRX_STATUS_RX_ON
+        && g_trxStatus.bit.trxStatus != TRX_STATUS_RX_ON 
+    ){
+        return INT8_MAX;
+    }
+
+    return AT86RF233_RSSI_BASE_VAL + (int8_t)samr21TrxReadRegister(PHY_ED_LEVEL_REG);
+}
 
 //TX Power 
 #define SIZE_AT86RF233_TX_POWER_TABLE 16

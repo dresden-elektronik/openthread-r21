@@ -33,19 +33,15 @@
  *   OpenThread.
  *
  */
-
-#include "utils/soft_source_match_table.h"
-
 #include <stdlib.h>
 #include <string.h>
 
 #include <openthread/logging.h>
-
-#include "utils/code_utils.h"
+#include "soft_source_match_table.h"
+#include "code_utils.h"
 
 #if RADIO_CONFIG_SRC_MATCH_SHORT_ENTRY_NUM || RADIO_CONFIG_SRC_MATCH_EXT_ENTRY_NUM
 static uint16_t sPanId = 0;
-
 void utilsSoftSrcMatchSetPanId(uint16_t aPanId)
 {
     sPanId = aPanId;

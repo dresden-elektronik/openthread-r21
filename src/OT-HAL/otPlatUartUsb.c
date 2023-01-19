@@ -1,4 +1,4 @@
-#include "utils/uart.h"
+#include "uart.h"
 #include "samr21Usb.h"
     
 volatile static bool s_dtr = false;
@@ -46,6 +46,10 @@ otError otPlatUartSend(const uint8_t *aBuf, uint16_t aBufLength)
     tud_cdc_write_flush();
 
     return OT_ERROR_NONE;
+}
+
+otError otPlatWakeHost(){
+   //TODO 
 }
 
 void tud_cdc_tx_complete_cb(uint8_t itf){

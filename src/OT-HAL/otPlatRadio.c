@@ -7,9 +7,9 @@
 #include "samr21RadioTxHandler.h"
 #include "samr21RadioEdHandler.h"
 #include "samr21RadioAddrMatch.h"
+#include "soft_source_match_table.h"
 #include "samr21Nvm.h"
 
-extern AT86RF233_REG_TRX_STATUS_t g_trxStatus; // from samr21trx.c
 
 static otRadioState s_radioState = OT_RADIO_STATE_DISABLED;
 static int8_t s_lastEdResult = INT8_MAX;
@@ -37,7 +37,7 @@ otRadioState otPlatRadioGetState(otInstance *aInstance)
 void otPlatRadioSetExtendedAddress(otInstance *aInstance, const otExtAddress *aAddress)
 {
     OT_UNUSED_VARIABLE(aInstance);
-    samr21RadioSetIeeeAddr(aAddress);
+    samr21RadioSetIeeeAddr(aAddress->m8);
 }
 
 void otPlatRadioSetShortAddress(otInstance *aInstance, uint16_t aAddress)
@@ -52,7 +52,10 @@ void otPlatRadioSetPanId(otInstance *aInstance, uint16_t aPanId)
     OT_UNUSED_VARIABLE(aInstance);
 
     samr21RadioSetPanId(aPanId);
+
+#if RADIO_CONFIG_SRC_MATCH_SHORT_ENTRY_NUM || RADIO_CONFIG_SRC_MATCH_EXT_ENTRY_NUM
     utilsSoftSrcMatchSetPanId(aPanId);
+#endif // RADIO_CONFIG_SRC_MATCH_SHORT_ENTRY_NUM || RADIO_CONFIG_SRC_MATCH_EXT_ENTRY_NUM}
 }
 
 otError otPlatRadioEnable(otInstance *aInstance)
@@ -103,7 +106,7 @@ otError otPlatRadioSetTransmitPower(otInstance *aInstance, int8_t aPower)
 {
     OT_UNUSED_VARIABLE(aInstance);
 
-    samr21RadioSetTxPower(aPower);
+    samr21RadioCtrlSetTxPower(aPower);
 
     return OT_ERROR_NONE;
 }
@@ -235,23 +238,6 @@ otError otPlatRadioGetRegion(otInstance *aInstance, uint16_t *aRegionCode)
     return OT_ERROR_NOT_IMPLEMENTED;
 }
 
-otError otPlatRadioSetFemLnaGain(otInstance *aInstance, uint16_t aGain)
-{
-
-    OT_UNUSED_VARIABLE(aInstance);
-    OT_UNUSED_VARIABLE(aGain);
-
-    return OT_ERROR_NOT_IMPLEMENTED;
-}
-
-otError otPlatRadioGetFemLnaGain(otInstance *aInstance, uint16_t *aGain)
-{
-
-    OT_UNUSED_VARIABLE(aInstance);
-    OT_UNUSED_VARIABLE(aGain);
-
-    return OT_ERROR_NOT_IMPLEMENTED;
-}
 
 uint64_t otPlatRadioGetNow(otInstance *aInstance){
     
@@ -309,8 +295,8 @@ void otPlatRadioSetMacKey(otInstance *aInstance,
     OT_UNUSED_VARIABLE(aInstance);
     OT_UNUSED_VARIABLE(aKeyIdMode);
 
-    assert(aKeyType == OT_KEY_TYPE_LITERAL_KEY);
-    assert(aPrevKey != NULL && aCurrKey != NULL && aNextKey != NULL);
+//    assert(aKeyType == OT_KEY_TYPE_LITERAL_KEY);
+//    assert(aPrevKey != NULL && aCurrKey != NULL && aNextKey != NULL);
 
     samr21RadioCtrlSetMacKeys(aKeyId,
                               aPrevKey->mKeyMaterial.mKey.m8,
@@ -354,6 +340,14 @@ otError otPlatRadioEnergyScan(otInstance *aInstance, uint8_t aScanChannel, uint1
     }
 
     return OT_ERROR_BUSY;
+}
+
+
+int8_t otPlatRadioGetRssi(otInstance *aInstance){
+    
+    OT_UNUSED_VARIABLE(aInstance);
+
+    
 }
 
 otError otPlatRadioReceive(otInstance *aInstance, uint8_t aChannel){

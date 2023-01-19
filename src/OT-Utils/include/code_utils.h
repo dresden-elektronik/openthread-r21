@@ -1,5 +1,3 @@
-
-
 /*
  *  Copyright (c) 2017, The OpenThread Authors.
  *  All rights reserved.
@@ -30,71 +28,57 @@
 
 /**
  * @file
- *   This file includes samr21 compile-time configuration constants
- *   for OpenThread.
+ *   This file includes macros for validating runtime conditions.
  */
 
-#ifndef OPENTHREAD_CORE_SAMR21_CONFIG_H_
-#define OPENTHREAD_CORE_SAMR21_CONFIG_H_
-
-#include <stdint.h>
-
-extern uint32_t __d_nv_mem_start;
-extern uint32_t __d_nv_mem_end;
+#ifndef CODE_UTILS_H
+#define CODE_UTILS_H
 
 /**
- * @def OPENTHREAD_CONFIG_PLATFORM_INFO
+ *  This checks for the specified condition, which is expected to
+ *  commonly be true, and branches to the local label 'exit' if the
+ *  condition is false.
  *
- * The platform-specific string to insert into the OpenThread version string.
+ *  @param[in]  aCondition  A Boolean expression to be evaluated.
  *
  */
-#define OPENTHREAD_CONFIG_PLATFORM_INFO "SAMR21"
+#define otEXPECT(aCondition) \
+    do                       \
+    {                        \
+        if (!(aCondition))   \
+        {                    \
+            goto exit;       \
+        }                    \
+    } while (0)
 
 /**
- * @def OPENTHREAD_CONFIG_PLATFORM_FLASH_API_ENABLE
+ *  This checks for the specified condition, which is expected to
+ *  commonly be true, and both executes @p anAction and branches to
+ *  the local label 'exit' if the condition is false.
  *
- * Define to 1 to enable otPlatFlash* APIs to support non-volatile storage.
- *
- * When defined to 1, the platform MUST implement the otPlatFlash* APIs instead of the otPlatSettings* APIs.
+ *  @param[in]  aCondition  A Boolean expression to be evaluated.
+ *  @param[in]  aAction     An expression or block to execute when the
+ *                          assertion fails.
  *
  */
-#define OPENTHREAD_CONFIG_PLATFORM_FLASH_API_ENABLE 0
+#define otEXPECT_ACTION(aCondition, aAction) \
+    do                                       \
+    {                                        \
+        if (!(aCondition))                   \
+        {                                    \
+            aAction;                         \
+            goto exit;                       \
+        }                                    \
+    } while (0)
 
 /**
- * @def RADIO_CONFIG_SRC_MATCH_ENTRY_NUM
+ * This macro calculates the number of elements in an array.
  *
- * The number of source address table entries.
+ * @param[in] aArray  Name of the array variable.
  *
- */
-#define RADIO_CONFIG_SRC_MATCH_ENTRY_NUM 16
-#define RADIO_CONFIG_SRC_MATCH_EXT_ENTRY_NUM 16
-
-/**
- * @def OPENTHREAD_CONFIG_DEFAULT_TRANSMIT_POWER
- *
- * The default IEEE 802.15.4 transmit power (dBm)
+ * @returns Number of elements in the array.
  *
  */
-#define OPENTHREAD_CONFIG_DEFAULT_TRANSMIT_POWER 5
+#define otARRAY_LENGTH(aArray) (sizeof(aArray) / sizeof(aArray[0]))
 
-/**
- * @def OPENTHREAD_CONFIG_NCP_HDLC_ENABLE
- *
- * Define to 1 to enable NCP HDLC support.
- *
- */
-#ifndef OPENTHREAD_CONFIG_NCP_HDLC_ENABLE
-#define OPENTHREAD_CONFIG_NCP_HDLC_ENABLE 1
-#endif
-
-/**
- * @def OPENTHREAD_CONFIG_TCP_ENABLE
- *
- * Define as 1 to enable TCP.
- *
- */
-#ifndef OPENTHREAD_CONFIG_TCP_ENABLE
-#define OPENTHREAD_CONFIG_TCP_ENABLE 0
-#endif
-
-#endif // OPENTHREAD_CORE_SAMR21_CONFIG_H_
+#endif // CODE_UTILS_H

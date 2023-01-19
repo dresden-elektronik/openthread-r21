@@ -361,7 +361,7 @@ void otMacFrameSetEnhAckProbingIe(otRadioFrame *aFrame, const uint8_t *aData, ui
  *
  * Added by ERH@dresdenElektronik
  */
-uint8_t otMacFrameGetSecurityLevel(otRadioFrame *aFrame)
+uint8_t otMacFrameGetSecurityLevel(otRadioFrame *aFrame);
 
 // Protected Class Attributes :(
 // /**

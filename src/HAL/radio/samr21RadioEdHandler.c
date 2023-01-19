@@ -15,6 +15,10 @@ static uint8_t s_maxEdLevel;
 static bool s_edDone = false;
 
 
+static void samr21RadioEdCleanup(){
+    samr21RadioCtrlReturnToLastHandler();
+    cb_samr21RadioEdDone(AT86RF233_RSSI_BASE_VAL + s_maxEdLevel);
+}
 
 //Called at the beginning of each ED
 static void samr21RadioEdStartScan()
@@ -51,10 +55,7 @@ static void samr21RadioEdEval()
     samr21RadioEdStartScan();    
 }
 
-static void samr21RadioEdCleanup(){
-    samr21RadioCtrlReturnToLastHandler();
-    cb_samr21RadioEdDone(AT86RF233_RSSI_BASE_VAL + s_maxEdLevel);
-}
+
 
 void samr21RadioEdEventHandler(IrqEvent event)
 {

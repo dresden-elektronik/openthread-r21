@@ -12,6 +12,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include "samr21.h"
 
 #include "802_15_4_Helper.h"
@@ -19,6 +20,7 @@
 #include "samr21Trx.h"
 #include "samr21RadioTrxRegCopy.h"
 #include "samr21RadioCtrl.h"
+#include "samr21RadioVars.h"
 #include "samr21RadioAes.h"
 #include "samr21Timer.h"
 
@@ -54,7 +56,7 @@ bool samr21RadioTxSetup();
 
 
 //IRQ-Handler
-void samr21RadioTxEventHandler();
+void samr21RadioTxEventHandler(IrqEvent event);
 
 //Callback
  void cb_samr21RadioTxDone(otRadioFrame* txFrameBuffer, otRadioFrame* txAckFrameBuffer);

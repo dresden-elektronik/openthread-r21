@@ -32,7 +32,9 @@
         "otultilwrapper_macframe.h": "c",
         "radio.h": "c",
         "samr21radiotxhandler.h": "c",
-        "samr21radiorxhandler.h": "c"
+        "samr21radiorxhandler.h": "c",
+        "soft_source_match_table.h": "c",
+        "misc.h": "c"
     },
     "cmake.configureOnOpen": false
 }

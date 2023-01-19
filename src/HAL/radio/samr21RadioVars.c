@@ -7,9 +7,14 @@
  * the LICENSE.txt file.
  *
  */
-#include "samr21RadioVars.h"
+#include <stdint.h>
+#include <stdbool.h>
 
-volatile uint64_t   g_ieeeAddr;
+#ifndef AES_BLOCK_SIZE
+#define AES_BLOCK_SIZE 16
+#endif
+
+volatile uint64_t   g_extAddr;
 volatile uint16_t   g_shortAddr;
 volatile uint16_t   g_panId;
 

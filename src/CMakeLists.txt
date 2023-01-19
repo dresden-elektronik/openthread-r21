@@ -13,19 +13,30 @@ add_library(openthread-r21
     HAL/radio/samr21RadioRxHandler.c
     HAL/radio/samr21RadioTxHandler.c
     HAL/radio/samr21RadioVars.c
+    HAL/radio/samr21TrxRegCopy.c
     HAL/radio/samr21Trx.c
     OT-Utils/link_metrics.cpp
     OT-Utils/otUtilWrapper_macFrame.cpp
     OT-Utils/soft_source_match_table.c
+    OT-HAL/otPlatAlarm.c
+    OT-HAL/otPlatEntropy.c
+    OT-HAL/otPlatRadio.c
+    OT-HAL/otPlatSystem.c
+    OT-HAL/otPlatUartUsb.c
 )
 
 target_include_directories(openthread-r21
     PRIVATE
         ${OT_PUBLIC_INCLUDES}
+        HAL
         HAL/include
+        HAL/radio
         HAL/radio/include
+        OT-HAL
         OT-HAL/include
+        OT-Utils
         OT-Utils/include        
+        ./
 )
 
 set_target_properties(openthread-r21

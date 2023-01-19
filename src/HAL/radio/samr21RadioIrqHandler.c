@@ -108,7 +108,7 @@ void TC5_Handler()
 
 void RTC_Handler()
 {
-    RTC->MODE0.INTENFLAG.bit.CMP0 = 1;
+    RTC->MODE0.INTFLAG.bit.CMP0 = 1;
     RTC->MODE0.INTENCLR.bit.CMP0 = 1;
     NVIC_DisableIRQ(RTC_IRQn);
 

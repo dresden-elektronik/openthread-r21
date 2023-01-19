@@ -41,7 +41,7 @@
 
 #include <openthread/link_metrics.h>
 
-#include "mac_frame.h"
+#include "otUtilWrapper_macFrame.h"
 
 #ifdef __cplusplus
 extern "C" {

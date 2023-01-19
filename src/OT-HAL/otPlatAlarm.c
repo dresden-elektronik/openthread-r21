@@ -9,7 +9,7 @@
 
 #define MICRO_SECS_PER_MILLI_SEC 1000
 
-otInstance *s_instance = NULL;
+static otInstance *s_instance = NULL;
 
 void otPlatAlarmMilliStartAt(otInstance *aInstance, uint32_t aT0, uint32_t aDt)
 {

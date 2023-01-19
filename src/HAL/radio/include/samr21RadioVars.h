@@ -7,13 +7,10 @@
  * the LICENSE.txt file.
  *
  */
-#ifndef _SAMR21_RADIO_VARS_H_
-#define _SAMR21_RADIO_VARS_H_
 
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "at86rf233.h"
 
 extern uint64_t   g_extAddr;
 extern uint16_t   g_shortAddr;
@@ -43,5 +40,3 @@ extern uint16_t   g_transmissionTimeout_us;
 
 extern uint32_t   g_txAckTimeout_us;
 
-
-#endif //_SAMR21_RADIO_VARS_H_

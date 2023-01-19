@@ -10,6 +10,13 @@ OT_OPTIONS=(
     "-DCMAKE_BUILD_TYPE=MinSizeRel"
     "-DOT_PLATFORM=external"
     "-DOT_SLAAC=ON"
+    "-DOT_APP_RCP=ON"
+    "-DOT_RCP=ON"
+    "-DOT_FTD=OFF"
+    "-DOT_MTD=OFF"
+    "-DOT_APP_CLI=OFF"
+    "-DOT_APP_NCP=OFF"
+
 )
 readonly OT_OPTIONS
 

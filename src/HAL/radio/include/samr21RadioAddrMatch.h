@@ -10,8 +10,11 @@
 #ifndef _SAMR21_RADIO_ADDRESS_MATCH_H_
 #define _SAMR21_RADIO_ADDRESS_MATCH_H_
 
-#include <stdint.h>
+
+#include <stddef.h>
 #include <stdbool.h>
+#include <stdint.h>
+
 
 #include "samr21.h"
 #include "802_15_4_Helper.h"

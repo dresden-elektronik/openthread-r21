@@ -146,7 +146,7 @@
 /* PHY_CC_CCA */
 #define CCA_REQUEST       7
 #define CCA_MODE          5
-#define CHANNEL           0
+#define PHY_CHANNEL       0
 
 /* CCA_THRES */
 #define CCA_ED_THRES      0

@@ -59,6 +59,58 @@ otRadioFrame *samr21RadioTxGetAckOtBuffer()
     return &s_txAckFrame;
 }
 
+void samr21RadioTxCleanup(bool success)
+{
+    samr21Timer4Stop();
+    samr21RadioRemoveEventHandler();
+
+    if (!success)
+    {
+        cb_samr21RadioTxFailed(&s_txFrame, s_txStatus);
+    }
+    else
+    {
+        cb_samr21RadioTxDone(&s_txFrame, &s_txAckFrame);
+    }
+
+    s_txHandlerActive = false;
+}
+
+static void samr21RadioTxStartCCA()
+{
+    s_txStatus = TX_STATUS_CCA;
+
+    // Check if Transciver is in recive state
+    if (g_trxStatus.bit.trxStatus != TRX_STATUS_RX_ON)
+    {
+        samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_RX_ON);
+        while (g_trxStatus.bit.trxStatus != TRX_STATUS_RX_ON)
+        {
+            samr21TrxUpdateStatus();
+        }
+    }
+
+    // Prepare CCA Measurment
+    g_phyCcCcaReg.bit.ccaRequest = 1;
+
+    // Start CCA Measurment
+    samr21TrxWriteRegister(PHY_CC_CCA_REG, g_phyCcCcaReg.reg);
+
+    // Reset local copy of ccaRequest Bit
+    g_phyCcCcaReg.bit.ccaRequest = 0;
+
+    // Start CCA TimeoutTimer
+    samr21Timer4Set(TIMEOUT_CCA_us);
+}
+
+static void samr21RadioTxStart()
+{
+    s_numCsmaBackoffs = 0;
+    s_numTransmissionRetrys = 0;
+
+    samr21RadioTxStartCCA();
+}
+
 bool samr21RadioTxSetup()
 {
     if (s_txHandlerActive)
@@ -120,66 +172,6 @@ txStart:
     return true;
 }
 
-static void samr21RadioTxStart()
-{
-    s_numCsmaBackoffs = 0;
-    s_numTransmissionRetrys = 0;
-
-    samr21RadioTxStartCCA();
-}
-
-static void samr21RadioTxStartCCA()
-{
-    s_txStatus = TX_STATUS_CCA;
-
-    // Check if Transciver is in recive state
-    if (g_trxStatus.bit.trxStatus != TRX_STATUS_RX_ON)
-    {
-        samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_RX_ON);
-        while (g_trxStatus.bit.trxStatus != TRX_STATUS_RX_ON)
-        {
-            samr21TrxUpdateStatus();
-        }
-    }
-
-    // Prepare CCA Measurment
-    g_phyCcCcaReg.bit.ccaRequest = 1;
-
-    // Start CCA Measurment
-    samr21TrxWriteRegister(PHY_CC_CCA_REG, g_phyCcCcaReg.reg);
-
-    // Reset local copy of ccaRequest Bit
-    g_phyCcCcaReg.bit.ccaRequest = 0;
-
-    // Start CCA TimeoutTimer
-    samr21Timer4Set(TIMEOUT_CCA_us);
-}
-
-static void samr21RadioTxEvalCCA()
-{
-    // Clear CCA TimeoutTimer
-    samr21Timer4Stop();
-
-    if (g_trxStatus.bit.ccaStatus)
-    {
-        samr21RadioTxStartTransmission();
-        return;
-    }
-
-    if (
-        s_numCsmaBackoffs < s_txFrame.mInfo.mTxInfo.mMaxCsmaBackoffs && s_txFrame.mInfo.mTxInfo.mCsmaCaEnabled)
-    {
-        uint32_t backoffTime_us =
-            ((samr21TrxGetRandomByte() >> (8 - min(g_csmaBackoffExponentMin + s_numCsmaBackoffs, g_csmaBackoffExponentMax))) - 1) * (20 * AT86RF233_SYMBOL_TIME_us);
-        s_numCsmaBackoffs++;
-
-        s_txStatus = TX_STATUS_CSMA_BACKOFF;
-        samr21Timer4Set(backoffTime_us);
-        return;
-    }
-
-    samr21RadioTxCleanup(false);
-}
 
 static void samr21RadioTxStartTransmission()
 {
@@ -268,7 +260,7 @@ static void samr21RadioTxStartTransmission()
     {
         samr21TrxSpiStartAccess(AT86RF233_CMD_FRAMEBUFFER_WRITE, NULL);
         samr21TrxSpiTransceiveBytesRaw(&s_txFrame.mPsdu[-1], NULL, s_txFrame.mLength - 1); // -2 FCS +1 PhyLen
-        samr21TrxSpiCloseSpiAccess();
+        samr21TrxSpiCloseAccess();
         s_txStatus = TX_STATUS_SENDING_WAIT_TRX_END;
         return;
     }
@@ -279,7 +271,7 @@ static void samr21RadioTxStartTransmission()
     samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, 0x00);
     samr21TrxSpiTransceiveBytesRaw(&s_txFrame.mPsdu[-1], NULL, headerLength + 1); // phyLen not in pdsuLen
     s_numBytesPdsuUploaded = headerLength;
-    samr21TrxSpiCloseSpiAccess();
+    samr21TrxSpiCloseAccess();
 
     /******************************Encrypt and Upload Payload (AES CTR)************************************/
 
@@ -462,6 +454,33 @@ static void samr21RadioTxStartTransmission()
     s_txStatus = TX_STATUS_SENDING_WAIT_TRX_END;
 }
 
+
+static void samr21RadioTxEvalCCA()
+{
+    // Clear CCA TimeoutTimer
+    samr21Timer4Stop();
+
+    if (g_trxStatus.bit.ccaStatus)
+    {
+        samr21RadioTxStartTransmission();
+        return;
+    }
+
+    if (
+        s_numCsmaBackoffs < s_txFrame.mInfo.mTxInfo.mMaxCsmaBackoffs && s_txFrame.mInfo.mTxInfo.mCsmaCaEnabled)
+    {
+        uint32_t backoffTime_us =
+            ((samr21TrxGetRandomByte() >> (8 - (g_csmaBackoffExponentMin + s_numCsmaBackoffs > g_csmaBackoffExponentMax ? g_csmaBackoffExponentMax : g_csmaBackoffExponentMin + s_numCsmaBackoffs))) - 1) * (20 * IEEE_802_15_4_24GHZ_TIME_PER_OCTET_us);
+        s_numCsmaBackoffs++;
+
+        s_txStatus = TX_STATUS_CSMA_BACKOFF;
+        samr21Timer4Set(backoffTime_us);
+        return;
+    }
+
+    samr21RadioTxCleanup(false);
+}
+
 static void samr21RadioTxPrepareAckReception()
 {
     samr21Timer4Stop();
@@ -493,7 +512,7 @@ static void samr21RadioTxAckReceptionDone()
 
     if (s_txAckFrame.mLength > IEEE_802_15_4_PDSU_SIZE)
     {
-        samr21TrxSpiStopAccess();
+        samr21TrxSpiCloseAccess();
         goto ackInvalid;
     }
 
@@ -536,23 +555,6 @@ ackInvalid:
     }
 
     samr21RadioTxCleanup(false);
-}
-
-void samr21RadioTxCleanup(bool success)
-{
-    samr21Timer4Stop();
-    samr21RadioRemoveEventHandler();
-
-    if (!success)
-    {
-        cb_samr21RadioTxFailed(&s_txFrame, s_txStatus);
-    }
-    else
-    {
-        cb_samr21RadioTxDone(&s_txFrame, &s_txAckFrame);
-    }
-
-    s_txHandlerActive = false;
 }
 
 void samr21RadioTxEventHandler(IrqEvent event)

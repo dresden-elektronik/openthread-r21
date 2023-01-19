@@ -10,6 +10,11 @@
 #ifndef _SAMR21_RADIO_CTRL_H_
 #define _SAMR21_RADIO_CTRL_H_
 
+#include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
+#include <stddef.h>
+
 #include "samr21.h"
 #include "802_15_4_Helper.h"
 #include "samr21Trx.h"

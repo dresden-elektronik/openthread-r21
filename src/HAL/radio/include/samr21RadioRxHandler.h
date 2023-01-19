@@ -10,14 +10,18 @@
 #ifndef _SAMR21_RADIO_RX_HANDLER_H_
 #define _SAMR21_RADIO_RX_HANDLER_H_
 
-#include <stdint.h>
+
+#include <stddef.h>
 #include <stdbool.h>
+#include <stdint.h>
+
 #include "samr21.h"
 
 #include "802_15_4_Helper.h"
 #include "samr21RadioIrqHandler.h"
 #include "samr21Trx.h"
 #include "samr21RadioTrxRegCopy.h"
+#include "samr21RadioVars.h"
 #include "samr21RadioCtrl.h"
 #include "samr21RadioAes.h"
 #include "samr21Timer.h"
@@ -35,7 +39,7 @@
 #define ENH_ACK_PROBING_IE 0x00
 #endif
 
-typedef enum dkcdksdkj
+typedef enum RxStatus
 {
     RX_STATUS_IDLE = 0x00,
 
@@ -49,7 +53,7 @@ typedef enum dkcdksdkj
     RX_STATUS_DONE = 0xF0,
 } RxStatus;
 
-typedef struct dwcewcwefccec
+typedef struct RxBuffer
 {
     RxStatus status;
     otRadioFrame otFrame;
@@ -75,7 +79,7 @@ void samr21RadioRxSetup(uint8_t channel, uint32_t duration, uint32_t startTime);
 
 
 // IRQ-Handler
-void samr21RadioRxEventHandler();
+void samr21RadioRxEventHandler(IrqEvent event);
 
 // Callback
 void cb_samr21RadioRxDone(RxBuffer* buffer);
