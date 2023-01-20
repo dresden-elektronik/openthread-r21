@@ -201,20 +201,16 @@ void samr21TimerInit()
     TC4->COUNT16.INTFLAG.bit.OVF = 1;
     TC5->COUNT16.INTFLAG.bit.OVF = 1;
     // enable interrupt in NVIC
+    
+    NVIC_ClearPendingIRQ(TCC0_IRQn);
+    NVIC_ClearPendingIRQ(TCC1_IRQn);
+    NVIC_ClearPendingIRQ(TC4_IRQn);
 
-#ifdef __TESTBUILD__
     NVIC_EnableIRQ(TCC0_IRQn);
     NVIC_EnableIRQ(TCC1_IRQn);
-#endif
 
-// Used by Openthread Alarm
-#ifndef __TESTBUILD__
-    NVIC_EnableIRQ(TCC2_IRQn);
-    NVIC_EnableIRQ(TC3_IRQn);
-#endif
 
     NVIC_EnableIRQ(TC4_IRQn);
-    NVIC_EnableIRQ(TC5_IRQn);
 }
 
 void samr21Timer0Set(uint32_t value_us)

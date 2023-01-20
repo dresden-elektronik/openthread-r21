@@ -7,7 +7,7 @@ readonly OT_SRCDIR
 
 OT_OPTIONS=(
     "-DCMAKE_TOOLCHAIN_FILE=${OT_SRCDIR}/src/arm-none-eabi-gcc.cmake"
-    "-DCMAKE_BUILD_TYPE=MinSizeRel"
+    "-DCMAKE_BUILD_TYPE=Debug"
     "-DOT_PLATFORM=external"
     "-DOT_SLAAC=ON"
     "-DOT_APP_RCP=ON"

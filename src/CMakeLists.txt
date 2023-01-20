@@ -5,6 +5,7 @@ add_library(openthread-r21
     HAL/samr21Rtc.c
     HAL/samr21Timer.c
     HAL/samr21Usb.c
+    HAL/samr21Uart.c
     HAL/radio/samr21RadioAddrMatch.c
     HAL/radio/samr21RadioAes.c
     HAL/radio/samr21RadioCtrl.c
@@ -23,6 +24,7 @@ add_library(openthread-r21
     OT-HAL/otPlatRadio.c
     OT-HAL/otPlatSystem.c
     OT-HAL/otPlatUartUsb.c
+    OT-HAL/otPlatLog.c
 )
 
 target_include_directories(openthread-r21

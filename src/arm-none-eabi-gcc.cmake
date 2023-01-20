@@ -11,4 +11,4 @@ set(COMMON_C_FLAGS                 "-mcpu=cortex-m0plus -mfloat-abi=soft -mthumb
 set(CMAKE_C_FLAGS_INIT             "${COMMON_C_FLAGS} -std=gnu99")
 set(CMAKE_CXX_FLAGS_INIT           "${COMMON_C_FLAGS} -fno-exceptions -fno-rtti")
 set(CMAKE_ASM_FLAGS_INIT           "${COMMON_C_FLAGS}")
-set(CMAKE_EXE_LINKER_FLAGS_INIT    "${COMMON_C_FLAGS} -specs=nosys.specs -Wl,--entry=Reset_Handler")
+set(CMAKE_EXE_LINKER_FLAGS_INIT    "${COMMON_C_FLAGS} -specs=nano.specs -specs=nosys.specs -Wl,--entry=Reset_Handler")

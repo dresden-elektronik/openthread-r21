@@ -34,7 +34,8 @@
         "samr21radiotxhandler.h": "c",
         "samr21radiorxhandler.h": "c",
         "soft_source_match_table.h": "c",
-        "misc.h": "c"
+        "misc.h": "c",
+        "type_traits": "cpp"
     },
     "cmake.configureOnOpen": false
 }
