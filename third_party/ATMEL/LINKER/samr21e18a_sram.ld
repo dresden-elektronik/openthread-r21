@@ -152,5 +152,6 @@ SECTIONS
     } > ram
 
     . = ALIGN(4);
+    end = . ;
     _end = . ;
 }
