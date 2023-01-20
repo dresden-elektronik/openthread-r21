@@ -31,12 +31,10 @@
  * Auto ProductID layout's Bitmap:
  *   [MSB]         HID | MSC | CDC          [LSB]
  */
-#define _PID_MAP(itf, n)  ( (CFG_TUD_##itf) << (n) )
-#define USB_PID           (0x4000 | _PID_MAP(CDC, 0) | _PID_MAP(MSC, 1) | _PID_MAP(HID, 2) | \
-                           _PID_MAP(MIDI, 3) | _PID_MAP(VENDOR, 4) )
 
-#define USB_VID   0xCafe
-#define USB_BCD   0x0200
+#define USB_PID   0x0032    
+#define USB_VID   0x1cf1
+#define USB_BCD   0x0201
 
 //--------------------------------------------------------------------+
 // Device Descriptors
@@ -236,11 +234,11 @@ uint8_t const * tud_descriptor_configuration_cb(uint8_t index)
 // array of pointer to string descriptors
 char const* string_desc_arr [] =
 {
-  (const char[]) { 0x09, 0x04 }, // 0: is supported language is English (0x0409)
-  "dresden elektronik",          // 1: Manufacturer
-  "Conbee2 Thread",              // 2: Product
-  "123456789012",                // 3: Serials, should use chip ID
-  "TinyUSB CDC",                 // 4: CDC Interface
+  (const char[]) { 0x09, 0x04 },              // 0: is supported language is English (0x0409)
+  "dresden elektronik",                       // 1: Manufacturer
+  "Thread RCP [ConBee II]",                   // 2: Product
+  "123456789012",                             // 3: Serials, should use chip ID
+  "TinyUSB CDC",                              // 4: CDC Interface
 };
 
 
@@ -258,7 +256,16 @@ uint16_t const* tud_descriptor_string_cb(uint8_t index, uint16_t langid)
   {
     memcpy(&_desc_str[1], string_desc_arr[0], 2);
     chr_count = 1;
-  }else
+  }
+  //ADDED FOR CONBEE2 THREAD IMPLEMENTAION
+  else if ( index == 3 ){
+    for(uint8_t i = 0; i < 9; i++){
+      _desc_str[1+i] = ((uint8_t*)0x00804012)[i];
+    }
+    chr_count = 9;
+  }
+  //REMOVE IF string_desc_arr iSerial IS USED
+  else
   {
     // Note: the 0xEE index string is a Microsoft OS 1.0 Descriptors.
     // https://docs.microsoft.com/en-us/windows-hardware/drivers/usbcon/microsoft-defined-usb-descriptors

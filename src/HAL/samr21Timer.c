@@ -196,6 +196,7 @@ void samr21TimerInit()
     TCC0->INTFLAG.bit.OVF = 1;
     TCC1->INTFLAG.bit.OVF = 1;
     TCC2->INTFLAG.bit.OVF = 1;
+    
 
     TC3->COUNT16.INTFLAG.bit.OVF = 1;
     TC4->COUNT16.INTFLAG.bit.OVF = 1;
@@ -204,7 +205,7 @@ void samr21TimerInit()
     
     NVIC_ClearPendingIRQ(TCC0_IRQn);
     NVIC_ClearPendingIRQ(TCC1_IRQn);
-    NVIC_ClearPendingIRQ(TC4_IRQn);
+    NVIC_ClearPendingIRQ(TC5_IRQn);
 
     NVIC_EnableIRQ(TCC0_IRQn);
     NVIC_EnableIRQ(TCC1_IRQn);
