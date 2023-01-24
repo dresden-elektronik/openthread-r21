@@ -25,9 +25,9 @@ extern uint32_t   g_cslPeriod;
 
 
 extern uint8_t    g_currKeyId; 
-extern uint8_t    *g_prevKey; 
-extern uint8_t    *g_currKey;
-extern uint8_t    *g_nextKey;
+extern uint8_t    g_prevKey[]; 
+extern uint8_t    g_currKey[];
+extern uint8_t    g_nextKey[];
 
 extern uint8_t    g_numMaxTransmissionRetrys;
 extern uint8_t    g_numMaxCsmaBackoffs;

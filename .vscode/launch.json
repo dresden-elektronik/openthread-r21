@@ -1,0 +1,21 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Cortex Debug",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/out/build/bin/ot-rcp",
+            "request": "launch",
+            "type": "cortex-debug",
+            "runToEntryPoint": "main",
+            "servertype": "openocd",
+            "configFiles": [ "${workspaceFolder}/test/OpenOCD_config/ATMEL-ICE-OpenOCD-samr21e18a.cfg" ],
+            "gdbTarget": "localhost:3333",
+            "gdbPath" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-gdb",
+            "toolchainPrefix" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-"
+        }
+    ]
+}
