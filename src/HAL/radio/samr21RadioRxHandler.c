@@ -791,9 +791,9 @@ void samr21RadioRxAbort()
     {
         s_rxAbort = true;
 
-        while (s_rxHandlerActive)
-            ;
-        return;
+        // while (s_rxHandlerActive)
+        //     ;
+        // return;
     }
 }
 

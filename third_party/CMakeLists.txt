@@ -44,6 +44,7 @@ target_link_libraries(samr21-tusb
     PRIVATE
         samr21-CMSIS
         ot-config
+        openthread-r21
 )
 
 target_compile_definitions(samr21-CMSIS

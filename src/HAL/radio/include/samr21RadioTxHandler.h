@@ -27,7 +27,7 @@
 #include "openthread/platform/radio.h"
 #include "otUtilWrapper_macFrame.h"
 
-#define TIMEOUT_CCA_us 100
+#define TIMEOUT_CCA_us 1000
 
 typedef enum TxStatus
 {

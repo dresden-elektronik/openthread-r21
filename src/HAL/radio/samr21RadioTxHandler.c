@@ -172,7 +172,6 @@ txStart:
     return true;
 }
 
-
 static void samr21RadioTxStartTransmission()
 {
     s_txStatus = TX_STATUS_SENDING_UPLOADING;
@@ -454,7 +453,6 @@ static void samr21RadioTxStartTransmission()
     s_txStatus = TX_STATUS_SENDING_WAIT_TRX_END;
 }
 
-
 static void samr21RadioTxEvalCCA()
 {
     // Clear CCA TimeoutTimer
@@ -484,8 +482,13 @@ static void samr21RadioTxEvalCCA()
 static void samr21RadioTxPrepareAckReception()
 {
     samr21Timer4Stop();
-    s_txStatus = TX_STATUS_WAIT_FOR_ACK;
-    samr21Timer4Set(g_txAckTimeout_us);
+    if (otMacFrameIsAckRequested(&s_txFrame)){
+        s_txStatus = TX_STATUS_WAIT_FOR_ACK;
+        samr21Timer4Set(g_txAckTimeout_us);
+        return;
+    }
+    s_txStatus = TX_STATUS_DONE;
+    samr21RadioTxCleanup(true);
 }
 
 static void samr21RadioTxAckReceptionStarted()

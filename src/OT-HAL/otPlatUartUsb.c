@@ -3,6 +3,14 @@
     
 volatile static bool s_dtr = false;
 
+struct waitForHostBuffer_s
+{
+    uint16_t len;
+    uint8_t  buf[];
+} s_waitForHostBuffer;
+
+
+
 void samr21OtPlatUsbTask(){
 
     tud_task(); 
@@ -14,6 +22,11 @@ void samr21OtPlatUsbTask(){
         uint32_t count = tud_cdc_read(buf, sizeof(buf));
 
         otPlatUartReceived(buf,count);        
+    }
+
+    if(s_waitForHostBuffer.len && s_dtr){
+        tud_cdc_write(s_waitForHostBuffer.buf, s_waitForHostBuffer.len);
+        s_waitForHostBuffer.len = 0;
     }
 }
 
@@ -39,12 +52,14 @@ otError otPlatUartSend(const uint8_t *aBuf, uint16_t aBufLength)
         ( tud_cdc_write_available() < aBufLength )
         || !s_dtr 
     ){
-        return OT_ERROR_FAILED;
+        memcpy(s_waitForHostBuffer.buf, aBuf, aBufLength);
+        s_waitForHostBuffer.len = aBufLength;
+        return OT_ERROR_NONE;
     }
 
     tud_cdc_write(aBuf, aBufLength);
     tud_cdc_write_flush();
-
+    otPlatUartSendDone();
     return OT_ERROR_NONE;
 }
 
@@ -60,4 +75,10 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts){
     (void)itf;
     (void)rts;
     s_dtr = dtr;
+
+    if(s_waitForHostBuffer.len){
+        tud_cdc_write(s_waitForHostBuffer.buf, s_waitForHostBuffer.len);
+        s_waitForHostBuffer.len = 0;
+        otPlatUartSendDone();
+    }
 }

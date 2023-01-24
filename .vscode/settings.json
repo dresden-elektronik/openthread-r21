@@ -37,5 +37,6 @@
         "misc.h": "c",
         "type_traits": "cpp"
     },
-    "cmake.configureOnOpen": false
+    "cmake.configureOnOpen": false,
+    "cortex-debug.variableUseNaturalFormat": false
 }
