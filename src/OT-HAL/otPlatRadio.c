@@ -304,7 +304,7 @@ void otPlatRadioSetMacKey(otInstance *aInstance,
                               aNextKey->mKeyMaterial.mKey.m8);
 }
 
-void otPlatSetMacFarameCounter(otInstance *aInstance, uint32_t aMacFrameCounter){
+void otPlatRadioSetMacFrameCounter(otInstance *aInstance, uint32_t aMacFrameCounter){
     
     OT_UNUSED_VARIABLE(aInstance);
     samr21RadioCtrlSetMacFrameCounter(aMacFrameCounter);

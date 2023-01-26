@@ -2,6 +2,7 @@
 #include "otPlatSystemHeader.h"
 #include "openthread/platform/misc.h"
 
+#include "samr21.h"
 #include "samr21Clock.h"
 #include "samr21Trx.h"
 #include "samr21RadioCtrl.h"
@@ -44,9 +45,31 @@ void otSysProcessDrivers(otInstance *aInstance)
 }
 
 otPlatResetReason otPlatGetResetReason(otInstance *aInstance){
-    return OT_PLAT_RESET_REASON_POWER_ON; //TODO
+    switch (PM->RCAUSE.reg)
+    {
+    case PM_RCAUSE_POR:
+        return OT_PLAT_RESET_REASON_POWER_ON;
+    
+    case PM_RCAUSE_BOD12:
+        return OT_PLAT_RESET_REASON_FAULT;
+        
+    case PM_RCAUSE_BOD33:
+        return OT_PLAT_RESET_REASON_FAULT;
+
+    case PM_RCAUSE_EXT:
+        return OT_PLAT_RESET_REASON_EXTERNAL;
+
+    case PM_RCAUSE_WDT:
+        return OT_PLAT_RESET_REASON_WATCHDOG;
+
+    case PM_RCAUSE_SYST:
+        return OT_PLAT_RESET_REASON_SOFTWARE;
+
+    default:
+        return OT_PLAT_RESET_REASON_OTHER; //TODO
+    }
 }
 
 void otPlatReset(otInstance *aInstance){
-    __NOP();
+   NVIC_SystemReset();
 }

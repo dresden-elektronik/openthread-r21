@@ -10,12 +10,12 @@
             "executable": "${workspaceFolder}/out/build/bin/ot-rcp",
             "request": "launch",
             "type": "cortex-debug",
-            "runToEntryPoint": "Reset_Handler",
             "servertype": "openocd",
             "configFiles": [ "${workspaceFolder}/test/OpenOCD_config/ATMEL-ICE-OpenOCD-samr21e18a.cfg" ],
             "gdbTarget": "localhost:3333",
             "gdbPath" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-gdb",
-            "toolchainPrefix" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-"
+            "toolchainPrefix" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-",
+            "preLaunchTask": "buid RCP"
         },
         {
             "name": "Cortex Debug Live",
@@ -23,7 +23,6 @@
             "executable": "${workspaceFolder}/out/build/bin/ot-rcp",
             "request": "attach",
             "type": "cortex-debug",
-            "runToEntryPoint": "main",
             "servertype": "openocd",
             "configFiles": [ "${workspaceFolder}/test/OpenOCD_config/ATMEL-ICE-OpenOCD-samr21e18a.cfg" ],
             "gdbTarget": "localhost:3333",

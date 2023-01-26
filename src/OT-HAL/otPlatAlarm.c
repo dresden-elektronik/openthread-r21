@@ -47,7 +47,7 @@ uint32_t otPlatAlarmMicroGetNow(void)
 
 void TCC0_Handler(){
     TCC0->INTFLAG.bit.OVF = 1;
-    otPlatAlarmMilliFired(s_instance);
+    otPlatAlarmMicroFired(s_instance);
 }
 
 void TCC1_Handler(){

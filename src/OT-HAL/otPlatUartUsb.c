@@ -76,7 +76,7 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts){
     (void)rts;
     s_dtr = dtr;
 
-    if(s_waitForHostBuffer.len){
+    if(s_waitForHostBuffer.len && dtr){
         tud_cdc_write(s_waitForHostBuffer.buf, s_waitForHostBuffer.len);
         s_waitForHostBuffer.len = 0;
         otPlatUartSendDone();

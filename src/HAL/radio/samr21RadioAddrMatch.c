@@ -11,14 +11,9 @@
 #include "samr21RadioAddrMatch.h"
 
 
-//Self Device Addr
-static uint64_t g_ieeeAddr;
-static uint16_t g_shortAddr;
-static uint16_t g_panId;
-
 void samr21RadioSetIeeeAddr(uint8_t* addr){
     for(uint8_t i = 0; i < IEEE_802_15_4_EXTENDED_ADDR_SIZE_BYTES; i++){
-        ((uint8_t *)(&g_ieeeAddr))[i] = addr[i];
+        ((uint8_t *)(&g_extAddr))[i] = addr[i];
     }
 }
 
@@ -26,12 +21,12 @@ void samr21RadioSetShortAddr(uint16_t addr){
     g_shortAddr = addr;
 }
 
-void samr21RadioSetPanId(uint16_t addr){
-    g_panId = addr;
+void samr21RadioSetPanId(uint16_t panId){
+    g_panId = panId;
 }
 
 uint8_t* samr21RadioGetIeeeAddr(){
-    return ((uint8_t *)(&g_ieeeAddr));
+    return ((uint8_t *)(&g_extAddr));
 }
 uint16_t samr21RadioGetShortAddr(){
     return g_shortAddr;
@@ -42,7 +37,7 @@ uint16_t samr21RadioGetPanId(){
 
 bool samr21RadioMatchesIeeeAddr(uint8_t* addr){
     for(uint8_t i = 0; i < IEEE_802_15_4_EXTENDED_ADDR_SIZE_BYTES; i++){
-        if(((uint8_t *)(&g_ieeeAddr))[i] != addr[i]){
+        if(((uint8_t *)(&g_extAddr))[i] != addr[i]){
             return false;
         }
     }

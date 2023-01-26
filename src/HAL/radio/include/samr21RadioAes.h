@@ -16,6 +16,7 @@
 
 #include "samr21RadioTrxRegCopy.h"
 #include "samr21RadioVars.h"
+#include "samr21Timer.h"
 #include "samr21Trx.h"
 #include "samr21.h"
 

@@ -17,6 +17,7 @@
 
 
 #include "samr21.h"
+#include "samr21RadioVars.h"
 #include "802_15_4_Helper.h"
 
 //For Self-Radio

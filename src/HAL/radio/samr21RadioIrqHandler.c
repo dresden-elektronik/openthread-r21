@@ -72,16 +72,7 @@ void EIC_Handler()
     }
 }
 
-// timer via TC3
-void TC3_Handler()
-{
-    // Reset IRQ
-    TC3->COUNT16.INTFLAG.bit.OVF = 1;
 
-    if(s_eventHandlerFunc){
-        (*s_eventHandlerFunc)(TIMER_EVENT_3_TRIGGER);
-    } 
-}
 
 // timer via TC4
 void TC4_Handler()

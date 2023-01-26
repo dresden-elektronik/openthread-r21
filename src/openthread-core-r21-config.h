@@ -88,6 +88,37 @@ extern uint32_t __d_nv_mem_end;
 #endif
 
 /**
+ * @def OPENTHREAD_CONFIG_PLATFORM_USEC_TIMER_ENABLE
+ *
+ * Define to 1 if you want to support microsecond timer in platform.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_PLATFORM_USEC_TIMER_ENABLE
+#define OPENTHREAD_CONFIG_PLATFORM_USEC_TIMER_ENABLE 1
+#endif
+
+/**
+ * @def OPENTHREAD_CONFIG_CSL_RECEIVE_TIME_AHEAD
+ *
+ * Reception scheduling and ramp up time needed for the CSL receiver to be ready, in units of microseconds.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_CSL_RECEIVE_TIME_AHEAD
+#define OPENTHREAD_CONFIG_CSL_RECEIVE_TIME_AHEAD 2000
+#endif
+
+/**
+ * @def OPENTHREAD_CONFIG_CSL_MIN_RECEIVE_ON
+ *
+ * The minimum CSL receive window (in microseconds) required to receive an IEEE 802.15.4 frame.
+ * - Frame preamble: 6*2 symbols + margin
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_CSL_MIN_RECEIVE_ON
+#define OPENTHREAD_CONFIG_CSL_MIN_RECEIVE_ON 12 * 16
+#endif
+
+/**
  * @def OPENTHREAD_CONFIG_TCP_ENABLE
  *
  * Define as 1 to enable TCP.
@@ -95,6 +126,16 @@ extern uint32_t __d_nv_mem_end;
  */
 #ifndef OPENTHREAD_CONFIG_TCP_ENABLE
 #define OPENTHREAD_CONFIG_TCP_ENABLE 0
+#endif
+
+/**
+ * @def OPENTHREAD_CONFIG_STACK_VENDOR_OUI
+ *
+ * The Organizationally Unique Identifier for the vendor.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_STACK_VENDOR_OUI
+#define OPENTHREAD_CONFIG_STACK_VENDOR_OUI 0x00212e
 #endif
 
 #endif // OPENTHREAD_CORE_SAMR21_CONFIG_H_

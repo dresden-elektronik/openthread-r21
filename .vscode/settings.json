@@ -35,7 +35,11 @@
         "samr21radiorxhandler.h": "c",
         "soft_source_match_table.h": "c",
         "misc.h": "c",
-        "type_traits": "cpp"
+        "type_traits": "cpp",
+        "samr21radioaes.h": "c",
+        "alarm-micro.h": "c",
+        "instance.h": "c",
+        "otutilwrapper_macframe.h": "c"
     },
     "cmake.configureOnOpen": false,
     "cortex-debug.variableUseNaturalFormat": false

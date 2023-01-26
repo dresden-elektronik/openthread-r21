@@ -281,7 +281,7 @@ void otMacFrameSetEnhAckProbingIe(otRadioFrame *aFrame, const uint8_t *aData, ui
 
 uint8_t otMacFrameGetSecurityLevel(otRadioFrame *aFrame){
     uint8_t secLevel;
-    return static_cast<Mac::Frame *>(aFrame)->GetSecurityLevel(secLevel);
+    static_cast<Mac::Frame *>(aFrame)->GetSecurityLevel(secLevel);
     return secLevel;
 }
 
