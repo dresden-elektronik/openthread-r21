@@ -9,8 +9,14 @@
  */
 #include "samr21RadioAes.h"
 
+
+volatile static bool s_aesBusy = false;
+
 void samr21RadioAesKeySetup(uint8_t *key)
 {
+
+    while (s_aesBusy);
+    
 
     samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, AES_CTRL_REG);
 
@@ -25,7 +31,6 @@ void samr21RadioAesKeySetup(uint8_t *key)
 
 void samr21RadioAesEcbEncrypt(uint8_t *inDataBlock, uint8_t *outDataBlock)
 {
-
     samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, AES_CTRL_REG);
 
     AT86RF233_SRAM_REG_AES_CTRL_t aesCtrl = {
@@ -76,12 +81,12 @@ void samr21RadioAesEcbEncrypt(uint8_t *inDataBlock, uint8_t *outDataBlock)
         samr21TrxSpiTransceiveByteRaw(aesCtrl.reg);
     }
 
+
     samr21TrxSpiCloseAccess();
 }
 
 void samr21RadioAesCbcEncrypt(uint8_t *inDataBlock, uint8_t inDataLength, uint8_t *outDataBlock)
 {
-
     samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, AES_CTRL_REG);
 
     // Send ECB encription Command
@@ -140,6 +145,7 @@ void samr21RadioAesCbcEncrypt(uint8_t *inDataBlock, uint8_t inDataLength, uint8_
         samr21TrxSpiTransceiveByteRaw(aesCtrl.reg);
     }
 
+
     samr21TrxSpiCloseAccess();
 }
 
@@ -149,14 +155,4 @@ void samr21RadioAesReadBuffer(uint8_t *pBuffer, uint8_t offset, uint8_t lenght)
     samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_READ, AES_KEY_REG + offset);
     samr21TrxSpiTransceiveBytesRaw(NULL, pBuffer, lenght);
     samr21TrxSpiCloseAccess();
-}
-
-bool samr21RadioAesBusy()
-{
-
-    samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_READ, AES_STATUS_REG);
-    uint8_t aesStatus = samr21TrxSpiReadByteRaw();
-    samr21TrxSpiCloseAccess();
-
-    return !(aesStatus & 0x01);
 }
