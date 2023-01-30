@@ -67,8 +67,10 @@ typedef struct RxBuffer
 // Init
 void samr21RadioRxResetAllBuffer();
 void samr21RadioRxResetBuffer(RxBuffer * buffer);
+void samr21RadioRxPrepareBuffer();
 
-void samr21RadioRxAbort();
+
+
 bool samr21RadioRxBusy();
 
 bool samr21RadioRxIsReceiveSlotPlanned();

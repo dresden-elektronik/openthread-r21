@@ -39,6 +39,7 @@ typedef enum TxStatus
     TX_STATUS_SENDING_UPLOADED_HEADER,
     TX_STATUS_SENDING_UPLOADED_PAYLOAD,
     TX_STATUS_SENDING_BUSY_MIC      ,
+    TX_STATUS_SENDING_WAIT_FOR_MIC  ,
     TX_STATUS_SENDING_WAIT_TRX_END  ,
     TX_STATUS_WAIT_FOR_ACK          ,
     TX_STATUS_RECIVING_ACK          ,
@@ -49,7 +50,8 @@ typedef enum TxStatus
 
 //Interface to other RadioHandler
 bool samr21RadioTxBusy();
-bool samr21RadioTxAbortRetrys();
+void samr21RadioTxAbortRetrys();
+
 
 //Interface to Openthread
 otRadioFrame* samr21RadioTxGetOtBuffer();

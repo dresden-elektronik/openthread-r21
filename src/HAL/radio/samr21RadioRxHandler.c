@@ -355,8 +355,7 @@ static void samr21RadioRxSendEnhAck()
         {
             if (cbcBlockLength == sizeof(cbcBlock))
             {
-                while (samr21RadioAesBusy())
-                    ;
+                samr21delaySysTick(700);
                 samr21RadioAesCbcEncrypt(cbcBlock, AES_BLOCK_SIZE, NULL);
                 cbcBlockLength = 0;
             }
@@ -367,8 +366,7 @@ static void samr21RadioRxSendEnhAck()
         // process header remainder
         if (cbcBlockLength != 0)
         {
-            while (samr21RadioAesBusy())
-                ;
+            samr21delaySysTick(700);
             samr21RadioAesCbcEncrypt(cbcBlock, cbcBlockLength, NULL);
             cbcBlockLength = 0;
         }
@@ -378,8 +376,7 @@ static void samr21RadioRxSendEnhAck()
         {
             if (cbcBlockLength == sizeof(cbcBlock))
             {
-                while (samr21RadioAesBusy())
-                    ;
+                samr21delaySysTick(700);
                 samr21RadioAesCbcEncrypt(cbcBlock, AES_BLOCK_SIZE, NULL);
                 cbcBlockLength = 0;
             }
@@ -390,14 +387,12 @@ static void samr21RadioRxSendEnhAck()
         // process Payload remainder
         if (cbcBlockLength != 0)
         {
-            while (samr21RadioAesBusy())
-                ;
+            samr21delaySysTick(700);
             samr21RadioAesCbcEncrypt(cbcBlock, cbcBlockLength, NULL);
         }
 
         // Wait for the last CBC-Block
-        while (samr21RadioAesBusy())
-            ;
+        samr21delaySysTick(700);
         samr21RadioAesReadBuffer(pFooter, 0, micSize);
 
         samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, (uint8_t)(numBytesPdsuUploaded + 1));
@@ -463,6 +458,7 @@ static void samr21RadioRxDownloadRemaining()
         }
         else
         {
+            samr21TrxSpiCloseAccess();
             samr21RadioRxCleanup(false);
             return;
         }
@@ -510,6 +506,8 @@ static void samr21RadioRxDownloadRemaining()
 
         samr21RadioRxSendImmAck();
     }
+
+    samr21RadioRxCleanup(true);
 }
 
 static void samr21RadioRxDownloadAddrField()
@@ -778,24 +776,13 @@ static void samr21RadioRxDownloadFCF()
 
 bool samr21RadioRxBusy()
 {
-    return s_rxHandlerActive;
+    return (s_rxBuffer[s_activeRxBuffer].status == RX_STATUS_IDLE ? false : true);
 }
 
 bool samr21RadioRxIsReceiveSlotPlanned(){
     return s_slottedListeningDuration_us;
 }
 
-void samr21RadioRxAbort()
-{
-    if (samr21RadioRxBusy())
-    {
-        s_rxAbort = true;
-
-        // while (s_rxHandlerActive)
-        //     ;
-        // return;
-    }
-}
 
 void samr21RadioRxResetAllBuffer()
 {
@@ -817,6 +804,12 @@ void samr21RadioRxResetBuffer(RxBuffer * buffer)
     __enable_irq();
 }
 
+void samr21RadioRxPrepareBuffer()
+{
+    s_activeRxBuffer = ( s_activeRxBuffer + 1 ) % NUM_SAMR21_RX_BUFFER;
+    samr21RadioRxResetBuffer(&s_rxBuffer[s_activeRxBuffer]);
+}
+
 RxBuffer *samr21RadioRxGetPendingRxBuffer()
 {
     for (uint16_t i = 0; i < NUM_SAMR21_RX_BUFFER; i++)
@@ -831,10 +824,13 @@ RxBuffer *samr21RadioRxGetPendingRxBuffer()
 
 void samr21RadioRxSetup(uint8_t channel, uint32_t duration, uint32_t startTime)
 {
-    // Abort the current Transmisson (prevent retrys)
-    samr21RadioTxAbort();
+    // Wait for current Transmisson (prevent retrys)
+    
+    while(samr21RadioTxBusy()){
+        samr21RadioTxAbortRetrys();
+    }
 
-    void samr21RadioSetEventHandler(samr21RadioRxEventHandler);
+    samr21RadioSetEventHandler(&samr21RadioRxEventHandler);
     s_rxHandlerActive = true;
     s_rxAbort = false;
 
@@ -880,6 +876,12 @@ void samr21RadioRxEventHandler(IrqEvent event)
         if (buffer->status == RX_STATUS_RECIVING_ADDR_FIELD)
         {
             samr21RadioRxDownloadAddrField();
+            return;
+        }
+
+        if (buffer->status == RX_STATUS_RECIVING_REMAINING)
+        {
+            samr21RadioRxDownloadRemaining();
             return;
         }
 

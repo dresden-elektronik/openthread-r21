@@ -217,7 +217,7 @@ Samr21RadioState samr21RadioCtrlReturnToLastHandler()
         samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_TRX_OFF);
         return s_radioState;
     }
-    
+
     g_irqMask = (AT86RF233_REG_IRQ_MASK_t){
         .bit.pllLock = 0,
         .bit.pllUnlock = 0,
@@ -228,6 +228,8 @@ Samr21RadioState samr21RadioCtrlReturnToLastHandler()
         .bit.bufferUnderRun = 1,
         .bit.batteryLow = 0};
     samr21TrxWriteRegister(IRQ_MASK_REG, g_irqMask.reg);
+
+    samr21RadioRxPrepareBuffer();
     
     samr21RadioSetEventHandler(&samr21RadioRxEventHandler);
     

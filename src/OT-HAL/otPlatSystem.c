@@ -42,6 +42,7 @@ void otSysDeinit(void)
 void otSysProcessDrivers(otInstance *aInstance)
 {
     samr21OtPlatUsbTask();
+    samr21OtPlatRadioTask();
 }
 
 otPlatResetReason otPlatGetResetReason(otInstance *aInstance){

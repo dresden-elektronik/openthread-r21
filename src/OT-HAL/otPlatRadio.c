@@ -365,7 +365,8 @@ otError otPlatRadioSleep(otInstance *aInstance){
     OT_UNUSED_VARIABLE(aInstance);
 
     samr21RadioCtrlSetState(SAMR21_RADIO_STATE_SLEEP);
-    samr21RadioRxAbort(); 
+
+    while (samr21RadioRxBusy());
     samr21RadioCtrlReturnToLastHandler();
     
     return OT_ERROR_NONE;
