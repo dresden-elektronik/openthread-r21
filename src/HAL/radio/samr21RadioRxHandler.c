@@ -20,8 +20,50 @@ uint8_t s_slottedListeningChannel;
 volatile bool s_rxAbort = false;
 volatile bool s_rxHandlerActive = false;
 
+static struct 
+{
+    otRadioFrame otAck;
+    uint8_t psdu[IEEE_802_15_4_FRAME_SIZE];
+    uint8_t numBytesUploaded;
+}s_currentAckTransmission;
 
-static uint8_t s_ackEncryptionMask[(IEEE_802_15_4_FRAME_SIZE / AES_BLOCK_SIZE)][AES_BLOCK_SIZE];
+
+
+static struct 
+{
+    bool        securityHeaderPresent;
+    bool        needsEncryption;
+
+    uint8_t*    header;
+    uint8_t     headerLen;
+
+    uint8_t*    payload;
+    uint8_t     payloadLen;
+
+    uint8_t*    mic;
+    uint8_t     micSize;
+
+    uint8_t*     pendingAesResultBuffer;
+
+    uint8_t nonce[AES_BLOCK_SIZE];
+    uint8_t encryptionBlocks[(IEEE_802_15_4_FRAME_SIZE / AES_BLOCK_SIZE)][AES_BLOCK_SIZE];
+
+    struct
+    {
+        uint8_t numEncryptionBlocks;
+        uint8_t numProcessedEncryptionBlocks;
+    } ctr;
+    
+    uint8_t cbcBlock[AES_BLOCK_SIZE];
+
+    struct
+    {
+        uint8_t currentBlockLen;
+        uint8_t numProcessedHeaderBytes;
+        uint8_t numProcessedPayloadBytes;
+    } cbc;
+    
+}s_currentAckTransmissionSecurity;
 
 static void samr21RadioRxCleanup(bool success){
     samr21Timer4Stop();
@@ -66,13 +108,11 @@ static void samr21RadioRxSendImmAck()
     RxBuffer *buffer = &s_rxBuffer[s_activeRxBuffer];
     buffer->status = RX_STATUS_SENDING_ACK;
 
-   
-
     otMacFrameGenerateImmAck(
         &(buffer->otFrame),
         buffer->framePending,
-        &buffer->otAck);
-    buffer->rxAckPsdu[0] = buffer->otAck.mLength;
+        &s_currentAckTransmission.otAck);
+    s_currentAckTransmission.psdu[0] = s_currentAckTransmission.otAck.mLength;
 
     while (g_trxStatus.bit.trxStatus != TRX_STATUS_PLL_ON)
     {
@@ -84,7 +124,7 @@ static void samr21RadioRxSendImmAck()
 
     samr21TrxSpiStartAccess(AT86RF233_CMD_FRAMEBUFFER_WRITE, NULL);
     samr21TrxSetSLP_TR(false);
-    samr21TrxSpiTransceiveBytesRaw(buffer->otAck.mPsdu[-1], NULL, buffer->otAck.mLength - 1); // -2 FCS +1 PhyLen
+    samr21TrxSpiTransceiveBytesRaw(&s_currentAckTransmission.otAck.mPsdu[-1], NULL, s_currentAckTransmission.otAck.mLength - 1); // -2 FCS +1 PhyLen
     samr21TrxSpiCloseAccess();
 
     buffer->otFrame.mInfo.mRxInfo.mAckedWithFramePending = buffer->framePending;
@@ -93,6 +133,247 @@ static void samr21RadioRxSendImmAck()
     buffer->otFrame.mInfo.mRxInfo.mAckKeyId = 0;
 
     buffer->status = RX_STATUS_SENDING_ACK_WAIT_TRX_END;
+}
+
+static void samr21RadioRxAckUploadAllRaw(){
+        samr21TrxSpiStartAccess(AT86RF233_CMD_FRAMEBUFFER_WRITE, NULL);
+        samr21TrxSpiTransceiveBytesRaw(&s_currentAckTransmission.psdu[0], NULL, s_currentAckTransmission.psdu[0] - 1); // -2 FCS +1 PhyLen
+        samr21TrxSpiCloseAccess();
+
+        s_currentAckTransmission.numBytesUploaded = s_currentAckTransmission.psdu[-1];
+
+        //Queue Move to RX in advance, this will only executes after TX is done
+        samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_RX_ON);
+
+        s_rxBuffer[s_activeRxBuffer].status = RX_STATUS_SENDING_ACK_WAIT_TRX_END;
+}
+
+static void samr21RadioRxAckUploadHeader(){
+
+    //Write via SRAM starting from Addr 0x00 of Framebuffer (->phyLen)
+    samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, 0x00);
+    samr21TrxSpiTransceiveBytesRaw(&s_currentAckTransmission.psdu[0], NULL, s_currentAckTransmissionSecurity.headerLen + 1); // phyLen not in psduLen
+    samr21TrxSpiCloseAccess();
+
+    s_currentAckTransmission.numBytesUploaded = s_currentAckTransmissionSecurity.headerLen;
+    s_rxBuffer[s_activeRxBuffer].status = RX_STATUS_SENDING_ENH_ACK_UPLOADED_HEADER;
+}
+
+static void samr21RadioRxAckUploadPayload(){
+    s_currentAckTransmissionSecurity.ctr.numEncryptionBlocks = s_currentAckTransmissionSecurity.payloadLen / AES_BLOCK_SIZE ;
+    s_currentAckTransmissionSecurity.ctr.numEncryptionBlocks += (s_currentAckTransmissionSecurity.payloadLen % AES_BLOCK_SIZE ? 1 : 0);
+
+    while (s_currentAckTransmissionSecurity.ctr.numEncryptionBlocks > s_currentAckTransmissionSecurity.ctr.numProcessedEncryptionBlocks)
+    {
+        //Save some Time if no encryption is needed
+        if(s_currentAckTransmissionSecurity.needsEncryption){
+            // increase Nonce Counter
+            s_currentAckTransmissionSecurity.nonce[(AES_BLOCK_SIZE - 1)]++;
+            // start uploading next AES Block, while reading the result of the last Block
+            samr21RadioAesEcbEncrypt(s_currentAckTransmissionSecurity.nonce, s_currentAckTransmissionSecurity.pendingAesResultBuffer);
+            
+            s_currentAckTransmissionSecurity.pendingAesResultBuffer = 
+                s_currentAckTransmissionSecurity.encryptionBlocks[
+                    s_currentAckTransmissionSecurity.nonce[(AES_BLOCK_SIZE - 1)]
+                ]
+            ;
+        } 
+        s_currentAckTransmissionSecurity.ctr.numProcessedEncryptionBlocks++;
+
+        // While AES is busy, an encrypted payload-block can be uploaded 
+        // This gives headroom for longer AES Operation, while simultaniusly topping of the FrameBuffer
+
+        //Write via SRAM starting from Addr of the current Byte to the Framebuffer
+        samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, (uint8_t)(s_currentAckTransmission.numBytesUploaded + 1)); // phyLen not in psduLen
+
+        for (uint8_t i = 0; i < AES_BLOCK_SIZE; i++)
+        {
+#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
+            samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
+#endif
+            // Upload (encrypted) payload to Framebuffer
+            if (s_currentAckTransmissionSecurity.needsEncryption)
+            {
+                samr21TrxSpiTransceiveByteRaw(
+                    s_currentAckTransmission.otAck.mPsdu[s_currentAckTransmission.numBytesUploaded++] 
+                    ^ s_currentAckTransmissionSecurity.encryptionBlocks[s_currentAckTransmissionSecurity.ctr.numProcessedEncryptionBlocks][i]);
+            }
+            else
+            {
+                samr21TrxSpiTransceiveByteRaw(
+                    s_currentAckTransmission.otAck.mPsdu[s_currentAckTransmission.numBytesUploaded++]);
+            }
+        }
+
+        samr21TrxSpiCloseAccess();
+    }
+    if(s_currentAckTransmissionSecurity.needsEncryption){
+        // get Last Payload encryptionBlock and start MIC encryptionBlock
+        s_currentAckTransmissionSecurity.nonce[(AES_BLOCK_SIZE - 1)] = 0; ////The Nonce for MIC encryption has the CTR value 0
+        samr21RadioAesEcbEncrypt(s_currentAckTransmissionSecurity.nonce, s_currentAckTransmissionSecurity.pendingAesResultBuffer);
+        s_currentAckTransmissionSecurity.pendingAesResultBuffer = 
+            s_currentAckTransmissionSecurity.encryptionBlocks[
+                s_currentAckTransmissionSecurity.nonce[(AES_BLOCK_SIZE - 1)]
+            ]
+        ;
+    }
+    s_currentAckTransmissionSecurity.ctr.numProcessedEncryptionBlocks++;
+
+    // Upload Last Payload-Chunk to be encrypted befor MIC
+    if (s_currentAckTransmission.numBytesUploaded < (s_currentAckTransmissionSecurity.headerLen + s_currentAckTransmissionSecurity.payloadLen))
+    {
+        //Write via SRAM starting from Addr of the current Byte to the Framebuffer
+        samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, (uint8_t)(s_currentAckTransmission.numBytesUploaded + 1));//phyLen not in psduLen
+
+        for (uint8_t i = 0; i < AES_BLOCK_SIZE; i++)
+        {
+
+            // Upload remaining to Framebuffer
+#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
+            samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
+#endif
+            if (s_currentAckTransmissionSecurity.needsEncryption)
+            {
+                samr21TrxSpiTransceiveByteRaw(
+                    s_currentAckTransmission.otAck.mPsdu[s_currentAckTransmission.numBytesUploaded++] 
+                    ^ s_currentAckTransmissionSecurity.encryptionBlocks[s_currentAckTransmissionSecurity.ctr.numProcessedEncryptionBlocks][i]);
+            }
+            else
+            {
+                samr21TrxSpiTransceiveByteRaw(
+                    s_currentAckTransmission.otAck.mPsdu[s_currentAckTransmission.numBytesUploaded++]);
+            }
+
+            // Break if entire payload is uploaded
+            if (s_currentAckTransmission.numBytesUploaded >= (s_currentAckTransmissionSecurity.headerLen + s_currentAckTransmissionSecurity.payloadLen))
+            {
+                break;
+            }
+        }
+        samr21TrxSpiCloseAccess();
+    }
+    s_rxBuffer[s_activeRxBuffer].status = RX_STATUS_SENDING_ENH_ACK_UPLOADED_PAYLOAD;
+}
+//this function gets triggered once by the main handler and after by a Timer.
+//this is because there is nothing to do while the AES-Engine is busy
+static void samr21RadioRxAckCalcMic(){
+    
+    //Only executed on first Round
+    if(s_rxBuffer[s_activeRxBuffer].status != TX_STATUS_SENDING_BUSY_MIC){
+
+        s_rxBuffer[s_activeRxBuffer].status  = TX_STATUS_SENDING_BUSY_MIC;
+        // Form init Vektor (See IEEE 802.15.4-2015 Appendix B for good examples)
+        s_currentAckTransmissionSecurity.cbcBlock[0] = 
+            (s_currentAckTransmissionSecurity.headerLen != 0 ? 0x01000000 : 0x0) 
+            | (((s_currentAckTransmissionSecurity.micSize) >> 1) << 3) | 1; // L always 2
+        s_currentAckTransmissionSecurity.cbcBlock[14] = 0; // always 0 cause maxlenght is 127
+        s_currentAckTransmissionSecurity.cbcBlock[15] = s_currentAckTransmissionSecurity.headerLen;
+        memcpy(&s_currentAckTransmissionSecurity.cbcBlock[1], s_currentAckTransmissionSecurity.nonce, 13);
+
+        // start the first CBC-Round  (plain ECB, r21 datasheet 40.1.4.2 Cipher Block Chaining (CBC))
+        // simultaneously retive the MIC encryptionBlock from the CTR-Section ()
+        samr21RadioAesEcbEncrypt(s_currentAckTransmissionSecurity.cbcBlock, s_currentAckTransmissionSecurity.pendingAesResultBuffer);
+        samr21Timer4Set(21); //AES-Engine takes 21us
+
+        // Only the result of the last CBC Round is of interest
+        // The output of the rounds in between can be discarded
+        s_currentAckTransmissionSecurity.pendingAesResultBuffer = NULL;
+
+        s_currentAckTransmissionSecurity.cbcBlock[0]^= s_currentAckTransmissionSecurity.headerLen >> 8;
+        s_currentAckTransmissionSecurity.cbcBlock[1]^= s_currentAckTransmissionSecurity.headerLen >> 0;
+
+        s_currentAckTransmissionSecurity.cbc.currentBlockLen = 2;
+        s_currentAckTransmissionSecurity.cbc.numProcessedHeaderBytes = 0;
+        s_currentAckTransmissionSecurity.cbc.numProcessedPayloadBytes = 0;
+
+        goto fillNextBlock;
+    }
+
+    //Still Rounds to go
+    if (
+        s_currentAckTransmissionSecurity.cbc.numProcessedHeaderBytes < s_currentAckTransmissionSecurity.headerLen
+        ||s_currentAckTransmissionSecurity.cbc.numProcessedPayloadBytes < s_currentAckTransmissionSecurity.headerLen
+    ){
+        samr21RadioAesCbcEncrypt(s_currentAckTransmissionSecurity.cbcBlock, AES_BLOCK_SIZE, NULL);
+        samr21Timer4Set(21);//AES takes 21us
+        goto fillNextBlock;
+    }
+
+    //This is the last CBC Round the result of this is the (unencrypted!) MIC
+    if (
+        s_currentAckTransmissionSecurity.cbc.numProcessedHeaderBytes == s_currentAckTransmissionSecurity.headerLen
+        ||s_currentAckTransmissionSecurity.cbc.numProcessedPayloadBytes == s_currentAckTransmissionSecurity.headerLen
+    ){
+        samr21RadioAesCbcEncrypt(s_currentAckTransmissionSecurity.cbcBlock, AES_BLOCK_SIZE, NULL);
+        s_currentAckTransmissionSecurity.pendingAesResultBuffer = s_currentAckTransmissionSecurity.cbcBlock; //Put the result back into the cbcBlockBuffer
+        samr21Timer4Set(21); //AES takes 21us
+
+        s_rxBuffer[s_activeRxBuffer].status = RX_STATUS_SENDING_ENH_ACK_WAIT_FOR_MIC;
+        return;
+    }
+
+
+fillNextBlock:
+
+    //Fill CBC-Input-Block with Header, pad remainder with 0x00.
+    if(s_currentAckTransmissionSecurity.cbc.numProcessedHeaderBytes < s_currentAckTransmissionSecurity.headerLen){
+        while (s_currentAckTransmissionSecurity.cbc.currentBlockLen < AES_BLOCK_SIZE)
+        {
+            s_currentAckTransmissionSecurity.cbcBlock[s_currentAckTransmissionSecurity.cbc.currentBlockLen++] =
+                (s_currentAckTransmissionSecurity.cbc.numProcessedHeaderBytes < s_currentAckTransmissionSecurity.headerLen ?
+                    s_currentAckTransmissionSecurity.header[s_currentAckTransmissionSecurity.cbc.numProcessedHeaderBytes++]
+                    : 0x00
+                ) 
+            ;
+        }
+        return;
+    }
+    //Fill CBC-Input-Block with Payload, pad remainder with 0x00.
+    if(s_currentAckTransmissionSecurity.cbc.numProcessedPayloadBytes < s_currentAckTransmissionSecurity.payloadLen){
+        while (s_currentAckTransmissionSecurity.cbc.currentBlockLen < AES_BLOCK_SIZE)
+        {
+            s_currentAckTransmissionSecurity.cbcBlock[s_currentAckTransmissionSecurity.cbc.currentBlockLen++] =
+                (s_currentAckTransmissionSecurity.cbc.numProcessedPayloadBytes < s_currentAckTransmissionSecurity.payloadLen ?
+                    s_currentAckTransmissionSecurity.payload[s_currentAckTransmissionSecurity.cbc.numProcessedPayloadBytes++]
+                    : 0x00
+                ) 
+            ;
+        }
+        return;
+    }
+}
+
+static void samr21RadioRxAckUploadMic(){
+    
+    samr21RadioAesReadBuffer(s_currentAckTransmissionSecurity.cbcBlock, 0, s_currentAckTransmissionSecurity.micSize); //AesResultBuffer == cbcBlock
+    
+    //Write via SRAM starting from Addr of the current Byte to the Framebuffer (->footer)
+    samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, (uint8_t)(s_currentAckTransmission.numBytesUploaded + 1)); //phyLen not in psduLen 
+
+        for (uint8_t i = 0; i < s_currentAckTransmissionSecurity.micSize; i++)
+        {
+
+#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
+            samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
+#endif
+            if (s_currentAckTransmissionSecurity.needsEncryption)
+            {
+                samr21TrxSpiTransceiveByteRaw(
+                    s_currentAckTransmissionSecurity.cbcBlock[i] ^ s_currentAckTransmissionSecurity.encryptionBlocks[0][i]); //MIC is encrypted with CTR Block i=0
+                s_currentAckTransmission.numBytesUploaded++; 
+            }
+            else
+            {
+                samr21TrxSpiTransceiveByteRaw(
+                    s_currentAckTransmissionSecurity.cbcBlock[i]);
+                s_currentAckTransmission.numBytesUploaded++;
+            }
+        }
+        samr21TrxSpiCloseAccess();
+        s_rxBuffer[s_activeRxBuffer].status = RX_STATUS_SENDING_ACK_WAIT_TRX_END;
+
+    //Queue Move to RX (For ACK) in advance, this will only executes after TX is done
+    samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_RX_ON);
 }
 
 static void samr21RadioRxSendEnhAck()
@@ -106,11 +387,11 @@ static void samr21RadioRxSendEnhAck()
     samr21TrxSetSLP_TR(true);
     
     RxBuffer *buffer = &s_rxBuffer[s_activeRxBuffer];
-    buffer->status = RX_STATUS_SENDING_ENH_ACK;
+    buffer->status = RX_STATUS_SENDING_ENH_ACK_UPLOADED_HEADER;
     // Timout-Timer
     samr21Timer4Set((IEEE_802_15_4_FRAME_SIZE * 2) * IEEE_802_15_4_24GHZ_TIME_PER_OCTET_us);
 
-
+    otRadioFrame ack = {.mPsdu = &s_currentAckTransmission.psdu[1]};
 
     uint8_t ieData[IEEE_802_15_4_PDSU_SIZE];
     uint8_t ieDataLen = 0;
@@ -157,265 +438,113 @@ static void samr21RadioRxSendEnhAck()
         buffer->framePending,
         ieData,
         ieDataLen,
-        &buffer->otAck);
+        &s_currentAckTransmission.otAck);
 
     buffer->otFrame.mInfo.mRxInfo.mAckedWithFramePending = buffer->framePending;
-    buffer->otAck.mPsdu[-1] = buffer->otAck.mLength;
+    ack.mPsdu[-1] = ack.mLength;
 
-    uint8_t securityLevel = otMacFrameGetSecurityLevel(&buffer->otAck);
+    s_currentAckTransmissionSecurity.securityHeaderPresent = 0;
 
-    if(!securityLevel){
-        samr21TrxSpiStartAccess(AT86RF233_CMD_FRAMEBUFFER_WRITE, NULL);
-        samr21TrxSetSLP_TR(false);
-        samr21TrxSpiTransceiveBytesRaw(&buffer->otAck.mPsdu[-1], NULL,buffer->otAck.mLength-1); // -2 FCS +1 PhyLen
-        samr21TrxSpiCloseAccess();
+    if(otMacFrameIsSecurityEnabled(&s_currentAckTransmission.otAck)){
+        __disable_irq();
+
+        buffer->otFrame.mInfo.mRxInfo.mAckFrameCounter = g_macFrameCounter;
+        otMacFrameSetFrameCounter(&s_currentAckTransmission.otAck, g_macFrameCounter++);
         
-        buffer->otFrame.mInfo.mRxInfo.mAckedWithSecEnhAck = false;
-        buffer->otFrame.mInfo.mRxInfo.mAckFrameCounter = 0;
-        buffer->otFrame.mInfo.mRxInfo.mAckKeyId = 0;
-        
+        if(otMacFrameIsKeyIdMode1(&s_currentAckTransmission.otAck)){
+            otMacFrameSetKeyId(&ack, g_currKeyId);
+            buffer->otFrame.mInfo.mRxInfo.mAckKeyId = g_currKeyId;
+            s_currentAckTransmission.otAck.mInfo.mTxInfo.mAesKey = (const otMacKeyMaterial *)&g_currKey;
+        }
+
+        s_currentAckTransmissionSecurity.securityHeaderPresent = 1;
+        __enable_irq();
+    } else {
+        //If there is no Security processing needed, the frame can just be uploaded
+        samr21RadioRxAckUploadAllRaw();
         return;
     }
 
-    buffer->otFrame.mInfo.mRxInfo.mAckedWithSecEnhAck = true;
-  
-    uint16_t payloadLenght;
-    uint16_t headerLength;
-    uint16_t footerLenght;
+    //Get some Markers for AES 
+    s_currentAckTransmissionSecurity.header = otMacFrameGetHeader(&ack);
+    s_currentAckTransmissionSecurity.payload = otMacFrameGetPayload(&ack);
+    s_currentAckTransmissionSecurity.mic = otMacFrameGetFooter(&ack);
 
-    uint8_t *pHeader;
-    uint8_t *pPayload;
-    uint8_t *pFooter;
+    s_currentAckTransmissionSecurity.headerLen =  s_currentAckTransmissionSecurity.header - s_currentAckTransmission.psdu; //calc offset between pointers
+    s_currentAckTransmissionSecurity.payloadLen = s_currentAckTransmissionSecurity.mic - s_currentAckTransmissionSecurity.payload;
 
-    uint16_t numProcessedEncryptionBlocks = 0;
-    uint16_t numBytesPdsuUploaded; 
-    uint16_t processedAuthenicationHeaderBlocks = 0;
-    uint16_t processedAuthenicationPayloadBlocks = 0;
+
+    // Upload only the unencrypted Header Part first
+    // This gives some Headroom to perform AES-CCM*
+    samr21RadioRxAckUploadHeader();
+
+    uint8_t securityLevel = otMacFrameGetSecurityLevel(&ack);
+
+    s_currentAckTransmissionSecurity.needsEncryption = (securityLevel & 0b100 ? 1 : 0);
+
+    switch (securityLevel & 0b11)
+    {
+    case 0b00:
+        s_currentAckTransmissionSecurity.micSize = 0;
+        break;
     
-    uint8_t ackNonce[AES_BLOCK_SIZE];
-    uint8_t cbcBlock[AES_BLOCK_SIZE];
-    uint8_t ackEncryptionMask[IEEE_802_15_4_FRAME_SIZE/AES_BLOCK_SIZE][AES_BLOCK_SIZE];
-
-    uint8_t keyId = otMacFrameGetKeyId(&buffer->otAck);
-
-    otMacGenerateNonce(&buffer->otAck, (uint8_t *)(&g_extAddr), ackNonce);
-
-    if (keyId == g_currKeyId)
-    {
-        samr21RadioAesKeySetup(g_currKey);
+    case 0b01:
+        s_currentAckTransmissionSecurity.micSize = 2;
+        break;
+    
+    case 0b10:
+        s_currentAckTransmissionSecurity.micSize = 4;
+        break;
+    
+    case 0b11:
+        s_currentAckTransmissionSecurity.micSize = 16;
+        break;
     }
-    else if (keyId == (g_currKeyId - 1))
+
+    //Generate Nonce and first EncryptionBlock if needed (TRX is busy with sending Preamble and SFD anyways)
+    if (securityLevel)
     {
-        samr21RadioAesKeySetup(g_prevKey);
+        otMacGenerateNonce(&ack, (uint8_t *)(&g_extAddr), s_currentAckTransmissionSecurity.nonce);
+        samr21RadioAesKeySetup((uint8_t *)ack.mInfo.mTxInfo.mAesKey);
+
+        if(s_currentAckTransmissionSecurity.needsEncryption){
+
+            s_currentAckTransmissionSecurity.nonce[(AES_BLOCK_SIZE - 2)] = 0; // Always 0 cause max nonce-ctr == 8 (FRAME_SIZE / BLOCKSIZE)
+            s_currentAckTransmissionSecurity.nonce[(AES_BLOCK_SIZE - 1)] = 1; // The first Nonce for Payload encryption has CTR value 1
+
+            // Start generating the encrytion mask for the first block
+            // The AES-Engine of the at86rf233 takes 21us per Block
+            samr21RadioAesEcbEncrypt(s_currentAckTransmissionSecurity.nonce, NULL);
+
+            s_currentAckTransmissionSecurity.ctr.numProcessedEncryptionBlocks = 0;
+            s_currentAckTransmissionSecurity.pendingAesResultBuffer = 
+                s_currentAckTransmissionSecurity.encryptionBlocks[
+                    s_currentAckTransmissionSecurity.nonce[(AES_BLOCK_SIZE - 1)]
+                ]
+            ;
+        }
     }
-    else if (keyId == (g_currKeyId + 1))
+    
+    // Upload the Payload next. This takes time ~100us per 16Byte Block ( ~40us without Encryption ) 
+    // The Trx ist still busy transmitting the so far uploaded Framebuffer
+    samr21RadioRxAckUploadPayload();
+
+
+    if(s_currentAckTransmissionSecurity.micSize)
     {
-        samr21RadioAesKeySetup(g_nextKey);
-    }
-    else
-    {
-        samr21RadioRxCleanup(false);
+        // Start the Calculation of the MIC. This take Time (~60us * ( 2 + psduLen/16 ) )
+        // While the AES-Engine is Busy there is not a lot to do.
+        // Because of that, this Secetion is relauched Multiple Times by a Timer-IRQ
+        // We just start the first Round here and wait for the said Timer-IRQ (See TxEventHandler)
+        // If Encryption is enabled, the AES-Buffer should hold the result for the CTR=0 Encrytion Block (needed for MIC encryption)
+        samr21RadioRxAckCalcMic();
         return;
     }
 
-    buffer->otFrame.mInfo.mRxInfo.mAckKeyId = keyId;
+    //FCS is appended by at86rf233
 
-    ackNonce[(AES_BLOCK_SIZE - 2)] = 0; // Always 0 cause max nonce-ctr == 8 (FRAME_SIZE / BLOCKSIZE)
-    ackNonce[(AES_BLOCK_SIZE - 1)] = 1; // The first Nonce for Payload encryption has CTR value 1
-
-    // Start generating the encrytion mask for the first block
-    // The AES-Engine of the at86rf233 takes 21us per Block
-    samr21RadioAesEcbEncrypt(ackNonce, NULL);
-    numProcessedEncryptionBlocks = 0;
-
-    // Needed for Calculation of Unsecured Header size
-    pPayload = otMacFrameGetPayload(&buffer->otAck);
-    headerLength = (uint32_t)pPayload - (uint32_t)buffer->otAck.mPsdu;
-
-    __disable_irq();
-    buffer->otFrame.mInfo.mRxInfo.mAckFrameCounter = g_macFrameCounter ;
-    otMacFrameSetFrameCounter(&buffer->otAck, g_macFrameCounter++);
-    __enable_irq();
-
-    samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, 0x00);
-    samr21TrxSpiTransceiveBytesRaw(&buffer->otAck.mPsdu[-1], NULL, headerLength + 1); // phyLen not in pdsuLen
-    numBytesPdsuUploaded = headerLength;
-    samr21TrxSpiCloseAccess();
-
-
-    /******************************Encrypt and Upload Payload (AES CTR)************************************/
-
-    payloadLenght = otMacFrameGetPayloadLength(&buffer->otAck);
-    footerLenght = otMacFrameGetFooterLength(&buffer->otAck);
-
-    uint8_t numRequiredEncryptionBlocks = payloadLenght / AES_BLOCK_SIZE;
-
-    if (payloadLenght % AES_BLOCK_SIZE)
-    {
-        numRequiredEncryptionBlocks++;
-    }
-
-    while (numRequiredEncryptionBlocks > numProcessedEncryptionBlocks)
-    {
-
-        // increase Nonce Counter
-        ackNonce[(AES_BLOCK_SIZE - 1)]++;
-        // start uploading next AES Block, while reading the result of the last Block
-        samr21RadioAesEcbEncrypt(ackNonce, &ackEncryptionMask[1 + numProcessedEncryptionBlocks]);
-
-        // While AES is busy, an encrypted payload-block can be uploaded to the FrameBuffer
-        // This gives headroom for longer AES Operation
-        samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, (uint8_t)(numBytesPdsuUploaded + 1)); // phyLen not in pdsuLen
-
-        for (uint8_t i = 0; i < AES_BLOCK_SIZE; i++)
-        {
-#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-            samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
-#endif
-            // Upload (encrypted) payload to Framebuffer
-            if (securityLevel >= 0b100)
-            {
-                samr21TrxSpiTransceiveByteRaw(
-                    buffer->otAck.mPsdu[numBytesPdsuUploaded++] ^ ackEncryptionMask[1 + numProcessedEncryptionBlocks][i]);
-            }
-            else
-            {
-                samr21TrxSpiTransceiveByteRaw(
-                    buffer->otAck.mPsdu[numBytesPdsuUploaded++]);
-            }
-        }
-
-        samr21TrxSpiCloseAccess();
-
-        numProcessedEncryptionBlocks++;
-    }
-
-    // get Last Payload encryptionMaskBlock and start MIC encryptionMaskBlock
-    ackNonce[(AES_BLOCK_SIZE - 1)] = 0; ////The Nonce for MIC encryption has the CTR value 0
-    samr21RadioAesEcbEncrypt(ackNonce, &ackEncryptionMask[1 + numProcessedEncryptionBlocks]);
-
-    // Upload Last Payload-Chunk to be encrypted befor MIC
-    if (numBytesPdsuUploaded < (headerLength + payloadLenght))
-    {
-
-        samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, (uint8_t)(numBytesPdsuUploaded + 1));
-        for (uint8_t i = 0; i < AES_BLOCK_SIZE; i++)
-        {
-
-            // Upload remaining encrypted payload to Framebuffer
-#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-            samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
-#endif
-            if (securityLevel >= 0b100)
-            {
-                samr21TrxSpiTransceiveByteRaw(
-                    buffer->otAck.mPsdu[numBytesPdsuUploaded++] ^ ackEncryptionMask[1 + numProcessedEncryptionBlocks][i]);
-            }
-            else
-            {
-                samr21TrxSpiTransceiveByteRaw(
-                    buffer->otAck.mPsdu[numBytesPdsuUploaded++]);
-            }
-
-            // Break if entire payload is uploaded
-            if (numBytesPdsuUploaded >= payloadLenght + headerLength)
-            {
-                break;
-            }
-        }
-        samr21TrxSpiCloseAccess();
-    }
-
-    /******************************Authenicate Payload and upload (encrypted) MIC (CBC-MAC)************************************/
-    if (footerLenght > 2)
-    { // MIC requested
-        pHeader = otMacFrameGetHeader(&buffer->otAck);
-        pFooter = otMacFrameGetFooter(&buffer->otAck);
-
-        uint8_t cbcBlockLength;
-        uint8_t micSize = footerLenght - 2;
-
-        // Form init Vektor
-        cbcBlock[0] = (headerLength != 0 ? 0x01000000 : 0x0) | (((footerLenght - 2) >> 1) << 3) | 1; // L always 2
-        cbcBlock[14] = 0;                                                                            // always 0 cause maxlenght is 127
-        cbcBlock[15] = headerLength;
-        memcpy(&cbcBlock[1], ackNonce, 13);
-
-        // start the first CBC-Round  (plain ECB, r21 datasheet 40.1.4.2 Cipher Block Chaining (CBC))
-        // simultaneously retive the MIC encryptionMaskBlock (Nonce-ctr = 0)) started last in the AES-CTR section
-        samr21RadioAesEcbEncrypt(cbcBlock, &ackEncryptionMask[0]);
-
-        cbcBlock[0] ^= headerLength >> 8;
-        cbcBlock[1] ^= headerLength >> 0;
-
-        cbcBlockLength = 2;
-
-        // process header bulk
-        for (uint8_t i = 0; i < headerLength; i++)
-        {
-            if (cbcBlockLength == sizeof(cbcBlock))
-            {
-                samr21delaySysTick(700);
-                samr21RadioAesCbcEncrypt(cbcBlock, AES_BLOCK_SIZE, NULL);
-                cbcBlockLength = 0;
-            }
-
-            cbcBlock[cbcBlockLength++] = pHeader[i];
-        }
-
-        // process header remainder
-        if (cbcBlockLength != 0)
-        {
-            samr21delaySysTick(700);
-            samr21RadioAesCbcEncrypt(cbcBlock, cbcBlockLength, NULL);
-            cbcBlockLength = 0;
-        }
-
-        // process Payload bulk
-        for (uint8_t i = 0; i < payloadLenght; i++)
-        {
-            if (cbcBlockLength == sizeof(cbcBlock))
-            {
-                samr21delaySysTick(700);
-                samr21RadioAesCbcEncrypt(cbcBlock, AES_BLOCK_SIZE, NULL);
-                cbcBlockLength = 0;
-            }
-
-            cbcBlock[cbcBlockLength++] = pPayload[i];
-        }
-
-        // process Payload remainder
-        if (cbcBlockLength != 0)
-        {
-            samr21delaySysTick(700);
-            samr21RadioAesCbcEncrypt(cbcBlock, cbcBlockLength, NULL);
-        }
-
-        // Wait for the last CBC-Block
-        samr21delaySysTick(700);
-        samr21RadioAesReadBuffer(pFooter, 0, micSize);
-
-        samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, (uint8_t)(numBytesPdsuUploaded + 1));
-
-        for (uint8_t i = 0; micSize; i++)
-        {
-
-#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-            samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
-#endif
-            if (securityLevel >= 0b100)
-            {
-                samr21TrxSpiTransceiveByteRaw(
-                    buffer->otAck.mPsdu[numBytesPdsuUploaded++] ^ ackEncryptionMask[0][i]);
-            }
-            else
-            {
-                samr21TrxSpiTransceiveByteRaw(
-                    buffer->otAck.mPsdu[numBytesPdsuUploaded++]);
-            }
-        }
-        samr21TrxSpiCloseAccess();
-    }
+    //Queue Move to RX (For ACK) in advance, this will only executes after TX is done
+    samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_RX_ON);
 
     buffer->status = RX_STATUS_SENDING_ACK_WAIT_TRX_END;
 }
@@ -776,7 +905,7 @@ static void samr21RadioRxDownloadFCF()
 
 bool samr21RadioRxBusy()
 {
-    return (s_rxBuffer[s_activeRxBuffer].status == RX_STATUS_IDLE ? false : true);
+    return s_rxBuffer[s_activeRxBuffer].status == RX_STATUS_IDLE;
 }
 
 bool samr21RadioRxIsReceiveSlotPlanned(){
@@ -786,6 +915,8 @@ bool samr21RadioRxIsReceiveSlotPlanned(){
 
 void samr21RadioRxResetAllBuffer()
 {
+    s_currentAckTransmission.otAck.mPsdu = &s_currentAckTransmission.psdu[1];
+
     for (uint16_t i = 0; i < NUM_SAMR21_RX_BUFFER; i++)
     {
         samr21RadioRxResetBuffer(&s_rxBuffer[i]);
@@ -800,7 +931,6 @@ void samr21RadioRxResetBuffer(RxBuffer * buffer)
     memset(buffer,0x00,sizeof(RxBuffer));
     buffer->status = RX_STATUS_IDLE;
     buffer->otFrame.mPsdu = &buffer->rxFramePsdu[1];
-    buffer->otAck.mPsdu = &(buffer->rxAckPsdu[1]);
     __enable_irq();
 }
 
@@ -825,10 +955,11 @@ RxBuffer *samr21RadioRxGetPendingRxBuffer()
 void samr21RadioRxSetup(uint8_t channel, uint32_t duration, uint32_t startTime)
 {
     // Wait for current Transmisson (prevent retrys)
-    
-    while(samr21RadioTxBusy()){
+    if(samr21RadioTxBusy()){
         samr21RadioTxAbortRetrys();
+        while(samr21RadioTxBusy());
     }
+    
 
     samr21RadioSetEventHandler(&samr21RadioRxEventHandler);
     s_rxHandlerActive = true;
@@ -882,6 +1013,18 @@ void samr21RadioRxEventHandler(IrqEvent event)
         if (buffer->status == RX_STATUS_RECIVING_REMAINING)
         {
             samr21RadioRxDownloadRemaining();
+            return;
+        }
+
+        if (buffer->status == RX_STATUS_SENDING_ENH_ACK_BUSY_MIC)
+        {
+            samr21RadioRxAckCalcMic();
+            return;
+        }
+
+        if (buffer->status == RX_STATUS_SENDING_ENH_ACK_WAIT_FOR_MIC)
+        {
+            samr21RadioRxAckUploadMic();
             return;
         }
 

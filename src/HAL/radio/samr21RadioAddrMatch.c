@@ -13,7 +13,7 @@
 
 void samr21RadioSetIeeeAddr(uint8_t* addr){
     for(uint8_t i = 0; i < IEEE_802_15_4_EXTENDED_ADDR_SIZE_BYTES; i++){
-        ((uint8_t *)(&g_extAddr))[i] = addr[i];
+        ((uint8_t *)(&g_extAddr))[IEEE_802_15_4_EXTENDED_ADDR_SIZE_BYTES-1-i] = addr[i];
     }
 }
 

@@ -47,8 +47,11 @@ typedef enum RxStatus
     RX_STATUS_RECIVING_ADDR_FIELD,
     RX_STATUS_RECIVING_REMAINING,
 
+    RX_STATUS_SENDING_ENH_ACK_UPLOADED_HEADER,
+    RX_STATUS_SENDING_ENH_ACK_UPLOADED_PAYLOAD,
+    RX_STATUS_SENDING_ENH_ACK_BUSY_MIC      ,
+    RX_STATUS_SENDING_ENH_ACK_WAIT_FOR_MIC  ,
     RX_STATUS_SENDING_ACK,
-    RX_STATUS_SENDING_ENH_ACK,
     RX_STATUS_SENDING_ACK_WAIT_TRX_END,
     RX_STATUS_DONE = 0xF0,
 } RxStatus;
@@ -58,8 +61,6 @@ typedef struct RxBuffer
     RxStatus status;
     otRadioFrame otFrame;
     uint8_t rxFramePsdu[IEEE_802_15_4_FRAME_SIZE];
-    otRadioFrame otAck;
-    uint8_t rxAckPsdu[IEEE_802_15_4_FRAME_SIZE];
     uint8_t neededPdsuSizeForNextAction;
     bool framePending;
 } RxBuffer;

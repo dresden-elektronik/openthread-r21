@@ -37,5 +37,5 @@ volatile uint8_t    g_numMaxCsmaBackoffs         = 4;
 volatile uint32_t   g_csmaBackoffExponentMin     = 3;
 volatile uint32_t   g_csmaBackoffExponentMax     = 7;
 
-volatile uint32_t   g_txAckTimeout_us            = 250;
+volatile uint32_t   g_txAckTimeout_us            = 550;
 

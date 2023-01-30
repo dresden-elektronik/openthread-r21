@@ -28,6 +28,8 @@
 #include "otUtilWrapper_macFrame.h"
 
 #define TIMEOUT_CCA_us 1000
+#define TIMEOUT_RETRY_us 3000
+
 
 typedef enum TxStatus
 {
