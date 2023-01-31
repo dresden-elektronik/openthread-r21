@@ -419,7 +419,7 @@ void cb_samr21RadioTxFailed(otRadioFrame* txFrameBuffer, TxStatus failedAt){
         error = OT_ERROR_CHANNEL_ACCESS_FAILURE;
     }
 
-    if(failedAt == TX_STATUS_WAIT_FOR_ACK || failedAt == TX_STATUS_RECIVING_ACK){
+    if(failedAt == TX_STATUS_WAIT_FOR_ACK || failedAt == TX_STATUS_RECEIVING_ACK){
         error = OT_ERROR_NO_ACK;
     }
     
