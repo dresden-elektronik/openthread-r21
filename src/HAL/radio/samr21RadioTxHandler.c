@@ -162,7 +162,7 @@ bool samr21RadioTxSetup()
         
         if(otMacFrameIsKeyIdMode1(&s_txFrame)){
             otMacFrameSetKeyId(&s_txFrame, g_currKeyId);
-            s_txFrame.mInfo.mTxInfo.mAesKey = (const otMacKeyMaterial *)&g_currKey;
+            s_txFrame.mInfo.mTxInfo.mAesKey = (const otMacKeyMaterial *)g_currKey;
         }
         __enable_irq();
     } 
@@ -235,6 +235,7 @@ static void samr21RadioTxUploadAllRaw(){
         samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_RX_ON);
 
         s_txStatus = TX_STATUS_SENDING_WAIT_TRX_END;
+        samr21Timer4Set(IEEE_802_15_4_24GHZ_TIME_PER_OCTET_us * IEEE_802_15_4_FRAME_SIZE);
 
 }
 
@@ -611,6 +612,7 @@ static void samr21RadioTxStartTransmission()
     samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_RX_ON);
 
     s_txStatus = TX_STATUS_SENDING_WAIT_TRX_END;
+    samr21Timer4Set(IEEE_802_15_4_24GHZ_TIME_PER_OCTET_us * IEEE_802_15_4_FRAME_SIZE);
 }
 
 static void samr21RadioTxEvalCCA()

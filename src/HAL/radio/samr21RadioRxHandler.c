@@ -69,7 +69,6 @@ static void samr21RadioRxCleanup(bool success){
     samr21Timer4Stop();
 
     PORT->Group[0].OUTCLR.reg= PORT_PA08;
-    PORT->Group[0].OUTCLR.reg= PORT_PA09;
 
     __disable_irq();
     RxBuffer *bufferDone = &s_rxBuffer[s_activeRxBuffer];
@@ -128,6 +127,7 @@ static void samr21RadioRxSendImmAck()
     buffer->otFrame.mInfo.mRxInfo.mAckKeyId = 0;
 
     buffer->status = RX_STATUS_SENDING_ACK_WAIT_TRX_END;
+    samr21Timer4Set(IEEE_802_15_4_24GHZ_TIME_PER_OCTET_us * IEEE_802_15_4_FRAME_SIZE);
 }
 
 static void samr21RadioRxAckUploadAllRaw(){
@@ -141,6 +141,7 @@ static void samr21RadioRxAckUploadAllRaw(){
         samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_RX_ON);
 
         s_rxBuffer[s_activeRxBuffer].status = RX_STATUS_SENDING_ACK_WAIT_TRX_END;
+        samr21Timer4Set(IEEE_802_15_4_24GHZ_TIME_PER_OCTET_us * IEEE_802_15_4_FRAME_SIZE);
 }
 
 static void samr21RadioRxAckUploadHeader(){
@@ -287,7 +288,7 @@ static void samr21RadioRxAckCalcMic(){
     //Still Rounds to go
     if (
         s_currentAckTransmissionSecurity.cbc.numProcessedHeaderBytes < s_currentAckTransmissionSecurity.headerLen
-        ||s_currentAckTransmissionSecurity.cbc.numProcessedPayloadBytes < s_currentAckTransmissionSecurity.headerLen
+        ||s_currentAckTransmissionSecurity.cbc.numProcessedPayloadBytes < s_currentAckTransmissionSecurity.payloadLen
     ){
         samr21RadioAesCbcEncrypt(s_currentAckTransmissionSecurity.cbcBlock, AES_BLOCK_SIZE, NULL);
         samr21Timer4Set(21);//AES takes 21us
@@ -297,7 +298,7 @@ static void samr21RadioRxAckCalcMic(){
     //This is the last CBC Round the result of this is the (unencrypted!) MIC
     if (
         s_currentAckTransmissionSecurity.cbc.numProcessedHeaderBytes == s_currentAckTransmissionSecurity.headerLen
-        ||s_currentAckTransmissionSecurity.cbc.numProcessedPayloadBytes == s_currentAckTransmissionSecurity.headerLen
+        ||s_currentAckTransmissionSecurity.cbc.numProcessedPayloadBytes == s_currentAckTransmissionSecurity.payloadLen
     ){
         samr21RadioAesCbcEncrypt(s_currentAckTransmissionSecurity.cbcBlock, AES_BLOCK_SIZE, NULL);
         s_currentAckTransmissionSecurity.pendingAesResultBuffer = s_currentAckTransmissionSecurity.cbcBlock; //Put the result back into the cbcBlockBuffer
@@ -365,7 +366,10 @@ static void samr21RadioRxAckUploadMic(){
             }
         }
         samr21TrxSpiCloseAccess();
+
+
         s_rxBuffer[s_activeRxBuffer].status = RX_STATUS_SENDING_ACK_WAIT_TRX_END;
+        samr21Timer4Set(IEEE_802_15_4_24GHZ_TIME_PER_OCTET_us * IEEE_802_15_4_FRAME_SIZE);
 
     //Queue Move to RX (For ACK) in advance, this will only executes after TX is done
     samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_RX_ON);
@@ -465,7 +469,7 @@ static void samr21RadioRxSendEnhAck()
     s_currentAckTransmissionSecurity.payload = otMacFrameGetPayload(&s_currentAckTransmission.otAck);
     s_currentAckTransmissionSecurity.mic = otMacFrameGetFooter(&s_currentAckTransmission.otAck);
 
-    s_currentAckTransmissionSecurity.headerLen =  s_currentAckTransmissionSecurity.header - s_currentAckTransmission.psdu; //calc offset between pointers
+    s_currentAckTransmissionSecurity.headerLen =  s_currentAckTransmissionSecurity.payload - s_currentAckTransmission.psdu; //calc offset between pointers
     s_currentAckTransmissionSecurity.payloadLen = s_currentAckTransmissionSecurity.mic - s_currentAckTransmissionSecurity.payload;
 
 
@@ -542,6 +546,7 @@ static void samr21RadioRxSendEnhAck()
     samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_RX_ON);
 
     buffer->status = RX_STATUS_SENDING_ACK_WAIT_TRX_END;
+    samr21Timer4Set(IEEE_802_15_4_24GHZ_TIME_PER_OCTET_us * IEEE_802_15_4_FRAME_SIZE);
 }
 
 static void samr21RadioRxDownloadRemaining()
@@ -605,7 +610,6 @@ static void samr21RadioRxDownloadRemaining()
 
     samr21TrxSpiCloseAccess();
 
-    PORT->Group[0].OUTCLR.reg= PORT_PA09;
 
     if (!rxStatus.bit.crcValid)
     {
@@ -1040,6 +1044,8 @@ void samr21RadioRxEventHandler(IrqEvent event)
         return;
 
     case TRX_EVENT_TRX_END:
+
+        PORT->Group[0].OUTCLR.reg= PORT_PA09;
         if (buffer->status == RX_STATUS_SENDING_ACK_WAIT_TRX_END)
         {
             samr21RadioRxCleanup(true);
