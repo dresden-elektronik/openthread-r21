@@ -30,14 +30,14 @@ git submodule update --init third_party/tinyusb
 
 3. execute the bootstrap script (This will install necessary dependencies and download the arm-none-eabi-gcc Toolchain)
 ```console
-bash scripts/bootstrap.sh
+bash script/bootstrap.sh
 ```
 > If your are on an unsupported Platform, you will have to manually install the following dependencies: 
 > automake, g++, libtool, make, cmake, ninja-build, shellcheck 
 
 4. build the RCP-Firmware
 ```console
-bash scripts/build.sh
+bash script/build.sh
 ```
 
 5. Done! You will find the linked Firmware (.elf Format) at **/openthread/out/build/ot-rcp**
