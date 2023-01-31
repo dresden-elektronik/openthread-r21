@@ -16,31 +16,31 @@ An OpenThread Border Router firmware port for Atmel-R21 (Microchip samr21) based
 This Part describes how to build the openthread rcp-firmware from source. **This will be obsolete once the .gcf image is available.**
 
 
-* 1. Clone this Repo:
+1. Clone this Repo:
 ```console
 git clone https://github.com/dresden-elektronik/openthread-r21
 ```
 
-* 2. cd into the directory and init the openthread and tinyusb submodule
+2. cd into the directory and init the openthread and tinyusb submodule
 ```console
 cd openthread-r21
 git submodule update --init openthread/
 git submodule update --init third_party/tinyusb
 ```
 
-* 3. execute the bootstrap script (This will install necessary dependencies and download the arm-none-eabi-gcc Toolchain)
+3. execute the bootstrap script (This will install necessary dependencies and download the arm-none-eabi-gcc Toolchain)
 ```console
 bash scripts/bootstrap.sh
 ```
 > If your are on an unsupported Platform, you will have to manually install the following dependencies: 
 > automake, g++, libtool, make, cmake, ninja-build, shellcheck 
 
-* 4. build the RCP-Firmware
+4. build the RCP-Firmware
 ```console
 bash scripts/build.sh
 ```
 
-* 5. Done! You will find the linked Firmware (.elf Format) at **/openthread/out/build/ot-rcp**
+5. Done! You will find the linked Firmware (.elf Format) at **/openthread/out/build/ot-rcp**
 
 
 # Flash Firmware via OpenOCD and GDB
@@ -48,12 +48,12 @@ bash scripts/build.sh
 This Part describes how to flash the previously build rcp-firmware to evalBoard by using a OpenOCD compatible Debugging Tool.
 
 
-* 0. Install [OpenOCD](https://openocd.org/) (**This Step may be skipped on debian and fedora based Systems**, bootstrap.sh should install OpenOCD via apt or dnf )
+0. Install [OpenOCD](https://openocd.org/) (**This Step may be skipped on debian and fedora based Systems**, bootstrap.sh should install OpenOCD via apt or dnf )
 
-* 1. Find the Open-OCD configuration file for your Debugger (Checkout [eLinux](https://elinux.org/OpenOCD_Config_File_Paths)-Page where to find your config File)
+1. Find the Open-OCD configuration file for your Debugger (Checkout [eLinux](https://elinux.org/OpenOCD_Config_File_Paths)-Page where to find your config File)
 > A Configuration for the ATMEL-ICE and the ATSAMR21ZLL-EK are provided in script/openocd_config/. You can also use them as a Template for your config
 
-* 2. Start an OpenOCD-Server (**Do this in a seperate Terminal**, this may require sudo-rights)
+2. Start an OpenOCD-Server (**Do this in a seperate Terminal**, this may require sudo-rights)
 ```console
 #For Atmel-ICE
 (sudo) openocd -f script/openocd_config/ATMEL-ICE-OpenOCD-samr21e18a.cfg
@@ -65,7 +65,7 @@ If everything goes well, you should see the following Output:
 ```console
 Info : Listening on port 3333 for gdb connections
 ```
-* 3. Start the GDB-Debugger, Connect to the OpenOCD-Server and flash the Firmware-File
+3. Start the GDB-Debugger, Connect to the OpenOCD-Server and flash the Firmware-File
     **Make Sure Your Devices are Powered!** 
 ```console
 gcc-arm-none-eabi/bin/arm-none-eabi-gdb \
@@ -74,41 +74,44 @@ gcc-arm-none-eabi/bin/arm-none-eabi-gdb \
     --eval-command='load'
 ```
 
-* 4. Reset the MCU (via gdb shell)
+4. Reset the MCU (via gdb shell)
 ```console
 (gdb) r
 ```
 
-* 5. Exit GDB by pressing **CTRL + C** and typing quit into the GDB Shell:
+5. Exit GDB by pressing **CTRL + C** and typing quit into the GDB Shell:
 ```console
 (gdb) quit
 ```
 
-* 6. Done! The Firmware on your Device is ready to act as an Openthread-RCP Dongle
+6. Done! The Firmware on your Device is ready to act as an Openthread-RCP Dongle
 
 
-# Install-Guide OpenThread Boarder-Router Daemon (Program running on the Host Side)
+# Install-Guide OpenThread Border-Router Daemon (Program running on the Host Side)
 
+This Part describes how to prepare a host Platform to operate as a Openthread Border Router in conjunction with the connected RCP-Device.
+**It is strongly advised to follow the Guide on the Official Openthread Website.**  
+## [Official Openthread Border Router Guide](https://openthread.io/guides/border-router)
 Tested on Debian11/Ubuntu22.04LTS/RaspberryPiOS(32Bit)
 
-* 0. Start with a fresh OS-Installation on whatever Platform you are planning to Use (Like RaspberryPi, VM, NUC). 
+0. Start with a fresh OS-Installation on whatever Platform you are planning to Use (Like RaspberryPi, VM, NUC). 
 
-    The OpenThread Boarder Router works best with debain based Platforms
+    The OpenThread Border Router works best with debain based Platforms
 
-* 1. On your desired Host-Platform clone into the [Openthread Boarder Router](https://openthread.io/guides/border-router) repository
+1. On your desired Host-Platform clone into the Openthread-Borader-Router-[repository](https://github.com/openthread/ot-br-posix)
 
 ```console
 git clone https://github.com/openthread/ot-br-posix
 ```
 
-* 2. cd into the repository and run the bootstrap script
+2. cd into the repository and run the bootstrap script
 
 ```console
 cd ot-br-posix
 (sudo) bash script/bootstrap
 ```
 
-* 3. Install the Boarder Router Daemon and specify the interface used to communicate with the local network
+3. Install the Border Router Daemon and specify the interface used to communicate with the local network
 ```console
 #Raspberry Pi on Ethernet
 (sudo) bash INFRA_IF_NAME=eth0 ./script/setup
@@ -116,7 +119,7 @@ cd ot-br-posix
 #Raspberry Pi on Wifi
 (sudo) bash INFRA_IF_NAME=wlan0 ./script/setup
 ```
-* 4. Check if the serial connection got initialized correctly
+4. Check if the serial connection got initialized correctly
 ```console
 ls /dev/ | grep tty*
 ```
@@ -129,7 +132,7 @@ or
 ttyACM1
 ```
 
-* 5. Modify the otbr-agent settings to use the expected serial-device for communication with the RCP
+5. Modify the otbr-agent settings to use the expected serial-device for communication with the RCP
 ```console
 (sudo) nano /etc/default/otbr-agent
 ```
@@ -147,12 +150,12 @@ Ethernet and RCP mapped to /dev/ttyACM1
 OTBR_AGENT_OPTS="-I wpan0 -B eth0 spinel+hdlc+uart:///dev/ttyACM1 trel://eth0"
 ```
 
-* 6. After modifying the otbr-agent config-file you should reboot your Host.
+6. After modifying the otbr-agent config-file you should reboot your Host.
 ```console
 sudo reboot now
 ```
     
-* 7. After Reboot you should be able to reach the Openthread Boarder Router Web-Interface by typing 
+7. After Reboot you should be able to reach the Openthread Border Router Web-Interface by typing 
     `http://YOURHOSTADDR/`
     into your Web-Browser
 
