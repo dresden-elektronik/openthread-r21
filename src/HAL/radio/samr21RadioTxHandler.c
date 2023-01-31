@@ -66,7 +66,7 @@ volatile bool s_txHandlerActive = false;
 
 bool samr21RadioTxBusy()
 {
-    return s_txStatus == TX_STATUS_IDLE || s_txStatus == TX_STATUS_DONE;
+    return ( ( s_txStatus == TX_STATUS_IDLE || s_txStatus == TX_STATUS_DONE ) ? false : true) ;
 }
 
 void samr21RadioTxAbortRetrys()
@@ -650,7 +650,7 @@ static void samr21RadioTxAckReceptionStarted()
 {
     samr21Timer4Stop();
     s_txAckFrame.mInfo.mRxInfo.mTimestamp = samr21RtcGetTimestamp();
-    s_txStatus = TX_STATUS_RECIVING_ACK;
+    s_txStatus = TX_STATUS_RECEIVING_ACK;
 
     // Timeout for Ack Reception
     samr21Timer4Set(IEEE_802_15_4_24GHZ_TIME_PER_OCTET_us * IEEE_802_15_4_FRAME_SIZE);
@@ -736,7 +736,7 @@ void samr21RadioTxEventHandler(IrqEvent event)
             return;
         }
 
-        if (s_txStatus == TX_STATUS_WAIT_FOR_ACK || TX_STATUS_RECIVING_ACK)
+        if (s_txStatus == TX_STATUS_WAIT_FOR_ACK || s_txStatus == TX_STATUS_RECEIVING_ACK)
         {
             samr21RadioTxRetry();
             return;
@@ -757,7 +757,7 @@ void samr21RadioTxEventHandler(IrqEvent event)
             samr21RadioTxPrepareAckReception();
             return;
         }
-        else if (s_txStatus == TX_STATUS_RECIVING_ACK)
+        else if (s_txStatus == TX_STATUS_RECEIVING_ACK)
         {
             samr21RadioTxEvalAck();
             return;

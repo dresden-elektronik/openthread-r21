@@ -905,8 +905,10 @@ static void samr21RadioRxDownloadFCF()
 
 bool samr21RadioRxBusy()
 {
-    return s_rxBuffer[s_activeRxBuffer].status == RX_STATUS_IDLE;
+    return (s_rxBuffer[s_activeRxBuffer].status == RX_STATUS_IDLE ? false : true);
 }
+
+
 
 bool samr21RadioRxIsReceiveSlotPlanned(){
     return s_slottedListeningDuration_us;

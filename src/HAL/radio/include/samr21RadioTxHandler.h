@@ -44,7 +44,7 @@ typedef enum TxStatus
     TX_STATUS_SENDING_WAIT_FOR_MIC  ,
     TX_STATUS_SENDING_WAIT_TRX_END  ,
     TX_STATUS_WAIT_FOR_ACK          ,
-    TX_STATUS_RECIVING_ACK          ,
+    TX_STATUS_RECEIVING_ACK          ,
     TX_STATUS_DONE             =0xF0,
     TX_STATUS_FAILED                
 } TxStatus;
