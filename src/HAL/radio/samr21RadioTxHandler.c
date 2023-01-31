@@ -386,9 +386,10 @@ static void samr21RadioTxCalcMic(){
     //Still Rounds to go
     if (
         s_currentTransmissionSecurity.cbc.numProcessedHeaderBytes < s_currentTransmissionSecurity.headerLen
-        ||s_currentTransmissionSecurity.cbc.numProcessedPayloadBytes < s_currentTransmissionSecurity.headerLen
+        ||s_currentTransmissionSecurity.cbc.numProcessedPayloadBytes < s_currentTransmissionSecurity.payloadLen
     ){
         samr21RadioAesCbcEncrypt(s_currentTransmissionSecurity.cbcBlock, AES_BLOCK_SIZE, NULL);
+        s_currentTransmissionSecurity.cbc.currentBlockLen = 0;
         samr21Timer4Set(21);//AES takes 21us
         goto fillNextBlock;
     }
@@ -396,9 +397,10 @@ static void samr21RadioTxCalcMic(){
     //This is the last CBC Round the result of this is the (unencrypted!) MIC
     if (
         s_currentTransmissionSecurity.cbc.numProcessedHeaderBytes == s_currentTransmissionSecurity.headerLen
-        ||s_currentTransmissionSecurity.cbc.numProcessedPayloadBytes == s_currentTransmissionSecurity.headerLen
+        ||s_currentTransmissionSecurity.cbc.numProcessedPayloadBytes == s_currentTransmissionSecurity.payloadLen
     ){
         samr21RadioAesCbcEncrypt(s_currentTransmissionSecurity.cbcBlock, AES_BLOCK_SIZE, NULL);
+        s_currentTransmissionSecurity.cbc.currentBlockLen = 0;
         s_currentTransmissionSecurity.pendingAesResultBuffer = s_currentTransmissionSecurity.cbcBlock; //Put the result back into the cbcBlockBuffer
         samr21Timer4Set(21); //AES takes 21us
 
@@ -466,6 +468,7 @@ static void samr21RadioTxUploadMic(){
         samr21TrxSpiCloseAccess();
 
     s_txStatus = TX_STATUS_SENDING_WAIT_TRX_END;
+    samr21Timer4Set(IEEE_802_15_4_24GHZ_TIME_PER_OCTET_us * IEEE_802_15_4_FRAME_SIZE);
 
     //Queue Move to RX (For ACK) in advance, this will only executes after TX is done
     samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_RX_ON);
@@ -532,7 +535,7 @@ static void samr21RadioTxStartTransmission()
     s_currentTransmissionSecurity.payload = otMacFrameGetPayload(&s_txFrame);
     s_currentTransmissionSecurity.mic = otMacFrameGetFooter(&s_txFrame);
 
-    s_currentTransmissionSecurity.headerLen =  s_currentTransmissionSecurity.header - s_txFrame.mPsdu; //calc offset between pointers
+    s_currentTransmissionSecurity.headerLen =  s_currentTransmissionSecurity.payload - s_txFrame.mPsdu; //calc offset between pointers
     s_currentTransmissionSecurity.payloadLen = s_currentTransmissionSecurity.mic - s_currentTransmissionSecurity.payload;
 
     // Upload only the unencrypted Header Part first
