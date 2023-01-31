@@ -54,6 +54,7 @@ This Part describes how to flash the previously build rcp-firmware to evalBoard 
 > A Configuration for the ATMEL-ICE and the ATSAMR21ZLL-EK are provided in script/openocd_config/. You can also use them as a Template for your config
 
 2. Start an OpenOCD-Server (**Do this in a seperate Terminal**, this may require sudo-rights)
+    **Make Sure Your Devices are Powered!** 
 ```console
 #For Atmel-ICE
 (sudo) openocd -f script/openocd_config/ATMEL-ICE-OpenOCD-samr21e18a.cfg
@@ -66,7 +67,7 @@ If everything goes well, you should see the following Output:
 Info : Listening on port 3333 for gdb connections
 ```
 3. Start the GDB-Debugger, Connect to the OpenOCD-Server and flash the Firmware-File
-    **Make Sure Your Devices are Powered!** 
+
 ```console
 gcc-arm-none-eabi/bin/arm-none-eabi-gdb \
     --init-eval-command='target extended-remote localhost:3333' \

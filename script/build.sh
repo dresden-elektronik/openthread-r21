@@ -1,8 +1,11 @@
+#!/bin/bash
+
+scriptDir=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 set -euxo pipefail
 
 OT_CMAKE_NINJA_TARGET=${OT_CMAKE_NINJA_TARGET:-}
 
-OT_SRCDIR="$(pwd)"
+OT_SRCDIR="${scriptDir}/.."
 readonly OT_SRCDIR
 
 OT_OPTIONS=(
@@ -22,7 +25,7 @@ readonly OT_OPTIONS
 
 build()
 {
-    local builddir="${OT_CMAKE_BUILD_DIR:-out/build}"
+    local builddir="${OT_CMAKE_BUILD_DIR:-${OT_SRCDIR}/out/build}"
 
 
     mkdir -p "${builddir}"
