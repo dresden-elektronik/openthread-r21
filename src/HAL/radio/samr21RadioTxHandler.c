@@ -104,6 +104,7 @@ void samr21RadioTxCleanup(bool success)
     {
         cb_samr21RadioTxDone(&s_txFrame, &s_txAckFrame);
     }
+    s_txStatus = TX_STATUS_IDLE;
 }
 
 static void samr21RadioTxStartCCA()
@@ -153,8 +154,9 @@ bool samr21RadioTxSetup()
     s_currentTransmission.numPsduBytesUploaded = 0;
     s_txFrame.mPsdu[-1] = s_txFrame.mLength;
 
+    s_currentTransmissionSecurity.securityHeaderPresent = (otMacFrameIsSecurityEnabled(&s_txFrame) ? true : false);
 
-    if(!s_txFrame.mInfo.mTxInfo.mIsARetx && !s_txFrame.mInfo.mTxInfo.mIsHeaderUpdated && otMacFrameIsSecurityEnabled(&s_txFrame)){
+    if(!s_txFrame.mInfo.mTxInfo.mIsARetx && !s_txFrame.mInfo.mTxInfo.mIsHeaderUpdated && s_currentTransmissionSecurity.securityHeaderPresent){
         __disable_irq();
         otMacFrameSetFrameCounter(&s_txFrame, g_macFrameCounter++);
         
@@ -162,12 +164,9 @@ bool samr21RadioTxSetup()
             otMacFrameSetKeyId(&s_txFrame, g_currKeyId);
             s_txFrame.mInfo.mTxInfo.mAesKey = (const otMacKeyMaterial *)&g_currKey;
         }
-        s_currentTransmissionSecurity.securityHeaderPresent = 1;
         __enable_irq();
-    } else {
-        s_currentTransmissionSecurity.securityHeaderPresent = 0;
-    }
-    
+    } 
+
 
     samr21RadioSetEventHandler(&samr21RadioTxEventHandler);
     s_txHandlerActive = true;
@@ -238,6 +237,9 @@ static void samr21RadioTxUploadAllRaw(){
         s_txStatus = TX_STATUS_SENDING_WAIT_TRX_END;
 
 }
+
+
+
 
 static void samr21RadioTxUploadHeader(){
 
@@ -482,13 +484,14 @@ static void samr21RadioTxStartTransmission()
 
     // Start Trasmission in advance, there is some spare time while the Preamble and SFD is transmitted
     samr21TrxSetSLP_TR(true);
+    PORT->Group[0].OUTSET.reg= PORT_PA06;
 
 
     if(!s_txFrame.mInfo.mTxInfo.mIsHeaderUpdated){
 
 #if OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
         // Add CSL-IE
-        if ((g_cslPeriod > 0) && !s_txFrame.mInfo.mTxInfo.mIsARetx)
+        if ((g_cslPeriod > 0) && !s_txFrame.mInfo.mTxInfo.mIsARetx && s_txFrame.mInfo.mTxInfo.mCslPresent)
         {
             otMacFrameSetCslIe(&s_txFrame, (uint16_t)g_cslPeriod, samr21RadioCtrlCslGetPhase());
         }
@@ -517,7 +520,7 @@ static void samr21RadioTxStartTransmission()
     samr21TrxSetSLP_TR(false);
 
 
-    if (!s_currentTransmissionSecurity.securityHeaderPresent)
+    if (!s_currentTransmissionSecurity.securityHeaderPresent || s_txFrame.mInfo.mTxInfo.mIsSecurityProcessed)
     {
         //If there is no Security processing needed, the frame can just be uploaded
         samr21RadioTxUploadAllRaw();
@@ -754,6 +757,7 @@ void samr21RadioTxEventHandler(IrqEvent event)
     case TRX_EVENT_TRX_END:
         if (s_txStatus == TX_STATUS_SENDING_WAIT_TRX_END)
         {
+            PORT->Group[0].OUTCLR.reg= PORT_PA06;
             samr21RadioTxPrepareAckReception();
             return;
         }

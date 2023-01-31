@@ -12,6 +12,7 @@
 #include "samr21Timer.h"
 #include "samr21Usb.h"
 
+#include "samr21debugPins.h"
 
 void otSysInit(int argc, char *argv[])
 {
@@ -27,6 +28,7 @@ void otSysInit(int argc, char *argv[])
 
     samr21UsbInit();
 
+    samr21DebugPortsInit();
 }
 
 bool otSysPseudoResetWasRequested(void)

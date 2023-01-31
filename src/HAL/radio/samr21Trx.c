@@ -253,7 +253,7 @@ void samr21TrxUpdateStatus(){
 void samr21TrxSpiStartAccess(uint8_t command, uint8_t addr){
     //Wait for other ongoing SPI Access to End
     while (s_spiActive);
-
+    PORT->Group[0].OUTSET.reg= PORT_PA07;
     __disable_irq();
     s_spiActive = true;
     PORT->Group[1].OUTCLR.reg = 1 << 31; //SSel Low Active
@@ -292,6 +292,7 @@ void samr21TrxSpiCloseAccess(){
 #endif
     s_spiActive = false;
     __enable_irq();
+    PORT->Group[0].OUTCLR.reg= PORT_PA07;
 }
 
 bool samr21TrxSpiBusy(){

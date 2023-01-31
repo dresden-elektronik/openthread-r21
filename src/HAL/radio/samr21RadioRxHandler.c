@@ -68,6 +68,9 @@ static struct
 static void samr21RadioRxCleanup(bool success){
     samr21Timer4Stop();
 
+    PORT->Group[0].OUTCLR.reg= PORT_PA08;
+    PORT->Group[0].OUTCLR.reg= PORT_PA09;
+
     __disable_irq();
     RxBuffer *bufferDone = &s_rxBuffer[s_activeRxBuffer];
   
@@ -84,15 +87,6 @@ static void samr21RadioRxCleanup(bool success){
 
 exit:
     samr21RadioRxResetBuffer(&s_rxBuffer[s_activeRxBuffer]);
-    
-    if(s_rxAbort){
-        samr21Timer4Stop();
-        samr21RadioRemoveEventHandler();
-        s_rxHandlerActive = false;
-        __enable_irq();
-        return;
-    }
-    
     __enable_irq();
 
     if(success){
@@ -121,6 +115,7 @@ static void samr21RadioRxSendImmAck()
 
     // Start Trasmission in advance, there is some spare time while the Preamble and SFD is transmitted
     samr21TrxSetSLP_TR(true);
+    PORT->Group[0].OUTSET.reg= PORT_PA08;
 
     samr21TrxSpiStartAccess(AT86RF233_CMD_FRAMEBUFFER_WRITE, NULL);
     samr21TrxSetSLP_TR(false);
@@ -385,13 +380,13 @@ static void samr21RadioRxSendEnhAck()
 
     // Start Trasmission in advance, there is some spare time while the Preamble and SFD is transmitted
     samr21TrxSetSLP_TR(true);
+    PORT->Group[0].OUTSET.reg= PORT_PA08;
     
     RxBuffer *buffer = &s_rxBuffer[s_activeRxBuffer];
     buffer->status = RX_STATUS_SENDING_ENH_ACK_UPLOADED_HEADER;
     // Timout-Timer
     samr21Timer4Set((IEEE_802_15_4_FRAME_SIZE * 2) * IEEE_802_15_4_24GHZ_TIME_PER_OCTET_us);
 
-    otRadioFrame ack = {.mPsdu = &s_currentAckTransmission.psdu[1]};
 
     uint8_t ieData[IEEE_802_15_4_PDSU_SIZE];
     uint8_t ieDataLen = 0;
@@ -441,7 +436,7 @@ static void samr21RadioRxSendEnhAck()
         &s_currentAckTransmission.otAck);
 
     buffer->otFrame.mInfo.mRxInfo.mAckedWithFramePending = buffer->framePending;
-    ack.mPsdu[-1] = ack.mLength;
+    s_currentAckTransmission.otAck.mPsdu[-1] = s_currentAckTransmission.otAck.mLength;
 
     s_currentAckTransmissionSecurity.securityHeaderPresent = 0;
 
@@ -452,7 +447,7 @@ static void samr21RadioRxSendEnhAck()
         otMacFrameSetFrameCounter(&s_currentAckTransmission.otAck, g_macFrameCounter++);
         
         if(otMacFrameIsKeyIdMode1(&s_currentAckTransmission.otAck)){
-            otMacFrameSetKeyId(&ack, g_currKeyId);
+            otMacFrameSetKeyId(&s_currentAckTransmission.otAck, g_currKeyId);
             buffer->otFrame.mInfo.mRxInfo.mAckKeyId = g_currKeyId;
             s_currentAckTransmission.otAck.mInfo.mTxInfo.mAesKey = (const otMacKeyMaterial *)&g_currKey;
         }
@@ -466,9 +461,9 @@ static void samr21RadioRxSendEnhAck()
     }
 
     //Get some Markers for AES 
-    s_currentAckTransmissionSecurity.header = otMacFrameGetHeader(&ack);
-    s_currentAckTransmissionSecurity.payload = otMacFrameGetPayload(&ack);
-    s_currentAckTransmissionSecurity.mic = otMacFrameGetFooter(&ack);
+    s_currentAckTransmissionSecurity.header = otMacFrameGetHeader(&s_currentAckTransmission.otAck);
+    s_currentAckTransmissionSecurity.payload = otMacFrameGetPayload(&s_currentAckTransmission.otAck);
+    s_currentAckTransmissionSecurity.mic = otMacFrameGetFooter(&s_currentAckTransmission.otAck);
 
     s_currentAckTransmissionSecurity.headerLen =  s_currentAckTransmissionSecurity.header - s_currentAckTransmission.psdu; //calc offset between pointers
     s_currentAckTransmissionSecurity.payloadLen = s_currentAckTransmissionSecurity.mic - s_currentAckTransmissionSecurity.payload;
@@ -478,7 +473,7 @@ static void samr21RadioRxSendEnhAck()
     // This gives some Headroom to perform AES-CCM*
     samr21RadioRxAckUploadHeader();
 
-    uint8_t securityLevel = otMacFrameGetSecurityLevel(&ack);
+    uint8_t securityLevel = otMacFrameGetSecurityLevel(&s_currentAckTransmission.otAck);
 
     s_currentAckTransmissionSecurity.needsEncryption = (securityLevel & 0b100 ? 1 : 0);
 
@@ -504,8 +499,8 @@ static void samr21RadioRxSendEnhAck()
     //Generate Nonce and first EncryptionBlock if needed (TRX is busy with sending Preamble and SFD anyways)
     if (securityLevel)
     {
-        otMacGenerateNonce(&ack, (uint8_t *)(&g_extAddr), s_currentAckTransmissionSecurity.nonce);
-        samr21RadioAesKeySetup((uint8_t *)ack.mInfo.mTxInfo.mAesKey);
+        otMacGenerateNonce(&s_currentAckTransmission.otAck, (uint8_t *)(&g_extAddr), s_currentAckTransmissionSecurity.nonce);
+        samr21RadioAesKeySetup((uint8_t *)s_currentAckTransmission.otAck.mInfo.mTxInfo.mAesKey);
 
         if(s_currentAckTransmissionSecurity.needsEncryption){
 
@@ -609,6 +604,8 @@ static void samr21RadioRxDownloadRemaining()
     AT86RF233_REG_RX_STATUS_t rxStatus = (AT86RF233_REG_RX_STATUS_t)samr21TrxSpiReadByteRaw();
 
     samr21TrxSpiCloseAccess();
+
+    PORT->Group[0].OUTCLR.reg= PORT_PA09;
 
     if (!rxStatus.bit.crcValid)
     {
@@ -768,6 +765,7 @@ static void samr21RadioRxStart(uint8_t channel)
 
 static void samr21RadioRxReceptionStarted()
 {
+    PORT->Group[0].OUTSET.reg= PORT_PA09;
     s_rxBuffer[s_activeRxBuffer].status = RX_STATUS_RECIVING_FCF;
     s_rxBuffer[s_activeRxBuffer].otFrame.mInfo.mRxInfo.mTimestamp =
         samr21RtcGetTimestamp();
