@@ -97,7 +97,7 @@ Tested on Debian11/Ubuntu22.04LTS/RaspberryPiOS(32Bit)
 
 0. Start with a fresh OS-Installation on whatever Platform you are planning to Use (Like RaspberryPi, VM, NUC). 
 
-    The OpenThread Border Router works best with debain based Platforms
+    The OpenThread Border Router works best with debian based Platforms
 
 1. On your desired Host-Platform clone into the Openthread-Borader-Router-[repository](https://github.com/openthread/ot-br-posix)
 
