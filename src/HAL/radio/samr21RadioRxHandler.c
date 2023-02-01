@@ -488,11 +488,11 @@ static void samr21RadioRxSendEnhAck()
         break;
     
     case 0b01:
-        s_currentAckTransmissionSecurity.micSize = 2;
+        s_currentAckTransmissionSecurity.micSize = 4;
         break;
     
     case 0b10:
-        s_currentAckTransmissionSecurity.micSize = 4;
+        s_currentAckTransmissionSecurity.micSize = 8;
         break;
     
     case 0b11:
@@ -678,6 +678,7 @@ static void samr21RadioRxDownloadAddrField()
         }
         else
         {
+            samr21TrxSpiCloseAccess();
             samr21RadioRxCleanup(false);
             return;
         }
@@ -815,6 +816,7 @@ static void samr21RadioRxDownloadFCF()
         }
         else
         {
+            samr21TrxSpiCloseAccess();
             samr21RadioRxCleanup(false);
             return;
         }

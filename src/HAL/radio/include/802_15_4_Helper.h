@@ -27,7 +27,7 @@
 #define IEEE_802_15_4_PHY_LEN_SIZE              1
 
 #define IEEE_802_15_4_STATIC_HEADER_SIZE        (IEEE_802_15_4_FCF_SIZE + IEEE_802_15_4_DSN_SIZE)
-
+#define IEEE_802_15_4_NONCE_SIZE_BYTES          13
 
 typedef enum IEEE_802_15_4_FrameType{
     IEEE_802_15_4_BEACON_FRAME               = 0b000,
