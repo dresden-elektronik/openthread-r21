@@ -20,8 +20,8 @@ if command -v apt-get; then
 elif command -v rpm; then
     sudo dnf install openocd
 else
-    echo no compatble 
-    No Known Package Manager found, Please instal OpenOCD manualy
+    echo No Known Package Manager found, Please install OpenOCD manualy
+    
 fi
 
 bash "${scriptDir}/../openthread/script/bootstrap"
