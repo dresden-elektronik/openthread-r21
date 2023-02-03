@@ -33,7 +33,7 @@
 
 #define AT86RF233_RSSI_BASE_VAL                     -94
 
-#define AT86RF233_SPI_TIME_PER_BYTE_us              2
+#define AT86RF233_SPI_TIME_PER_BYTE_us              10 
 #define AT86RF233_SPI_INIT_TIME_FRAMEBUFFER_us      3
 #define AT86RF233_SPI_INIT_TIME_REG_us              3
 #define AT86RF233_SPI_INIT_TIME_SRAM_us             5

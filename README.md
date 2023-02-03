@@ -26,6 +26,11 @@ git clone https://github.com/dresden-elektronik/openthread-r21
 cd openthread-r21
 git submodule update --init openthread/
 git submodule update --init third_party/tinyusb
+
+#or
+
+git submodule update --init --recursive --depth 1
+
 ```
 
 3. execute the bootstrap script (This will install necessary dependencies and download the arm-none-eabi-gcc Toolchain)

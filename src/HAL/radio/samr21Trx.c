@@ -246,7 +246,15 @@ void samr21TrxWriteRegister(uint8_t addr, uint8_t data){
 }
 
 void samr21TrxUpdateStatus(){
-    samr21TrxSpiStartAccess(0x00,NULL);
+
+    while (s_spiActive);
+    PORT->Group[0].OUTSET.reg= PORT_PA07;
+    __disable_irq();
+    PORT->Group[1].OUTCLR.reg = 1 << 31; //SSel Low Active
+    s_spiActive = true;
+
+    g_trxStatus.reg = samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
+
     samr21TrxSpiCloseAccess();
 }
 
@@ -280,7 +288,6 @@ void samr21TrxSpiStartAccess(uint8_t command, uint8_t addr){
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
     samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
 #endif
-
     samr21TrxSpiTransceiveByteRaw(addr);
 }
 

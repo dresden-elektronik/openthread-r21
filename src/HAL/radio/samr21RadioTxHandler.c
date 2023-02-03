@@ -65,6 +65,8 @@ static struct
 
 volatile bool s_txHandlerActive = false;
 
+
+
 bool samr21RadioTxBusy()
 {
     return ((s_txStatus == TX_STATUS_IDLE || s_txStatus == TX_STATUS_DONE) ? false : true);
@@ -261,7 +263,7 @@ static void samr21RadioTxUploadPayload()
 
     if (s_currentTransmissionSecurity.needsEncryption)
     {
-        samr21delaySysTick(700); // Wait for first AES-ECB to finish
+        samr21delaySysTick(700); // Wait for initial AES-ECB to finish
     }
 
     while (s_currentTransmissionSecurity.ctr.numEncryptionBlocks > s_currentTransmissionSecurity.ctr.numProcessedEncryptionBlocks)
@@ -585,7 +587,7 @@ static void samr21RadioTxStartTransmission()
             s_currentTransmissionSecurity.ctrBlock[0] = 1; // Always 1 cause L is always 2
             memcpy(&s_currentTransmissionSecurity.ctrBlock[1], s_currentTransmissionSecurity.nonce, IEEE_802_15_4_NONCE_SIZE_BYTES);
 
-            s_currentTransmissionSecurity.ctrBlock[AES_BLOCK_SIZE - 2] = 0;
+            s_currentTransmissionSecurity.ctrBlock[AES_BLOCK_SIZE - 2] = 0; // Always 0 cause ctr-Value never exceeds 0xFF
             s_currentTransmissionSecurity.ctrBlock[AES_BLOCK_SIZE - 1] = 1; // Start with ctr = 1, because timing for payload encryption is crucial
 
             // Start generating the encrytion mask for the first block
@@ -656,6 +658,7 @@ static void samr21RadioTxPrepareAckReception()
     {
         s_txStatus = TX_STATUS_WAIT_FOR_ACK;
         samr21Timer4Set(g_txAckTimeout_us);
+        samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_RX_ON);
         return;
     }
     s_txStatus = TX_STATUS_DONE;
@@ -690,8 +693,29 @@ static void samr21RadioTxEvalAck()
         goto ackInvalid;
     }
 
-    // Download PDSU
-    samr21TrxSpiTransceiveBytesRaw(NULL, s_txAckFrame.mPsdu, s_txAckFrame.mLength);
+    uint16_t numDownloadedPdsuBytes = 0;
+
+    while (numDownloadedPdsuBytes < s_txAckFrame.mLength)
+    {
+        uint32_t timeout = 0xFFFF;
+        while ((PORT->Group[1].IN.reg & PORT_PB00) && timeout)
+        {
+            timeout--;
+        }
+
+        if (timeout)
+        {
+            s_txAckFrame.mPsdu[numDownloadedPdsuBytes++] =
+                samr21TrxSpiReadByteRaw();
+            ;
+        }
+        else
+        {
+            samr21TrxSpiCloseAccess();
+            samr21RadioTxCleanup(false);
+            return;
+        }
+    }
 
 // Dowload LQI, RSSI and CRC Check (r21 Datasheet 35.3.2 -  Frame Buffer Access Mode)
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
@@ -768,9 +792,9 @@ void samr21RadioTxEventHandler(IrqEvent event)
         return;
 
     case TRX_EVENT_TRX_END:
+        PORT->Group[0].OUTCLR.reg = PORT_PA06;
         if (s_txStatus == TX_STATUS_SENDING_WAIT_TRX_END)
         {
-            PORT->Group[0].OUTCLR.reg = PORT_PA06;
             samr21RadioTxPrepareAckReception();
             return;
         }
@@ -781,6 +805,7 @@ void samr21RadioTxEventHandler(IrqEvent event)
         }
 
     case TRX_EVENT_RX_START:
+            PORT->Group[0].OUTCLR.reg = PORT_PA06;
         if (s_txStatus == TX_STATUS_WAIT_FOR_ACK)
         {
             samr21RadioTxAckReceptionStarted();
