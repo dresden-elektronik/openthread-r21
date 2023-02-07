@@ -2,20 +2,22 @@
 
 
 An OpenThread Border Router firmware port for Atmel-R21 (Microchip samr21) based ConBee II and RaspBee II.  
-**Note:** the port is still development, watch this repository to get notified when first beta test version is released.
+**Note:** the port is still in development, watch this repository to get notified when first beta test version is released.
 
-## For interested Useres 
-* There will be a GCF-flashable firmware for the **ConBeeII**/**RaspbeeII** soon. Stay tuned!
-* This firmware can be flashed via the GCFFlasher in the same way as deCONZ and ZShark firmware is flashed.
-* The firmware will convert the ConBeeII/RaspBeeII into a Radio-Co-Processor (RCP) for a Thread Border-Router-Daemon running on a Host. This functions as a Gateway between Thread-Devices and the local Network.
+# For interested Useres 
+* There will be a GCF-flashable firmware for the **ConBeeII** / **RaspbeeII** soon. Stay tuned!
+* This firmware can be flashed via the [GCFFlasher](https://github.com/dresden-elektronik/gcfflasher) in the same way as deCONZ and ZShark firmware is flashed.
+* The firmware will convert the ConBeeII/RaspBeeII into a Radio-Co-Processor (RCP) for a Thread Border-Router-Daemon running on a Host. This functions as a gateway between Thread-Devices and the local Network.
 * Thread forms the underlying technology for 802.15.4 based Matter-Devices 
 * Any deCONZ settings stored in NVRAM will be preserved (**in development, no guarantees, backup your data!**).
 * The firmware is **Thread-RCP only**, it **can not** be used in parallel with Zigbee firmware (but switching the firmware is always possible).
 
+# For Developers 
 
-# Build Guide (RCP-Firmware):
 
-This Part describes how to build the openthread rcp-firmware from source. **This will be obsolete once the .gcf image is available.** 
+## Build Guide (RCP-Firmware):
+
+This Part describes how to build the openthread RCP-firmware from source. **This will be obsolete once the .gcf image is available.** 
 
 Prerequisite: 
 * So Far you can only compile on a x86 Machine
@@ -54,9 +56,9 @@ bash script/build.sh
 5. Done! You will find the linked Firmware (.elf Format) at **/openthread/out/build/ot-rcp**
 
 
-# Flash Firmware via OpenOCD and GDB
+## Flash Firmware via OpenOCD and GDB
 
-This Part describes how to flash the previously build rcp-firmware onto the samr21 ROM-Flash by using a OpenOCD compatible Debugging Tool.
+This Part describes how to flash the previously build RCP-firmware onto the samr21 ROM-Flash by using a OpenOCD compatible Debugging Tool.
 
 
 0. Install [OpenOCD](https://openocd.org/) (**This Step may be skipped on debian and fedora based Systems**, bootstrap.sh should install OpenOCD via apt or dnf )
@@ -99,7 +101,7 @@ gcc-arm-none-eabi/bin/arm-none-eabi-gdb \
 6. Done! The Firmware on your Device is ready to act as an Openthread-RCP Dongle
 
 
-# Install-Guide OpenThread Border-Router Daemon (Program running on the Host Side)
+## Install-Guide OpenThread Border-Router Daemon (Program running on the Host Side)
 
 This Part describes how to prepare a host Platform to operate as a Openthread Border Router in conjunction with the connected RCP-Device.
 **It is strongly advised to follow the Guide on the Official Openthread Website.**  
@@ -152,7 +154,7 @@ ttyACM1
 The Device will likely aper as /dev/ttyACM0 but you should double check that with something like **dmesg**.
 You should modify your config-file according to your system. Some examples:
 
-WIFI and rcp mapped to /dev/ttyACM0
+WIFI and RCP mapped to /dev/ttyACM0
 ```console
 OTBR_AGENT_OPTS="-I wpan0 -B wlan0 spinel+hdlc+uart:///dev/ttyACM0 trel://wlan0"
 ```
