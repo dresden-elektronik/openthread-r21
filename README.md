@@ -154,7 +154,7 @@ You should modify your config-file according to your system. Some examples:
 
 WIFI and rcp mapped to /dev/ttyACM0
 ```console
-OTBR_AGENT_OPTS="-I wpan0 -B eth0 spinel+hdlc+uart:///dev/ttyACM0 trel://wlan0"
+OTBR_AGENT_OPTS="-I wpan0 -B wlan0 spinel+hdlc+uart:///dev/ttyACM0 trel://wlan0"
 ```
 
 Ethernet and RCP mapped to /dev/ttyACM1
