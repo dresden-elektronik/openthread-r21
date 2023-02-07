@@ -12,7 +12,13 @@
 #include "samr21Timer.h"
 #include "samr21Usb.h"
 
-#include "samr21debugPins.h"
+#ifdef _DEBUG
+    #include "samr21debugPins.h"
+#endif
+
+#ifdef _GCF_RELEASE_
+    volatile bool g_keepAlive = true;
+#endif
 
 void otSysInit(int argc, char *argv[])
 {
@@ -28,7 +34,9 @@ void otSysInit(int argc, char *argv[])
 
     samr21UsbInit();
 
+#ifdef _DEBUG
     samr21DebugPortsInit();
+#endif
 }
 
 bool otSysPseudoResetWasRequested(void)
@@ -45,6 +53,13 @@ void otSysProcessDrivers(otInstance *aInstance)
 {
     samr21OtPlatUsbTask();
     samr21OtPlatRadioTask();
+
+#ifdef _GCF_RELEASE_
+    //WDT
+    if(g_keepAlive){
+        WDT->CLEAR.reg = WDT_CLEAR_CLEAR_KEY_Val;
+    }
+#endif
 }
 
 otPlatResetReason otPlatGetResetReason(otInstance *aInstance){

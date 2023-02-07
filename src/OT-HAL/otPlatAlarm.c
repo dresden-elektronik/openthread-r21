@@ -37,7 +37,7 @@ void otPlatAlarmMicroStop(otInstance *aInstance)
 
 uint32_t otPlatAlarmMilliGetNow(void)
 {
-    return samr21RtcGetTimestamp() * MICRO_SECS_PER_MILLI_SEC;
+    return samr21RtcGetTimestamp() / MICRO_SECS_PER_MILLI_SEC;
 }
 
 uint32_t otPlatAlarmMicroGetNow(void)

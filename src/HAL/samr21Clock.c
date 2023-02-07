@@ -105,7 +105,7 @@ void samr21ClockTrxSrcInit(){
         //Setup GENDIV
         GCLK->GENDIV.reg = 
             GCLK_GENDIV_ID(2)
-            |GCLK_GENDIV_DIV(16) //Use GCLKGEN 4 for RTC/Timer (16MHz -> 1Mhz (1us))
+            |GCLK_GENDIV_DIV(16) //Use GCLKGEN 2 for RTC/Timer (16MHz -> 1Mhz (1us))
         ;
 
         //Wait for synchronization 
@@ -113,7 +113,7 @@ void samr21ClockTrxSrcInit(){
 
         //Setup GENCTRL
         GCLK->GENCTRL.reg = 
-            GCLK_GENCTRL_ID(2) // GCLKGEN4
+            GCLK_GENCTRL_ID(2) // GCLKGEN2
             |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_GCLKGEN1_Val)
             |GCLK_GENCTRL_RUNSTDBY
             //|GCLK_GENCTRL_DIVSEL

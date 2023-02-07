@@ -19,7 +19,7 @@ void samr21TrxInterfaceInit(){
         GCLK->CLKCTRL.reg =
             //GCLK_CLKCTRL_WRTLOCK
             GCLK_CLKCTRL_CLKEN
-            |GCLK_CLKCTRL_GEN(1) // GCLKGEN1
+            |GCLK_CLKCTRL_GEN(1) // GCLKGEN1 (Sourced from trx clkm)
             |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_SERCOM4_CORE_Val)
         ;
         //Wait for synchronization 

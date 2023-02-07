@@ -70,7 +70,7 @@ void samr21RtcDeinit(){
     GCLK->CLKCTRL.reg =
         //GCLK_CLKCTRL_WRTLOCK
         //GCLK_CLKCTRL_CLKEN
-        GCLK_CLKCTRL_GEN(2) // GCLKGEN2
+        GCLK_CLKCTRL_GEN(2) // GCLKGEN2 (1MHz)
         |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_RTC_Val)
     ;
 }

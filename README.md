@@ -4,17 +4,23 @@
 An OpenThread Border Router firmware port for Atmel-R21 (Microchip samr21) based ConBee II and RaspBee II.  
 **Note:** the port is still development, watch this repository to get notified when first beta test version is released.
 
-* The firmware converts the **ConBeeII**/**RaspbeeII** into a Radio-Co-Processor (RCP) for a Thread Border-Router-Daemon running on a Host. This functions as a Gateway between Thread-Devices and the local Network.
+## For interested Useres 
+* There will be a GCF-flashable firmware for the **ConBeeII**/**RaspbeeII** soon. Stay tuned!
+* This firmware can be flashed via the GCFFlasher in the same way as deCONZ and ZShark firmware is flashed.
+* The firmware will convert the ConBeeII/RaspBeeII into a Radio-Co-Processor (RCP) for a Thread Border-Router-Daemon running on a Host. This functions as a Gateway between Thread-Devices and the local Network.
 * Thread forms the underlying technology for 802.15.4 based Matter-Devices 
-* The firmware can be flashed via the GCFFlasher in the same way as deCONZ and ZShark firmware is flashed.
-* Any deCONZ settings stored in NVRAM are preserved (**in development, no guarantees, backup your data!**).
+* Any deCONZ settings stored in NVRAM will be preserved (**in development, no guarantees, backup your data!**).
 * The firmware is **Thread-RCP only**, it **can not** be used in parallel with Zigbee firmware (but switching the firmware is always possible).
 
 
 # Build Guide (RCP-Firmware):
 
-This Part describes how to build the openthread rcp-firmware from source. **This will be obsolete once the .gcf image is available.**
+This Part describes how to build the openthread rcp-firmware from source. **This will be obsolete once the .gcf image is available.** 
 
+Prerequisite: 
+* So Far you can only compile on a x86 Machine
+* I tested on Arch and Fedora. Debian based distros should also work.
+* You should at least have a working *git* package installed
 
 1. Clone this Repo:
 ```console
@@ -33,7 +39,7 @@ git submodule update --init --recursive --depth 1
 
 ```
 
-3. execute the bootstrap script (This will install necessary dependencies and download the arm-none-eabi-gcc Toolchain)
+3. execute the bootstrap script (This will install necessary dependencies and download the arm-none-eabi-gcc **x86** Toolchain)
 ```console
 bash script/bootstrap.sh
 ```
