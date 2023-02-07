@@ -56,7 +56,7 @@ bash script/build.sh
 
 # Flash Firmware via OpenOCD and GDB
 
-This Part describes how to flash the previously build rcp-firmware to evalBoard by using a OpenOCD compatible Debugging Tool.
+This Part describes how to flash the previously build rcp-firmware onto the samr21 ROM-Flash by using a OpenOCD compatible Debugging Tool.
 
 
 0. Install [OpenOCD](https://openocd.org/) (**This Step may be skipped on debian and fedora based Systems**, bootstrap.sh should install OpenOCD via apt or dnf )
