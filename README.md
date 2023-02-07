@@ -6,8 +6,8 @@ An OpenThread Border Router firmware port for Atmel-R21 (Microchip samr21) based
 
 # For interested Useres 
 * There will be a GCF-flashable firmware for the **ConBeeII** / **RaspbeeII** soon. Stay tuned!
-* This firmware can be flashed via the [GCFFlasher](https://github.com/dresden-elektronik/gcfflasher) in the same way as deCONZ and ZShark firmware is flashed.
-* The firmware will convert the ConBeeII/RaspBeeII into a Radio-Co-Processor (RCP) for a Thread Border-Router-Daemon running on a Host. This functions as a gateway between Thread-Devices and the local Network.
+* This firmware will be flashed via the [GCFFlasher](https://github.com/dresden-elektronik/gcfflasher) in the same way as deCONZ and ZShark firmware is flashed.
+* The firmware will convert the ConBeeII / RaspBeeII into a Radio-Co-Processor (RCP) for a Thread Border-Router-Daemon running on a Host. This functions as a gateway between Thread-Devices and the local Network.
 * Thread forms the underlying technology for 802.15.4 based Matter-Devices 
 * Any deCONZ settings stored in NVRAM will be preserved (**in development, no guarantees, backup your data!**).
 * The firmware is **Thread-RCP only**, it **can not** be used in parallel with Zigbee firmware (but switching the firmware is always possible).
