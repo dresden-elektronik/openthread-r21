@@ -6,6 +6,7 @@
 #include "samr21Clock.h"
 #include "samr21Trx.h"
 #include "samr21RadioCtrl.h"
+#include "samr21RadioFeCtrl.h"
 #include "samr21Rtc.h"
 #include "samr21Nvm.h"
 #include "samr21NopDelay.h"
@@ -37,6 +38,11 @@ void otSysInit(int argc, char *argv[])
 #ifdef _DEBUG
     samr21DebugPortsInit();
 #endif
+
+#ifdef _GCF_RELEASE_
+    samr21FeCtrlInit();
+#endif
+
 }
 
 bool otSysPseudoResetWasRequested(void)

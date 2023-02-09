@@ -19,7 +19,7 @@ An OpenThread Border Router firmware port for Atmel-R21 (Microchip samr21) based
 
 This Part describes how to build the openthread RCP-firmware from source. **This will be obsolete once the .gcf image is available.** 
 
-Prerequisite: 
+Prerequisites: 
 * So Far you can only compile on a x86 Machine
 * I tested on Arch and Fedora. Debian based distros should also work.
 * You should at least have a working *git* package installed
