@@ -115,10 +115,10 @@ static void samr21RadioTxStartCCA()
     s_txStatus = TX_STATUS_CCA;
 
     // Check if Transciver is in recive state
-    if (g_trxStatus.bit.trxStatus != TRX_STATUS_RX_ON)
+    if (g_trxStatus.bit.trxStatus != TRX_STATUS_RX_ON && g_trxStatus.bit.trxStatus != TRX_STATUS_BUSY_RX)
     {
         samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_RX_ON);
-        while (g_trxStatus.bit.trxStatus != TRX_STATUS_RX_ON)
+        while (g_trxStatus.bit.trxStatus != TRX_STATUS_RX_ON && g_trxStatus.bit.trxStatus != TRX_STATUS_BUSY_RX)
         {
             samr21TrxUpdateStatus();
         }

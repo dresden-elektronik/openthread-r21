@@ -103,15 +103,11 @@ static void samr21RadioRxSendImmAck()
     RxBuffer *buffer = &s_rxBuffer[s_activeRxBuffer];
     buffer->status = RX_STATUS_SENDING_ACK;
 
-    while (g_trxStatus.bit.trxStatus != TRX_STATUS_PLL_ON)
-    {
-        samr21TrxUpdateStatus();
-    }
+    // while (g_trxStatus.bit.trxStatus != TRX_STATUS_PLL_ON)
+    // {
+    //     samr21TrxUpdateStatus();
+    // }
 
-    // Start Trasmission in advance, there is some spare time while the Preamble and SFD is transmitted
-    samr21TrxSetSLP_TR(true);
-    PORT->Group[0].OUTSET.reg= PORT_PA08;
-    
     otMacFrameGenerateImmAck(
         &(buffer->otFrame),
         buffer->framePending,
@@ -391,14 +387,10 @@ static void samr21RadioRxAckUploadMic(){
 
 static void samr21RadioRxSendEnhAck()
 {
-    while (g_trxStatus.bit.trxStatus != TRX_STATUS_PLL_ON)
-    {
-        samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_FORCE_PLL_ON);
-    }
-
-    // Start Trasmission in advance, there is some spare time while the Preamble and SFD is transmitted
-    samr21TrxSetSLP_TR(true);
-    PORT->Group[0].OUTSET.reg= PORT_PA08;
+    // while (g_trxStatus.bit.trxStatus != TRX_STATUS_PLL_ON)
+    // {
+    //     samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_FORCE_PLL_ON);
+    // }
     
     RxBuffer *buffer = &s_rxBuffer[s_activeRxBuffer];
     buffer->status = RX_STATUS_SENDING_ENH_ACK_UPLOADED_HEADER;
@@ -569,9 +561,16 @@ static void samr21RadioRxSendEnhAck()
 
 static void samr21RadioRxDownloadRemaining()
 {
-    samr21TrxSpiStartAccess(AT86RF233_CMD_FRAMEBUFFER_READ, 0);
-
+    
     RxBuffer *buffer = &s_rxBuffer[s_activeRxBuffer];
+
+    if ( !g_promiscuousMode  && otMacFrameIsAckRequested(&(buffer->otFrame))) {
+        
+        // Prep TRX for Ack, only execs after frame is fully received
+        samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_PLL_ON);
+    }
+
+    samr21TrxSpiStartAccess(AT86RF233_CMD_FRAMEBUFFER_READ, 0);
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
     samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
@@ -596,6 +595,16 @@ static void samr21RadioRxDownloadRemaining()
             timeout--;
         }
 
+        if(numDownloadedPdsuBytes == (buffer->otFrame.mLength - 1) ){
+            PORT->Group[0].OUTCLR.reg= PORT_PA09;
+            if (otMacFrameIsAckRequested(&(buffer->otFrame)) && !g_promiscuousMode)
+            {
+                // Start Trasmission in advance, there is some spare time while the Preamble and SFD is transmitted
+                samr21TrxSetSLP_TR(true);
+                PORT->Group[0].OUTSET.reg= PORT_PA08;
+            }
+        }
+
         if (timeout && !s_rxAbort)
         {
             buffer->otFrame.mPsdu[numDownloadedPdsuBytes++] =
@@ -605,14 +614,19 @@ static void samr21RadioRxDownloadRemaining()
         else
         {
             samr21TrxSpiCloseAccess();
+            samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_RX_ON);
             samr21RadioRxCleanup(false);
             return;
         }
     }
 
-    PORT->Group[0].OUTCLR.reg= PORT_PA09;
+    if (otMacFrameIsAckRequested(&(buffer->otFrame)) && !g_promiscuousMode)
+    {
+        samr21TrxSetSLP_TR(false);
+    }
 
-    // Dowload LQI, RSSI and CRC Check (r21 Datasheet 35.3.2 -  Frame Buffer Access Mode)
+
+    // Download LQI, RSSI and CRC Check (r21 Datasheet 35.3.2 -  Frame Buffer Access Mode)
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
     samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
 #endif
@@ -633,6 +647,7 @@ static void samr21RadioRxDownloadRemaining()
 
     if (!rxStatus.bit.crcValid)
     {
+        samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_RX_ON);
         samr21RadioRxCleanup(false);
         return;
     }
@@ -644,10 +659,6 @@ static void samr21RadioRxDownloadRemaining()
 
     if (otMacFrameIsAckRequested(&(buffer->otFrame)))
     {
-
-        // Prep TRX
-        samr21TrxWriteRegister(TRX_STATE_REG, TRX_CMD_PLL_ON);
-
         if (otMacFrameIsVersion2015(&(buffer->otFrame)))
         {
             samr21RadioRxSendEnhAck();
@@ -655,6 +666,7 @@ static void samr21RadioRxDownloadRemaining()
         }
 
         samr21RadioRxSendImmAck();
+        return;
     }
 
     samr21RadioRxCleanup(true);
@@ -713,13 +725,17 @@ static void samr21RadioRxDownloadAddrField()
     {
         samr21RadioRxCleanup(false);
         return;
-    }
+    } 
+    
+    
+    buffer->neededPdsuSizeForNextAction = buffer->otFrame.mLength;
+    buffer->status = RX_STATUS_RECIVING_REMAINING;
+
+    samr21RadioRxDownloadRemaining();
+    return;
 
     uint32_t nextAction_us =
         ((buffer->otFrame.mLength - numDownloadedPdsuBytes) * IEEE_802_15_4_24GHZ_TIME_PER_OCTET_us) - (AT86RF233_SPI_INIT_TIME_FRAMEBUFFER_us + RX_FRAMEBUFFER_ACCESS_HEADROOM_us) - ((buffer->otFrame.mLength + AT86RF233_FRAMEBUFFER_MISC_SIZE) * AT86RF233_SPI_TIME_PER_BYTE_us);
-
-    buffer->neededPdsuSizeForNextAction = buffer->otFrame.mLength;
-    buffer->status = RX_STATUS_RECIVING_REMAINING;
 
     if (nextAction_us > 0xFFFF || nextAction_us < RX_FRAMEBUFFER_ACCESS_HEADROOM_us)
     {
