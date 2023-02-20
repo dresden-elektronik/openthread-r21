@@ -49,10 +49,12 @@ SEARCH_DIR(.)
 /* Memory Spaces Definitions */
 MEMORY
 {
-/*rom      (rx)  : ORIGIN = 0x00000000, LENGTH = 0x00040000*/
-
-  rom      (rx)  : ORIGIN = 0x00005000, LENGTH = 0x0003B000
-  ram      (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00008000
+  vec_rom         (rx)  : ORIGIN = 0x00005000, LENGTH = 0x00000100
+  reserved_pds    (r)   : ORIGIN = 0x00005100, LENGTH = 0x00004000
+  reserved_crc    (r)   : ORIGIN = 0x00009100, LENGTH = 0x00000100
+  rom             (rx)  : ORIGIN = 0x00009200, LENGTH = 0x00035D00
+  reserved_config (r)   : ORIGIN = 0x0003EF00, LENGTH = 0x00000100
+  ram             (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00008000
 }
 
 /* The stack size used by the application. NOTE: you need to adjust according to your application. */

@@ -24,10 +24,6 @@ void samr21OtPlatUsbTask(){
         otPlatUartReceived(buf,count);        
     }
 
-    if(s_waitForHostBuffer.len && s_dtr){
-        tud_cdc_write(s_waitForHostBuffer.buf, s_waitForHostBuffer.len);
-        s_waitForHostBuffer.len = 0;
-    }
 }
 
 otError otPlatUartEnable(void){
@@ -78,7 +74,7 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts){
 
     if(s_waitForHostBuffer.len && dtr){
         tud_cdc_write(s_waitForHostBuffer.buf, s_waitForHostBuffer.len);
-        s_waitForHostBuffer.len = 0;
+        //s_waitForHostBuffer.len = 0;
         otPlatUartSendDone();
     }
 }

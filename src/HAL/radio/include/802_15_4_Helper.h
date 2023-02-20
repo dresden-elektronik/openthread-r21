@@ -13,6 +13,9 @@
 
 #include <stdint.h>
 
+
+#define IEEE_802_15_4_AIFS_us                   64
+
 #define IEEE_802_15_4_EXTENDED_ADDR_SIZE_BYTES  8
 #define IEEE_802_15_4_SHORT_ADDR_SIZE_BYTES     2
 #define IEEE_802_15_4_PAN_ID_SIZE_BYTES         2

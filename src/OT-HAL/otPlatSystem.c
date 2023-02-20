@@ -13,6 +13,9 @@
 #include "samr21Timer.h"
 #include "samr21Usb.h"
 
+
+#define _DEBUG
+
 #ifdef _DEBUG
     #include "samr21debugPins.h"
 #endif
