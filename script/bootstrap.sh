@@ -1,6 +1,6 @@
 #!/bin/bash
 scriptDir=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-ARCH=$(arch)
+ARCH=$(uname -m)
 
 if [ ! -d "${scriptDir}/../gcc-arm-none-eabi" ]; then
     # Take action if $DIR exists. #
