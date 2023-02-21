@@ -33,9 +33,15 @@ if(OT_CFLAGS MATCHES "-pedantic-errors")
     string(REPLACE "-pedantic-errors" "" OT_CFLAGS "${OT_CFLAGS}")
 endif()
 
+if(DDEL_GCF_BUILD)
+    set(LINKER_SCRIPT_PATH "-T${PROJECT_SOURCE_DIR}/third_party/ATMEL/LINKER/samr21e18a_flash_gcf_offset.ld")
+else()
+    set(LINKER_SCRIPT_PATH "-T${PROJECT_SOURCE_DIR}/third_party/ATMEL/LINKER/samr21e18a_flash.ld" )
+endif()
+
 target_link_libraries(samr21-CMSIS
     PUBLIC
-        -T${PROJECT_SOURCE_DIR}/third_party/ATMEL/LINKER/samr21e18a_flash.ld
+	${LINKER_SCRIPT_PATH}
     PRIVATE
         ot-config
 )

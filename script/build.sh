@@ -19,7 +19,6 @@ OT_OPTIONS=(
     "-DOT_MTD=OFF"
     "-DOT_APP_CLI=OFF"
     "-DOT_APP_NCP=OFF"
-
 )
 readonly OT_OPTIONS
 

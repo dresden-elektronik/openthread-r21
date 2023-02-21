@@ -63,11 +63,14 @@ STACK_SIZE = DEFINED(STACK_SIZE) ? STACK_SIZE : DEFINED(__stack_size__) ? __stac
 /* Section Definitions */
 SECTIONS
 {
+    .vectors : {
+        KEEP(*(.vectors .vectors.*))
+    } > vec_rom
+
     .text :
     {
         . = ALIGN(4);
         _sfixed = .;
-        KEEP(*(.vectors .vectors.*))
         *(.text .text.* .gnu.linkonce.t.*)
         *(.glue_7t) *(.glue_7)
         *(.rodata .rodata* .gnu.linkonce.r.*)
