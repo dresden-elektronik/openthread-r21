@@ -34,17 +34,36 @@ if(OT_CFLAGS MATCHES "-pedantic-errors")
 endif()
 
 if(DDEL_GCF_BUILD)
-    set(LINKER_SCRIPT_PATH "-T${PROJECT_SOURCE_DIR}/third_party/ATMEL/LINKER/samr21e18a_flash_gcf_offset.ld")
+    target_link_libraries(samr21-CMSIS
+        PUBLIC
+            -T${PROJECT_SOURCE_DIR}/third_party/ATMEL/LINKER/samr21e18a_flash_gcf_offset.ld
+        PRIVATE
+            ot-config
+    )
+
+
+    target_compile_definitions(samr21-CMSIS
+        PUBLIC
+            ${OT_PLATFORM_DEFINES}
+            -D__SAMR21G18A__
+            -D_GCF_RELEASE_
+    )
 else()
-    set(LINKER_SCRIPT_PATH "-T${PROJECT_SOURCE_DIR}/third_party/ATMEL/LINKER/samr21e18a_flash.ld" )
+    target_link_libraries(samr21-CMSIS
+        PUBLIC
+            -T${PROJECT_SOURCE_DIR}/third_party/ATMEL/LINKER/samr21e18a_flash.ld
+        PRIVATE
+            ot-config
+    )
+
+    target_compile_definitions(samr21-CMSIS
+        PUBLIC
+            ${OT_PLATFORM_DEFINES}
+            -D__SAMR21G18A__
+    )
 endif()
 
-target_link_libraries(samr21-CMSIS
-    PUBLIC
-	${LINKER_SCRIPT_PATH}
-    PRIVATE
-        ot-config
-)
+
 
 target_link_libraries(samr21-tusb
     PRIVATE
@@ -53,11 +72,7 @@ target_link_libraries(samr21-tusb
         openthread-r21
 )
 
-target_compile_definitions(samr21-CMSIS
-    PUBLIC
-        ${OT_PLATFORM_DEFINES}
-        -D__SAMR21G18A__
-)
+
 
 target_compile_definitions(samr21-tusb
     PUBLIC

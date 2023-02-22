@@ -16,6 +16,7 @@ add_library(openthread-r21
     HAL/radio/samr21RadioVars.c
     HAL/radio/samr21TrxRegCopy.c
     HAL/radio/samr21Trx.c
+    HAL/radio/samr21RadioFeCtrl.c
     OT-Utils/link_metrics.cpp
     OT-Utils/otUtilWrapper_macFrame.cpp
     OT-Utils/soft_source_match_table.c

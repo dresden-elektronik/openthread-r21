@@ -10,6 +10,25 @@ struct waitForHostBuffer_s
 } s_waitForHostBuffer;
 
 
+static const uint8_t gcfResetCommand[] =
+{
+    0x0B,
+    0x03,
+    0x00,
+    0x0C,
+    0x00,
+    0x05,
+    0x00,
+    0x26,
+    0x02,
+    0x00,
+    0x00,
+    0x00
+};
+
+#ifdef _GCF_RELEASE_
+    extern volatile bool g_keepAlive;
+#endif
 
 void samr21OtPlatUsbTask(){
 
@@ -22,8 +41,13 @@ void samr21OtPlatUsbTask(){
         uint32_t count = tud_cdc_read(buf, sizeof(buf));
 
         otPlatUartReceived(buf,count);        
+    
+#ifdef _GCF_RELEASE_
+        if( ! strncmp( buf, gcfResetCommand, sizeof(gcfResetCommand) ) ){
+            NVIC_SystemReset();
+        }
+#endif
     }
-
 }
 
 otError otPlatUartEnable(void){
