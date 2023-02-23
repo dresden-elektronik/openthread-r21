@@ -49,6 +49,8 @@ main()
     options+=("$@")
 
     build "${options[@]}"
+
+    exec ${OT_SRCDIR}/gcc-arm-none-eabi/bin/arm-none-eabi-objcopy -O binary ${OT_SRCDIR}/out/build/bin/ot-rcp ${OT_SRCDIR}/out/ot-rcp-gcf.bin
 }
 
 main "$@"

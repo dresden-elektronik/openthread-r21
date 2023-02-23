@@ -40,7 +40,8 @@
         "alarm-micro.h": "c",
         "instance.h": "c",
         "otutilwrapper_macframe.h": "c",
-        "samr21radiofectrl.h": "c"
+        "samr21radiofectrl.h": "c",
+        "samr21usb.h": "c"
     },
     "cmake.configureOnOpen": false,
     "cortex-debug.variableUseNaturalFormat": false

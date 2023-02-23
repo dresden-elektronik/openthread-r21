@@ -44,6 +44,9 @@
 #define BOARD_TUD_MAX_SPEED   OPT_MODE_FULL_SPEED
 #endif
 
+#ifndef TUP_DCD_ENDPOINT_MAX
+#define TUP_DCD_ENDPOINT_MAX 8
+#endif
 
 //--------------------------------------------------------------------
 // Common Configuration

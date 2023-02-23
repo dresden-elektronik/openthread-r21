@@ -10,6 +10,8 @@ struct waitForHostBuffer_s
 } s_waitForHostBuffer;
 
 
+#ifdef _GCF_RELEASE_
+
 static const uint8_t gcfResetCommand[] =
 {
     0x0B,
@@ -26,8 +28,10 @@ static const uint8_t gcfResetCommand[] =
     0x00
 };
 
-#ifdef _GCF_RELEASE_
-    extern volatile bool g_keepAlive;
+
+extern volatile bool g_keepAlive;
+
+
 #endif
 
 void samr21OtPlatUsbTask(){
