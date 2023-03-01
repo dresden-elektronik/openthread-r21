@@ -34,7 +34,7 @@
 
 #define USB_PID   0x0032    
 #define USB_VID   0x1cf1
-#define USB_BCD   0x0201
+#define USB_BCD   0x0200
 
 //--------------------------------------------------------------------+
 // Device Descriptors
