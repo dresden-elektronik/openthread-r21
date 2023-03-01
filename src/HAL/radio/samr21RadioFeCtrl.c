@@ -16,8 +16,8 @@ void samr21FeCtrlInit(){
     PORT->Group[0].DIRSET.reg= PORT_PA08;
     //Setup Mux Settings
     PORT->Group[0].WRCONFIG.reg =
-        PORT_WRCONFIG_HWSEL
-        |PORT_WRCONFIG_WRPINCFG
+        //PORT_WRCONFIG_HWSEL
+        PORT_WRCONFIG_WRPINCFG
         |PORT_WRCONFIG_WRPMUX
         |PORT_WRCONFIG_PMUX(MUX_PA08F_RFCTRL_FECTRL0)
         //PORT_WRCONFIG_PULLEN
@@ -28,8 +28,8 @@ void samr21FeCtrlInit(){
     //Setup Mux Settings
     PORT->Group[0].DIRSET.reg= PORT_PA09;
     PORT->Group[0].WRCONFIG.reg =
-        PORT_WRCONFIG_HWSEL
-        |PORT_WRCONFIG_WRPINCFG
+        //PORT_WRCONFIG_HWSEL
+        PORT_WRCONFIG_WRPINCFG
         |PORT_WRCONFIG_WRPMUX
         |PORT_WRCONFIG_PMUX(MUX_PA09F_RFCTRL_FECTRL1)
         //PORT_WRCONFIG_PULLEN

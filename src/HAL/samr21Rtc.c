@@ -57,11 +57,11 @@ void samr21RtcDeinit(){
 
     //Disable permanent Sync with COUT Register
     RTC->MODE0.READREQ.reg = 0x00;
-    samr21delaySysTick(100);
 
     //Disable RTC
-    RTC->MODE0.CTRL.bit.ENABLE = 0;
-    while(RTC->MODE0.STATUS.bit.SYNCBUSY);
+    RTC->MODE0.CTRL.bit.SWRST = 1;
+    samr21delaySysTick(100);
+
 
     //Disable RTC In Power Manger
     PM->APBAMASK.bit.RTC_ = 0;

@@ -18,6 +18,8 @@ void samr21ClockTrxSrcInit(){
         //Deinit Timer and Counter first (to prevent an Error after a soft reset while modifying the clocksystem)
         samr21RtcDeinit();
         samr21TimerDeinit();
+
+        
   
         //Setup GCLKGEN 0 (CPU Clock) to Use the internal OSC8M
         //This is needed so a reliable Clock for the CPU is available while Clocks are being Setup
@@ -49,11 +51,13 @@ void samr21ClockTrxSrcInit(){
         ;
         while(GCLK->STATUS.bit.SYNCBUSY);
 
-        samr21delaySysTick(100);
+        //Disable DFLL
+        SYSCTRL->DFLLCTRL.reg = 0x00;
+        while(SYSCTRL->DFLLCTRL.bit.ENABLE);
 
+        //Reset GCLK
         GCLK->CTRL.reg = GCLK_CTRL_SWRST;
 
-        samr21delaySysTick(100);
         //Wait for synchronization 
         while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
 

@@ -14,7 +14,6 @@
 #include "samr21Usb.h"
 
 
-#define _DEBUG
 
 #ifdef _DEBUG
     #include "samr21debugPins.h"
@@ -24,25 +23,63 @@
     volatile bool g_keepAlive = true;
 #endif
 
+void conbeeTickleWdt(){
+#ifdef _GCF_RELEASE_
+    //WDT
+    if(g_keepAlive){
+        WDT->CLEAR.reg = WDT_CLEAR_CLEAR_KEY_Val;
+    }
+#endif
+}
+
+
+
 void otSysInit(int argc, char *argv[])
 {
-    samr21NvmInit();
-    samr21ClockTrxSrcInit();
-    samr21TrxInterfaceInit();
-    samr21TrxSetupMClk(0x5); //MCLK 1MHz -> 16 Mhz
-    samr21ClockInitAfterTrxSetup();
-
-    samr21TimerInit();
-
-    samr21RadioInitIrq();  
-
-    samr21UsbInit();
 
 #ifdef _DEBUG
     samr21DebugPortsInit();
 #endif
 
-#ifdef _GCF_RELEASE_
+#ifdef _GCF_RELEASE_   
+    samr21NvmInit();
+
+    conbeeTickleWdt();
+    samr21ClockTrxSrcInit();
+
+    conbeeTickleWdt();
+    samr21TrxInterfaceInit();
+    
+    conbeeTickleWdt();
+    samr21TrxSetupMClk(0x5); //MCLK 1MHz -> 16 Mhz
+    
+    conbeeTickleWdt();
+    samr21ClockInitAfterTrxSetup();
+    
+    conbeeTickleWdt();
+    samr21TimerInit();
+    
+    conbeeTickleWdt();
+    samr21RadioInitIrq();  
+
+    conbeeTickleWdt();
+    samr21UsbInit();
+
+    conbeeTickleWdt();
+    samr21FeCtrlInit();
+
+    //Confirm the App Started to Bootloader
+    uint8_t confirmedBtlFlag = 0x77;
+    samr21NvmWriteWithinRow(0x4FFF, &confirmedBtlFlag, sizeof(uint8_t));
+#else
+    samr21NvmInit();
+    samr21ClockTrxSrcInit();
+    samr21TrxInterfaceInit();
+    samr21TrxSetupMClk(0x5); //MCLK 1MHz -> 16 Mhz
+    samr21ClockInitAfterTrxSetup();
+    samr21TimerInit();
+    samr21RadioInitIrq();  
+    samr21UsbInit();
     samr21FeCtrlInit();
 #endif
 
