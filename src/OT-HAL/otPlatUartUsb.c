@@ -105,4 +105,11 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts){
         //s_waitForHostBuffer.len = 0;
         otPlatUartSendDone();
     }
+
+
+    //Dirty WA
+    if(!dtr){
+        NVIC_SystemReset();
+    }
+
 }
