@@ -15,7 +15,15 @@
 #include "samr21.h"
 #include "tusb.h"
 
+
+/**
+ * Inits the Ports and Clocks for the TinyUSB Driver
+*/
 void samr21UsbInit();
-void samr21UsbEchoTask();
+
+/**
+ * Deinit Clock for USB Module
+*/
+void samr21UsbDeinit();
 
 #endif //_SAMR21_USB_H_

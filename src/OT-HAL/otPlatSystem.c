@@ -57,10 +57,7 @@ void otSysInit(int argc, char *argv[])
     samr21ClockInitAfterTrxSetup();
     
     conbeeTickleWdt();
-    samr21TimerInit();
-    
-    conbeeTickleWdt();
-    samr21RadioInitIrq();  
+    samr21RtcInit();
 
     conbeeTickleWdt();
     samr21UsbInit();
@@ -72,16 +69,35 @@ void otSysInit(int argc, char *argv[])
     uint8_t confirmedBtlFlag = 0x77;
     samr21NvmWriteWithinRow(0x4FFF, &confirmedBtlFlag, sizeof(uint8_t));
 #else
+
     samr21NvmInit();
+    
     samr21ClockTrxSrcInit();
     samr21TrxInterfaceInit();
     samr21TrxSetupMClk(0x5); //MCLK 1MHz -> 16 Mhz
+
     samr21ClockInitAfterTrxSetup();
-    samr21TimerInit();
-    samr21RadioInitIrq();  
+    samr21RtcInit();
     samr21UsbInit();
-    samr21FeCtrlInit();
+
 #endif
+
+    //TCC1 Used by OT Micros Alarm
+    samr21Timer1Init(0); // 1MHz / (2^0) -> 1us resolution
+    //TCC2 Used by OT Millis Alarm
+    samr21Timer2Init(7); // 1MHz / (2^7) -> ~1ms resolution
+
+
+    //192 Lowest, 0 Highest
+    NVIC_SetPriority(TCC0_IRQn, 192); //Unused 
+    NVIC_SetPriority(TCC1_IRQn, 5); //Used by OT Micro Alarm
+    NVIC_SetPriority(TCC2_IRQn, 4); //Used by OT Millis Alarm
+    NVIC_SetPriority(TC3_IRQn, 192); //Unused
+    NVIC_SetPriority(TC4_IRQn, 2); //Timer For Mac-Orchestration 
+    NVIC_SetPriority(TC5_IRQn, 0); //Critical Timer for Mac-Security Feature
+    NVIC_SetPriority(EIC_IRQn, 1); //IRQs from AT86RF233
+    NVIC_SetPriority(USB_IRQn, 4); //For Communication with USB-Host
+    NVIC_SetPriority(RTC_IRQn, 3); //For timed Transmission
 
 }
 
@@ -97,8 +113,8 @@ void otSysDeinit(void)
 
 void otSysProcessDrivers(otInstance *aInstance)
 {
-    samr21OtPlatUsbTask();
-    samr21OtPlatRadioTask();
+    samr21OtPlatCommReceiveTask();
+    samr21OtPlatRadioReceiveTask();
 
 #ifdef _GCF_RELEASE_
     //WDT

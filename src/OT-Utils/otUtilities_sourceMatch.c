@@ -37,8 +37,8 @@
 #include <string.h>
 
 #include <openthread/logging.h>
-#include "soft_source_match_table.h"
-#include "code_utils.h"
+#include "otUtilities_sourceMatch.h"
+#include "otUtilities_codeUtils.h"
 
 #if RADIO_CONFIG_SRC_MATCH_SHORT_ENTRY_NUM || RADIO_CONFIG_SRC_MATCH_EXT_ENTRY_NUM
 static uint16_t sPanId = 0;

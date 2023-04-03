@@ -58,7 +58,7 @@ extern uint32_t __d_nv_mem_end;
  * When defined to 1, the platform MUST implement the otPlatFlash* APIs instead of the otPlatSettings* APIs.
  *
  */
-#define OPENTHREAD_CONFIG_PLATFORM_FLASH_API_ENABLE 0
+#define OPENTHREAD_CONFIG_PLATFORM_FLASH_API_ENABLE 1
 
 /**
  * @def RADIO_CONFIG_SRC_MATCH_ENTRY_NUM
@@ -76,6 +76,7 @@ extern uint32_t __d_nv_mem_end;
  *
  */
 #define OPENTHREAD_CONFIG_DEFAULT_TRANSMIT_POWER 5
+
 
 /**
  * @def OPENTHREAD_CONFIG_NCP_HDLC_ENABLE

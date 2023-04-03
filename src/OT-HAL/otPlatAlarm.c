@@ -11,28 +11,28 @@
 
 static otInstance *s_instance = NULL;
 
-void otPlatAlarmMilliStartAt(otInstance *aInstance, uint32_t aT0, uint32_t aDt)
+void otPlatAlarmMilliStartAt(otInstance *a_instance, uint32_t a_t0, uint32_t a_dT)
 {
-    s_instance = aInstance;
-    samr21Timer1Set( ( aDt - ( samr21RtcGetTimestamp() - aT0 ) ) * MICRO_SECS_PER_MILLI_SEC );
+    s_instance = a_instance;
+    samr21Timer2Set( a_dT - ( samr21RtcGetTimestamp() - a_t0 ) );
 }
 
-void otPlatAlarmMicroStartAt(otInstance *aInstance, uint32_t aT0, uint32_t aDt)
+void otPlatAlarmMicroStartAt(otInstance *a_Instance, uint32_t a_t0, uint32_t a_dT)
 {
-    s_instance = aInstance;
-    samr21Timer0Set( ( aDt - ( samr21RtcGetTimestamp() - aT0 ) ) );
+    s_instance = a_Instance;
+    samr21Timer1Set( a_dT - ( samr21RtcGetTimestamp() - a_t0 ) );
 }
 
-void otPlatAlarmMilliStop(otInstance *aInstance)
+void otPlatAlarmMilliStop(otInstance *a_Instance)
 {
-    s_instance = aInstance;
+    s_instance = a_Instance;
+    samr21Timer2Stop();
+}
+
+void otPlatAlarmMicroStop(otInstance *a_Instance)
+{
+    s_instance = a_Instance;
     samr21Timer1Stop();
-}
-
-void otPlatAlarmMicroStop(otInstance *aInstance)
-{
-    s_instance = aInstance;
-    samr21Timer0Stop();
 }
 
 uint32_t otPlatAlarmMilliGetNow(void)
@@ -45,12 +45,18 @@ uint32_t otPlatAlarmMicroGetNow(void)
     return samr21RtcGetTimestamp();
 }
 
-void TCC0_Handler(){
-    TCC0->INTFLAG.bit.OVF = 1;
-    otPlatAlarmMicroFired(s_instance);
-}
-
 void TCC1_Handler(){
     TCC1->INTFLAG.bit.OVF = 1;
-    otPlatAlarmMilliFired(s_instance);
+
+    if(s_instance){
+        otPlatAlarmMicroFired(s_instance);
+    }
+}
+
+void TCC2_Handler(){
+    TCC2->INTFLAG.bit.OVF = 1;
+
+    if(s_instance){
+        otPlatAlarmMilliFired(s_instance);
+    }
 }

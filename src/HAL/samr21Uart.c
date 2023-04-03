@@ -54,10 +54,10 @@ void samr21UartInit(){
     //Reset SERCOM4
         SERCOM2->USART.CTRLA.bit.SWRST = 1;
 
-    // Wait for SERCOM4 reset to finish
+    // Wait for SERCOM2 reset to finish
         while ( SERCOM2->USART.CTRLA.bit.SWRST || SERCOM2->USART.SYNCBUSY.bit.SWRST );
     
-    //Setup SERCOM4
+    //Setup SERCOM2
         
         //F_ref = 16MHz (if At86r233 ist setup correctly) F_baud = F_ref / 2*(BAUD+1) ---> BAUD = 7 F_baud = 3MBAUD
         SERCOM2->USART.BAUD.reg=
@@ -95,7 +95,7 @@ void samr21UartInit(){
 }
 
 void samr21UartDeinit(){
-    //Disable RTC
+    //Disable
     SERCOM2->USART.CTRLA.bit.ENABLE = 0;
     while ( SERCOM2->USART.CTRLA.bit.ENABLE || SERCOM2->USART.SYNCBUSY.bit.ENABLE );
 
@@ -111,8 +111,8 @@ void samr21UartDeinit(){
     ;
 }
 
-void samr21UartSend(uint8_t data){
+void samr21UartSend(uint8_t a_data){
     while (!SERCOM2->USART.INTFLAG.bit.DRE);
     //Put data into the tranmitt buffer to start transmission
-    SERCOM2->USART.DATA.bit.DATA = data;
+    SERCOM2->USART.DATA.bit.DATA = a_data;
 }

@@ -41,8 +41,33 @@
         "instance.h": "c",
         "otutilwrapper_macframe.h": "c",
         "samr21radiofectrl.h": "c",
-        "samr21usb.h": "c"
+        "samr21usb.h": "c",
+        "dcd.h": "c",
+        "tusb.h": "c",
+        "cdc_device.h": "c",
+        "tusb_common.h": "c",
+        "tusb_fifo.h": "c",
+        "samr21at86rf233.h": "c",
+        "otutilities_linkmetrics.h": "c",
+        "otutilities_macframe.h": "c",
+        "otutilities_sourcematch.h": "c",
+        "code_utils.h": "c",
+        "link_metrics.h": "c",
+        "samr21e16a.h": "c",
+        "samr21e18a.h": "c",
+        "samr21g17a.h": "c",
+        "samr21g18a.h": "c",
+        "system_samr21.h": "c",
+        "stat.h": "c",
+        "samr21clock.h": "c",
+        "samr21debugpins.h": "c"
     },
     "cmake.configureOnOpen": false,
-    "cortex-debug.variableUseNaturalFormat": false
+    "cortex-debug.variableUseNaturalFormat": false,
+    "cSpell.words": [
+        "Framebuffer",
+        "Pdsu",
+        "RSSI",
+        "SAMR"
+    ]
 }

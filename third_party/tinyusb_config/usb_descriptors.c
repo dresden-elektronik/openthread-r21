@@ -254,14 +254,16 @@ uint16_t const* tud_descriptor_string_cb(uint8_t index, uint16_t langid)
     memcpy(&_desc_str[1], string_desc_arr[0], 2);
     chr_count = 1;
   }
-  //ADDED FOR CONBEE2 THREAD IMPLEMENTAION
+
+#ifdef _GCF_RELEASE_
   else if ( index == 3 ){
     for(uint8_t i = 0; i < 9; i++){
       _desc_str[1+i] = ((uint8_t*)0x00804012)[i];
     }
     chr_count = 9;
   }
-  //REMOVE IF string_desc_arr iSerial IS USED
+#endif
+  
   else
   {
     // Note: the 0xEE index string is a Microsoft OS 1.0 Descriptors.

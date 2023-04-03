@@ -13,9 +13,9 @@ extern uint32_t g_currentCpuClkCycle_ns;
 
 
 
-void samr21delaySysTick(uint32_t delayCycles){
+void samr21delaySysTick(uint32_t a_delayCycles){
     //Sets the trigger value
-    SysTick->LOAD = delayCycles;
+    SysTick->LOAD = a_delayCycles;
     //Clear current value register
     SysTick->VAL = 0;
     //Enable Systick
@@ -29,12 +29,4 @@ void samr21delaySysTick(uint32_t delayCycles){
 
     //Disable Systick
     SysTick->CTRL = 0;
-}
-
-void samr21delayLoop(uint32_t delayCycles){
-    delayCycles = delayCycles >> 3; //Devide by 8
-    for (uint32_t i = 0; i < delayCycles; i++)
-    {
-        __NOP();
-    }
 }

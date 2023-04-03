@@ -9,11 +9,13 @@
  */
 #include "samr21.h"
 
-#ifndef _SAMR21_NVM_H_
-#define _SAMR21_NVM_H_
+#ifndef _SAMR21_FECTRL_H_
+#define _SAMR21_FECTRL_H_
 
-
+/**
+ * Sets up the FE-CTRL Multiplexer of the SAMR21, so the Frontend can be Controlled
+ */
 void samr21RadioFeCtrlInit();
 
 
-#endif //_SAMR21_PM_H_
+#endif //_SAMR21_FECTRL_H_

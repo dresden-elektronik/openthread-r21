@@ -53,7 +53,8 @@ MEMORY
   reserved_pds    (r)   : ORIGIN = 0x00005100, LENGTH = 0x00004000
   reserved_crc    (r)   : ORIGIN = 0x00009100, LENGTH = 0x00000100
   rom             (rx)  : ORIGIN = 0x00009200, LENGTH = 0x00035D00
-  reserved_config (r)   : ORIGIN = 0x0003EF00, LENGTH = 0x00000100
+  nvmem           (r)   : ORIGIN = 0x0003EF00, LENGTH = 0x00000E00
+  reserved_nvmem  (r)   : ORIGIN = 0x0003FD00, LENGTH = 0x00000300
   ram             (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00008000
 }
 
@@ -64,7 +65,7 @@ STACK_SIZE = DEFINED(STACK_SIZE) ? STACK_SIZE : DEFINED(__stack_size__) ? __stac
 SECTIONS
 {
     .vectors : {
-        . = ALIGN(4);
+        . = ALIGN(4);c
         _sfixed = .;
         KEEP(*(.vectors .vectors.*))
     } > vec_rom
@@ -126,6 +127,12 @@ SECTIONS
 
     . = ALIGN(4);
     _etext = .;
+
+    .nvmem : {
+        . = ALIGN(4);c
+        _snvmem = .;
+    } > nvmem
+
 
     .relocate : AT (_etext)
     {

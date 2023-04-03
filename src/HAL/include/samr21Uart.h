@@ -15,11 +15,22 @@
 #include "samr21.h"
 #include "samr21Uart.h"
 
-
+/**
+ * Inits the SERCOM2 and corrsponding Pins of the SAMR21 as a UART Debug Output
+ */
 void samr21UartInit();
 
+/**
+ * Deinits the SERCOM2 of the SAMR21
+ */
 void samr21UartDeinit();
 
+
+/**
+ * Sends a Single Character of data via the DEBUG-UART (SERCOM2)
+ * 
+ * @param[in] data Character to be vie Debug UART
+ */
 void samr21UartSend(uint8_t data);
 
 

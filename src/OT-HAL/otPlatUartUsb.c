@@ -1,4 +1,4 @@
-#include "uart.h"
+#include "otUtilities_uart.h"
 #include "samr21Usb.h"
     
 volatile static bool s_dtr = false;
@@ -11,7 +11,6 @@ struct waitForHostBuffer_s
 
 
 #ifdef _GCF_RELEASE_
-
 static const uint8_t gcfResetCommand[] =
 {
     0x0B,
@@ -27,14 +26,10 @@ static const uint8_t gcfResetCommand[] =
     0x00,
     0x00
 };
-
-
 extern volatile bool g_keepAlive;
-
-
 #endif
 
-void samr21OtPlatUsbTask(){
+void samr21OtPlatCommReceiveTask(){
 
     tud_task(); 
 
@@ -111,5 +106,4 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts){
     if(!dtr){
         NVIC_SystemReset();
     }
-
 }

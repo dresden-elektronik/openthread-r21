@@ -6,27 +6,22 @@ add_library(openthread-r21
     HAL/samr21Timer.c
     HAL/samr21Usb.c
     HAL/samr21Uart.c
-    HAL/radio/samr21RadioAddrMatch.c
-    HAL/radio/samr21RadioAes.c
-    HAL/radio/samr21RadioCtrl.c
-    HAL/radio/samr21RadioIrqHandler.c
-    HAL/radio/samr21RadioEdHandler.c
-    HAL/radio/samr21RadioRxHandler.c
-    HAL/radio/samr21RadioTxHandler.c
-    HAL/radio/samr21RadioVars.c
-    HAL/radio/samr21TrxRegCopy.c
-    HAL/radio/samr21Trx.c
-    HAL/radio/samr21RadioFeCtrl.c
-    OT-Utils/link_metrics.cpp
-    OT-Utils/otUtilWrapper_macFrame.cpp
-    OT-Utils/soft_source_match_table.c
+    HAL/samr21RadioCtrl.c
+    HAL/samr21Trx.c
+    HAL/samr21RadioFeCtrl.c
+    OT-Utils/otUtilities_linkMetrics.cpp
+    OT-Utils/otUtilities_macFrame.cpp
+    OT-Utils/otUtilities_sourceMatch.c
     OT-HAL/otPlatAlarm.c
+    OT-HAL/otFlash.c
     OT-HAL/otPlatEntropy.c
     OT-HAL/otPlatRadio.c
     OT-HAL/otPlatSystem.c
     OT-HAL/otPlatUartUsb.c
     OT-HAL/otPlatLog.c
+    syscallRedirect.c 
 )
+
 
 target_include_directories(openthread-r21
     PRIVATE
@@ -34,7 +29,6 @@ target_include_directories(openthread-r21
         HAL
         HAL/include
         HAL/radio
-        HAL/radio/include
         OT-HAL
         OT-HAL/include
         OT-Utils

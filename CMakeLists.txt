@@ -1,8 +1,13 @@
 
 cmake_minimum_required(VERSION 3.10.2)
+
+set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
+
 project(ot-samr21 VERSION 0.0.1)
 
 set(OT_PLATFORM_LIB "openthread-r21")
+ 
+
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
@@ -22,7 +27,6 @@ target_include_directories(ot-config INTERFACE
     ${PROJECT_SOURCE_DIR}/src/OT-HAL/include/
 
     ${PROJECT_SOURCE_DIR}/src/HAL/include/
-    ${PROJECT_SOURCE_DIR}/src/HAL/radio/include/
 )
 
 add_subdirectory(third_party)

@@ -57,11 +57,11 @@ void samr21RtcDeinit(){
 
     //Disable permanent Sync with COUT Register
     RTC->MODE0.READREQ.reg = 0x00;
-
+    samr21delaySysTick(100);
+    
     //Disable RTC
     RTC->MODE0.CTRL.bit.SWRST = 1;
     samr21delaySysTick(100);
-
 
     //Disable RTC In Power Manger
     PM->APBAMASK.bit.RTC_ = 0;
@@ -79,16 +79,23 @@ uint32_t samr21RtcGetTimestamp(){
     return RTC->MODE0.COUNT.reg;
 }
 
-void samr21RtcSetAlarm(uint32_t alarmTimestamp){
-    RTC->MODE0.COMP[0].reg = alarmTimestamp;
+void samr21RtcSetAbsoluteAlarm(uint32_t a_alarmTimestamp){
+    RTC->MODE0.COMP[0].reg = a_alarmTimestamp;
     RTC->MODE0.INTFLAG.bit.CMP0 = 1;
     RTC->MODE0.INTENSET.bit.CMP0 = 1;
     NVIC_EnableIRQ(RTC_IRQn);
 }
 
-//MOVED TO RADIO IRQ HANDLER
-// void RTC_Handler(){
-//     RTC->MODE0.INTENFLAG.bit.CMP0 = 1;
-//     RTC->MODE0.INTENCLR.bit.CMP0 = 1;
-//     NVIC_DisableIRQ(RTC_IRQn);
-// }
+void samr21RtcSetRelativeAlarm(uint32_t a_duration){
+    RTC->MODE0.COMP[0].reg = samr21RtcGetTimestamp() + a_duration;
+    RTC->MODE0.INTFLAG.bit.CMP0 = 1;
+    RTC->MODE0.INTENSET.bit.CMP0 = 1;
+    NVIC_EnableIRQ(RTC_IRQn);
+}
+
+void samr21RtcStopAlarm(){
+    NVIC_DisableIRQ(RTC_IRQn);
+    RTC->MODE0.INTFLAG.bit.CMP0 = 1;
+    RTC->MODE0.INTENCLR.bit.CMP0 = 1;
+}
+

@@ -2,445 +2,483 @@
 
 #include "openthread/platform/radio.h"
 
-#include "samr21RadioCtrl.h"
-#include "samr21RadioRxHandler.h"
-#include "samr21RadioTxHandler.h"
-#include "samr21RadioEdHandler.h"
-#include "samr21RadioAddrMatch.h"
-#include "soft_source_match_table.h"
+#include "otUtilities_macFrame.h"
+#include "otUtilities_sourceMatch.h"
+#include "otUtilities_linkMetrics.h"
+
 #include "samr21Nvm.h"
+#include "samr21RadioCtrl.h"
+#include "samr21Trx.h"
+#include "samr21Rtc.h"
 
 
-static otRadioState s_radioState = OT_RADIO_STATE_DISABLED;
-static int8_t s_lastEdResult = INT8_MAX;
+static otInstance * s_instance_p = NULL;
 
-static bool s_pendingRxBuffer;
 
-otInstance * s_instance = NULL;
+//Radio Configuration
 
-void otPlatRadioGetIeeeEui64(otInstance *aInstance, uint8_t *aIeeeEui64)
-{
-    uint64_t ieeeAddr = samr21NvmGetIeeeAddr();
+otRadioCaps otPlatRadioGetCaps(otInstance *a_instance_p){
 
-    for (uint8_t i = 0; i < sizeof(uint64_t); i++)
-    {
-        aIeeeEui64[i] = ((uint8_t *)&ieeeAddr)[i];
-    }
-}
-
-otRadioState otPlatRadioGetState(otInstance *aInstance)
-{
-    OT_UNUSED_VARIABLE(aInstance);
-    return (otRadioState)samr21RadioCtrlGetState();
-}
-
-void otPlatRadioSetExtendedAddress(otInstance *aInstance, const otExtAddress *aAddress)
-{
-    OT_UNUSED_VARIABLE(aInstance);
-    samr21RadioSetIeeeAddr(aAddress->m8);
-}
-
-void otPlatRadioSetShortAddress(otInstance *aInstance, uint16_t aAddress)
-{
-    OT_UNUSED_VARIABLE(aInstance);
-
-    samr21RadioSetShortAddr(aAddress);
-}
-
-void otPlatRadioSetPanId(otInstance *aInstance, uint16_t aPanId)
-{
-    OT_UNUSED_VARIABLE(aInstance);
-
-    samr21RadioSetPanId(aPanId);
-
-#if RADIO_CONFIG_SRC_MATCH_SHORT_ENTRY_NUM || RADIO_CONFIG_SRC_MATCH_EXT_ENTRY_NUM
-    utilsSoftSrcMatchSetPanId(aPanId);
-#endif // RADIO_CONFIG_SRC_MATCH_SHORT_ENTRY_NUM || RADIO_CONFIG_SRC_MATCH_EXT_ENTRY_NUM}
-}
-
-otError otPlatRadioEnable(otInstance *aInstance)
-{
-    s_instance = aInstance;
-    // Always on, cause the TRX-Clock is used as the ref Clock for the MCU-Clocks
-    samr21RadioCtrlSetState(SAMR21_RADIO_STATE_SLEEP);
-
-    return OT_ERROR_NONE;
-}
-
-otError otPlatRadioDisable(otInstance *aInstance)
-{
-    OT_UNUSED_VARIABLE(aInstance);
-
-    // Always on, cause the TRX-Clock is used as the ref Clock for the MCU-Clocks
-    samr21RadioCtrlSetState(SAMR21_RADIO_STATE_DISABLED);
-
-    return OT_ERROR_NONE;
-}
-
-otError otPlatRadioSetCcaEnergyDetectThreshold(otInstance *aInstance, int8_t aThreshold)
-{
-    OT_UNUSED_VARIABLE(aInstance);
-
-    samr21RadioCtrlSetCcaThreshold(aThreshold);
-
-    return OT_ERROR_NONE;
-}
-
-otError otPlatRadioGetCcaEnergyDetectThreshold(otInstance *aInstance, int8_t *aThreshold)
-{
-    OT_UNUSED_VARIABLE(aInstance);
-
-    *(aThreshold) = samr21RadioCtrlGetCurrentCcaThreshold();
-
-    return OT_ERROR_NONE;
-}
-
-otError otPlatRadioGetTransmitPower(otInstance *aInstance, int8_t *aPower)
-{
-    OT_UNUSED_VARIABLE(aInstance);
-
-    *(aPower) = samr21RadioCtrlGetTxPower();
-}
-
-otError otPlatRadioSetTransmitPower(otInstance *aInstance, int8_t aPower)
-{
-    OT_UNUSED_VARIABLE(aInstance);
-
-    samr21RadioCtrlSetTxPower(aPower);
-
-    return OT_ERROR_NONE;
-}
-
-int8_t otPlatRadioGetReceiveSensitivity(otInstance *aInstance)
-{
-    OT_UNUSED_VARIABLE(aInstance);
-
-    return AT86RF233_RSSI_BASE_VAL;
-}
-
-bool otPlatRadioIsEnabled(otInstance *aInstance)
-{
-    Samr21RadioState state = samr21RadioCtrlGetState();
-
-    if (
-        state == SAMR21_RADIO_STATE_DISABLED || state == SAMR21_RADIO_STATE_INVALID)
-    {
-        return false;
-    }
-    return true;
-}
-
-otRadioCaps otPlatRadioGetCaps(otInstance *aInstance)
-{
-
-    OT_UNUSED_VARIABLE(aInstance);
+    OT_UNUSED_VARIABLE(a_instance_p);
 
     return OT_RADIO_CAPS_ACK_TIMEOUT | OT_RADIO_CAPS_ENERGY_SCAN | OT_RADIO_CAPS_TRANSMIT_RETRIES | OT_RADIO_CAPS_CSMA_BACKOFF | OT_RADIO_CAPS_SLEEP_TO_TX | OT_RADIO_CAPS_TRANSMIT_SEC | OT_RADIO_CAPS_TRANSMIT_TIMING | OT_RADIO_CAPS_RECEIVE_TIMING;
 }
 
-otError otPlatRadioSetFemLnaGain(otInstance *aInstance, int8_t aGain)
-{
 
-    OT_UNUSED_VARIABLE(aInstance);
-    OT_UNUSED_VARIABLE(aGain);
+
+//TODO
+// const char *otPlatRadioGetVersionString(otInstance *a_instance_p){
+//    OT_UNUSED_VARIABLE(a_instance_p);
+// }
+
+int8_t otPlatRadioGetReceiveSensitivity(otInstance *a_instance_p){
+    OT_UNUSED_VARIABLE(a_instance_p);
+
+#ifdef _GCF_RELEASE_
+    //Frontend gives -10dBm Rx Sensitivity
+    return AT86RF233_RSSI_BASE_VAL_dBm - 10;
+#else
+    return AT86RF233_RSSI_BASE_VAL_dBm;
+#endif
+
+}
+
+void otPlatRadioGetIeeeEui64(otInstance *a_instance_p, uint8_t *a_ieeeEui64_p)
+{
+    OT_UNUSED_VARIABLE(a_instance_p);
+    samr21NvmGetIeeeAddr(a_ieeeEui64_p);
+}
+
+void otPlatRadioSetPanId(otInstance *a_instance_p, otPanId a_panId){
+    OT_UNUSED_VARIABLE(a_instance_p); 
+
+    samr21RadioCtrlSetPanId(a_panId);
+
+#if RADIO_CONFIG_SRC_MATCH_SHORT_ENTRY_NUM || RADIO_CONFIG_SRC_MATCH_EXT_ENTRY_NUM
+    utilsSoftSrcMatchSetPanId(a_panId);
+#endif // RADIO_CONFIG_SRC_MATCH_SHORT_ENTRY_NUM || RADIO_CONFIG_SRC_MATCH_EXT_ENTRY_NUM}
+}
+
+void otPlatRadioSetExtendedAddress(otInstance *a_instance_p, const otExtAddress *a_address_p)
+{
+    OT_UNUSED_VARIABLE(a_instance_p);
+
+    samr21RadioCtrlSetExtendedAddress(a_address_p->m8);
+}
+
+void otPlatRadioSetShortAddress(otInstance *a_instance_p, uint16_t a_address_p)
+{
+    OT_UNUSED_VARIABLE(a_instance_p);
+
+    samr21RadioCtrlSetShortAddress(a_address_p);
+}
+
+otError otPlatRadioGetTransmitPower(otInstance *a_instance_p, int8_t *a_power_p){
+    OT_UNUSED_VARIABLE(a_instance_p);
+
+    *a_power_p = samr21TrxGetTxPower();
+
+    return OT_ERROR_NONE;
+}
+
+otError otPlatRadioSetTransmitPower(otInstance *a_instance_p, int8_t a_power){
+    OT_UNUSED_VARIABLE(a_instance_p);
+
+    samr21TrxSetTxPower(a_power);
+
+    return OT_ERROR_NONE;
+}
+
+otError otPlatRadioGetCcaEnergyDetectThreshold(otInstance *a_instance_p, int8_t *a_threshold_p){
+    OT_UNUSED_VARIABLE(a_instance_p);
+
+    *a_threshold_p = samr21RadioCtrlGetCcaThreshold();
+
+    return OT_ERROR_NONE;
+}
+
+otError otPlatRadioSetCcaEnergyDetectThreshold(otInstance *a_instance_p, int8_t a_threshold){
+    OT_UNUSED_VARIABLE(a_instance_p);
+
+    samr21RadioCtrlSetCcaThreshold(a_threshold);
+
+    return OT_ERROR_NONE;
+}
+
+//TODO
+otError otPlatRadioGetFemLnaGain(otInstance *a_instance_p, int8_t *a_gain_p){
+    OT_UNUSED_VARIABLE(a_instance_p);
+    OT_UNUSED_VARIABLE(a_gain_p);
 
     return OT_ERROR_NOT_IMPLEMENTED;
 }
 
-otError otPlatRadioGetFemLnaGain(otInstance *aInstance, int8_t *aGain)
-{
-
-    OT_UNUSED_VARIABLE(aInstance);
-    OT_UNUSED_VARIABLE(aGain);
+//TODO
+otError otPlatRadioSetFemLnaGain(otInstance *a_instance_p, int8_t a_gain_p){
+    OT_UNUSED_VARIABLE(a_instance_p);
+    OT_UNUSED_VARIABLE(a_gain_p);
 
     return OT_ERROR_NOT_IMPLEMENTED;
 }
 
-void otPlatRadioSetPromiscuous(otInstance *aInstance, bool aEnable)
-{
-
-    OT_UNUSED_VARIABLE(aInstance);
-
-    samr21RadioCtrlSetPromiscuousMode(aEnable);
-}
-
-bool otPlatRadioGetPromiscuous(otInstance *aInstance)
-{
-
-    OT_UNUSED_VARIABLE(aInstance);
+bool otPlatRadioGetPromiscuous(otInstance *a_instance_p){
+    OT_UNUSED_VARIABLE(a_instance_p);
 
     return samr21RadioCtrlGetPromiscuousMode();
 }
 
-#if OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
+void otPlatRadioSetPromiscuous(otInstance *a_instance_p, bool a_enable){
+    OT_UNUSED_VARIABLE(a_instance_p);
 
-otError otPlatRadioEnableCsl(otInstance *aInstance,
-                             uint32_t aCslPeriod,
-                             otShortAddress aShortAddr,
-                             const otExtAddress *aExtAddr)
-{
-
-    OT_UNUSED_VARIABLE(aInstance);
-    OT_UNUSED_VARIABLE(aInstance);
-    OT_UNUSED_VARIABLE(aInstance);
-
-    g_cslPeriod = aCslPeriod;
+    samr21RadioCtrlSetPromiscuousMode(a_enable);
 }
 
-void otPlatRadioUpdateCslSampleTime(otInstance *aInstance, uint32_t aCslSampleTime)
-{
-    OT_UNUSED_VARIABLE(aInstance);
+void otPlatRadioSetMacKey(otInstance             *a_instance_p,
+                          uint8_t                 a_keyIdMode,
+                          uint8_t                 a_keyId,
+                          const otMacKeyMaterial *a_prevKey_p,
+                          const otMacKeyMaterial *a_currKey_p,
+                          const otMacKeyMaterial *a_nextKey_p,
+                          otRadioKeyType          a_keyType
+){
+    OT_UNUSED_VARIABLE(a_instance_p);
 
-    g_cslSampleTime = aCslSampleTime;
+#ifdef _DEBUG
+    assert(a_keyIdMode == 1);
+    assert(a_keyType == OT_KEY_TYPE_LITERAL_KEY);
+    assert(a_prevKey != NULL && a_currKey != NULL && a_nextKey != NULL);
+#else
+    OT_UNUSED_VARIABLE(a_keyIdMode);
+    OT_UNUSED_VARIABLE(a_keyType);
+#endif
+
+    samr21RadioCtrlSetMacKeys(
+        a_keyId,
+        a_prevKey_p->mKeyMaterial.mKey.m8,
+        a_currKey_p->mKeyMaterial.mKey.m8,
+        a_nextKey_p->mKeyMaterial.mKey.m8
+    );
 }
 
-uint8_t otPlatRadioGetCslAccuracy(otInstance *aInstance)
-{
-    OT_UNUSED_VARIABLE(aInstance);
+void otPlatRadioSetMacFrameCounter(otInstance *a_instance_p, uint32_t a_macFrameCounter){
+    OT_UNUSED_VARIABLE(a_instance_p);
 
-    return 30; //
+    samr21RadioCtrlSetMacFrameCounter(a_macFrameCounter);
 }
 
-uint8_t otPlatRadioGetCslClockUncertainty(otInstance *aInstance)
-{
-    OT_UNUSED_VARIABLE(aInstance);
+void otPlatRadioSetMacFrameCounterIfLarger(otInstance *a_instance_p, uint32_t a_macFrameCounter){
+    OT_UNUSED_VARIABLE(a_instance_p);
 
-    return 1;
+    if(samr21RadioCtrlGetMacFrameCounter() < a_macFrameCounter){
+        samr21RadioCtrlSetMacFrameCounter(a_macFrameCounter);
+    }
 }
 
-#endif // OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
-
-otError otPlatRadioSetChannelMaxTransmitPower(otInstance *aInstance, uint8_t aChannel, int8_t aMaxPower)
-{
-
-    OT_UNUSED_VARIABLE(aInstance);
-    OT_UNUSED_VARIABLE(aChannel);
-    OT_UNUSED_VARIABLE(aMaxPower);
-
-    return OT_ERROR_NOT_IMPLEMENTED;
-}
-
-otError otPlatRadioSetRegion(otInstance *aInstance, uint16_t aRegionCode)
-{
-
-    OT_UNUSED_VARIABLE(aInstance);
-    OT_UNUSED_VARIABLE(aRegionCode);
-
-    return OT_ERROR_NOT_IMPLEMENTED;
-}
-
-otError otPlatRadioGetRegion(otInstance *aInstance, uint16_t *aRegionCode)
-{
-
-    OT_UNUSED_VARIABLE(aInstance);
-    OT_UNUSED_VARIABLE(aRegionCode);
-
-    return OT_ERROR_NOT_IMPLEMENTED;
-}
-
-
-uint64_t otPlatRadioGetNow(otInstance *aInstance){
-    
-    OT_UNUSED_VARIABLE(aInstance);
-
+uint64_t otPlatRadioGetNow(otInstance *a_instance_p){
+    OT_UNUSED_VARIABLE(a_instance_p);
     return samr21RtcGetTimestamp();
 }
 
-uint32_t otPlatRadioGetBusSpeed(otInstance *aInstance){
+uint32_t otPlatRadioGetBusSpeed(otInstance *a_instance_p){
+    OT_UNUSED_VARIABLE(a_instance_p);
 
-    OT_UNUSED_VARIABLE(aInstance);
-
-    return 2000000; //actully 8Mbits but bus is shared with AES Engine.
+    //Return 0 when the MAC and above layer and Radio layer resides on the same chip.
+    return 0;
 }
 
-#if OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
-otError otPlatRadioConfigureEnhAckProbing(otInstance *aInstance,
-                                          otLinkMetrics aLinkMetrics,
-                                          const otShortAddress aShortAddress,
-                                          const otExtAddress *aExtAddress)
+
+
+//Radio Operation
+
+otRadioState otPlatRadioGetState(otInstance *a_instance_p){
+    OT_UNUSED_VARIABLE(a_instance_p);
+
+    return samr21RadioGetOtState();
+}
+
+otError otPlatRadioEnable(otInstance *a_instance_p)
 {
-    OT_UNUSED_VARIABLE(aInstance);
-    OT_UNUSED_VARIABLE(aLinkMetrics);
-    OT_UNUSED_VARIABLE(aShortAddress);
-    OT_UNUSED_VARIABLE(aExtAddress);
+    s_instance_p = a_instance_p;
 
-    otError error = OT_ERROR_NONE;
+    samr21RadioCtrlEnable();
 
-    error = otLinkMetricsConfigureEnhAckProbing(aShortAddress, aExtAddress, aLinkMetrics);
-    otEXPECT(error == OT_ERROR_NONE);
-
-exit:
-    return error;
-}
-#endif
-
-#if OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2
-void otPlatRadioEnableSrcMatch(otInstance *aInstance, bool aEnable)
-{
-    // UTILS SOFT-TABLE USED
-    OT_UNUSED_VARIABLE(aInstance);
-    OT_UNUSED_VARIABLE(aEnable);
-
-    return;
-}
-
-void otPlatRadioSetMacKey(otInstance *aInstance,
-                          uint8_t aKeyIdMode,
-                          uint8_t aKeyId,
-                          const otMacKeyMaterial *aPrevKey,
-                          const otMacKeyMaterial *aCurrKey,
-                          const otMacKeyMaterial *aNextKey,
-                          otRadioKeyType aKeyType)
-{
-    OT_UNUSED_VARIABLE(aInstance);
-    OT_UNUSED_VARIABLE(aKeyIdMode);
-
-//    assert(aKeyType == OT_KEY_TYPE_LITERAL_KEY);
-//    assert(aPrevKey != NULL && aCurrKey != NULL && aNextKey != NULL);
-
-    samr21RadioCtrlSetMacKeys(aKeyId,
-                              aPrevKey->mKeyMaterial.mKey.m8,
-                              aCurrKey->mKeyMaterial.mKey.m8,
-                              aNextKey->mKeyMaterial.mKey.m8);
-}
-
-void otPlatRadioSetMacFrameCounter(otInstance *aInstance, uint32_t aMacFrameCounter){
-    
-    OT_UNUSED_VARIABLE(aInstance);
-    samr21RadioCtrlSetMacFrameCounter(aMacFrameCounter);
-}
-
-otError otPlatRadioReceiveAt(otInstance *aInstance, uint8_t aChannel, uint32_t aStart, uint32_t aDuration){
-    
-    OT_UNUSED_VARIABLE(aInstance);
-    
-    if(samr21RadioRxIsReceiveSlotPlanned()){
-        return OT_ERROR_FAILED;
-    }
-
-    samr21RadioRxSetup(aChannel, aDuration, aStart);
-    
     return OT_ERROR_NONE;
 }
-#endif
 
-static bool s_edScanDone;
-static bool s_edScanDone;
-static bool s_edScanDone;
-
-otError otPlatRadioEnergyScan(otInstance *aInstance, uint8_t aScanChannel, uint16_t aScanDuration)
+otError otPlatRadioDisable(otInstance *a_instance_p)
 {
+    OT_UNUSED_VARIABLE(a_instance_p);
 
-    OT_UNUSED_VARIABLE(aInstance);
+    samr21RadioCtrlDisable();
 
-    if (samr21RadioEdStart(aScanChannel, aScanDuration))
-    {
+    return OT_ERROR_NONE;
+}
+
+bool otPlatRadioIsEnabled(otInstance *a_instance_p){
+    OT_UNUSED_VARIABLE(a_instance_p);
+
+    return ( samr21RadioGetOtState() > 0 ? true : false ); 
+}
+
+otError otPlatRadioSleep(otInstance *a_instance_p){
+    OT_UNUSED_VARIABLE(a_instance_p);
+
+    otRadioState currentState = samr21RadioGetOtState();
+
+    if(currentState == OT_RADIO_STATE_TRANSMIT){
+        return OT_ERROR_BUSY;
+    }
+    if(currentState == OT_RADIO_STATE_DISABLED){
+        return OT_ERROR_INVALID_STATE;
+    }
+    
+    samr21RadioCtrlSleep();
+    return OT_ERROR_NONE;
+}
+
+otError otPlatRadioReceive(otInstance *a_instance_p, uint8_t a_channel){
+    OT_UNUSED_VARIABLE(a_instance_p);
+
+    otRadioState currentState = samr21RadioGetOtState();
+
+    if(currentState == OT_RADIO_STATE_TRANSMIT || currentState == OT_RADIO_STATE_DISABLED){
+        return OT_ERROR_INVALID_STATE;
+    }
+
+    samr21RadioReceive(a_channel);
+
+    return OT_ERROR_NONE;
+}
+
+otError otPlatRadioReceiveAt(otInstance *a_instance_p, uint8_t a_channel, uint32_t a_start, uint32_t a_duration){
+    OT_UNUSED_VARIABLE(a_instance_p);
+
+    if(samr21RadioQueueReceiveSlot(a_start, a_channel, a_duration)){
         return OT_ERROR_NONE;
-        s_lastEdResult = INT8_MAX;
+    }
+
+    return OT_ERROR_FAILED;
+}
+
+otRadioFrame *otPlatRadioGetTransmitBuffer(otInstance *a_instance_p){
+    OT_UNUSED_VARIABLE(a_instance_p);
+
+    return samr21RadioGetOtTxBuffer();
+}
+
+otError otPlatRadioTransmit(otInstance *a_instance_p, otRadioFrame *a_frame){
+    OT_UNUSED_VARIABLE(a_instance_p);
+
+    otRadioState currentState = samr21RadioGetOtState();
+
+    if(currentState == OT_RADIO_STATE_TRANSMIT || currentState == OT_RADIO_STATE_DISABLED){
+        return OT_ERROR_INVALID_STATE;
+    }
+
+
+    samr21RadioTransmit(a_frame);
+
+    return OT_ERROR_NONE;
+}
+
+int8_t otPlatRadioGetRssi(otInstance *a_instance_p){
+    OT_UNUSED_VARIABLE(a_instance_p);
+
+    return samr21TrxGetLastRssiValue();
+}
+
+otError otPlatRadioEnergyScan(otInstance *a_instance_p, uint8_t a_scanChannel, uint16_t a_scanDuration){
+    OT_UNUSED_VARIABLE(a_instance_p);
+
+
+    if(samr21RadioStartEnergyDetection(a_scanChannel, a_scanDuration)){
+        return OT_ERROR_NONE;
     }
 
     return OT_ERROR_BUSY;
 }
 
+void otPlatRadioEnableSrcMatch(otInstance *a_instance_p, bool a_enable){
+    OT_UNUSED_VARIABLE(a_instance_p);
 
-int8_t otPlatRadioGetRssi(otInstance *aInstance){
-    
-    OT_UNUSED_VARIABLE(aInstance);
-
-    
-}
-
-otError otPlatRadioReceive(otInstance *aInstance, uint8_t aChannel){
-
-    OT_UNUSED_VARIABLE(aInstance);
-
-    samr21RadioCtrlSetState(SAMR21_RADIO_STATE_RECEIVE);
-    samr21RadioRxSetup(aChannel, 0, 0);
-    
-    return OT_ERROR_NONE;
-}
-
-otError otPlatRadioSleep(otInstance *aInstance){
-
-    OT_UNUSED_VARIABLE(aInstance);
-
-    samr21RadioCtrlSetState(SAMR21_RADIO_STATE_SLEEP);
-
-    while (samr21RadioRxBusy());
-    samr21RadioCtrlReturnToLastHandler();
-    
-    return OT_ERROR_NONE;
-}
-
-otRadioFrame *otPlatRadioGetTransmitBuffer(otInstance *aInstance){
-
-    OT_UNUSED_VARIABLE(aInstance);
-
-    return samr21RadioTxGetOtBuffer();
-}
-
-otError otPlatRadioTransmit(otInstance *aInstance, otRadioFrame *aFrame){
-    
-    OT_UNUSED_VARIABLE(aInstance);
-    
-    samr21RadioCtrlSetState(SAMR21_RADIO_STATE_TRANSMIT);
-    samr21RadioTxSetup();
-
-    return OT_ERROR_NONE;
+    samr21RadioCtrlSetFramePendingSrcMatch(a_enable);
 }
 
 
-void cb_samr21RadioEdDone(int8_t rssi)
+uint32_t otPlatRadioGetSupportedChannelMask(otInstance *a_instance_p){
+    OT_UNUSED_VARIABLE(a_instance_p);
+
+    return 0b00000011111111111111110000000000;
+}
+
+uint32_t otPlatRadioGetPreferredChannelMask(otInstance *a_instance_p){
+    OT_UNUSED_VARIABLE(a_instance_p);
+
+    return 0b00000001000010000100010000000000;
+}
+
+
+//TODO
+//otError otPlatRadioSetCoexEnabled(otInstance *aInstance, bool aEnabled);
+//bool otPlatRadioIsCoexEnabled(otInstance *aInstance);
+//otError otPlatRadioGetCoexMetrics(otInstance *aInstance, otRadioCoexMetrics *aCoexMetrics);
+
+#if OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
+
+otError otPlatRadioEnableCsl(otInstance         *a_instance_p,
+                             uint32_t            a_cslPeriod,
+                             otShortAddress      a_shortAddr,
+                             const otExtAddress *a_extAddr){
+    OT_UNUSED_VARIABLE(a_instance_p);
+
+    samr21RadioCtrlSetCslPeriod(uint32_t a_cslPeriod);
+}
+
+void otPlatRadioUpdateCslSampleTime(otInstance *a_instance_p, uint32_t a_cslSampleTime){
+    
+    OT_UNUSED_VARIABLE(a_instance_p);
+
+    samr21RadioCtrlSetCslSampleTime(uint32_t a_cslSampleTime);
+}
+
+uint8_t otPlatRadioGetCslUncertainty(otInstance *a_instance_p){
+    OT_UNUSED_VARIABLE(a_instance_p);
+    return 20;
+}
+
+uint8_t otPlatRadioGetCslAccuracy(otInstance *a_instance_p){
+    return 10;
+}
+
+#endif
+
+otError otPlatRadioSetChannelMaxTransmitPower(otInstance *a_instance_p, uint8_t a_channel, int8_t a_maxPower){
+    OT_UNUSED_VARIABLE(a_instance_p);
+    OT_UNUSED_VARIABLE(a_channel);
+    OT_UNUSED_VARIABLE(a_maxPower);
+
+    return OT_ERROR_NOT_IMPLEMENTED;
+}
+
+otError otPlatRadioSetRegion(otInstance *a_instance_p, uint16_t a_regionCode){
+    OT_UNUSED_VARIABLE(a_instance_p);
+    OT_UNUSED_VARIABLE(a_regionCode);
+
+    return OT_ERROR_NOT_IMPLEMENTED;
+}
+
+otError otPlatRadioGetRegion(otInstance *a_instance_p, uint16_t * a_regionCode_p){
+    OT_UNUSED_VARIABLE(a_instance_p);
+    OT_UNUSED_VARIABLE(a_regionCode_p);
+
+    return OT_ERROR_NOT_IMPLEMENTED;
+}
+
+otError otPlatRadioConfigureEnhAckProbing(otInstance         *a_instance_p,
+                                          otLinkMetrics       a_linkMetrics,
+                                          otShortAddress      a_shortAddress,
+                                          const otExtAddress *a_extAddress_p){
+    OT_UNUSED_VARIABLE(a_instance_p);
+    OT_UNUSED_VARIABLE(a_linkMetrics);
+    OT_UNUSED_VARIABLE(a_shortAddress);
+    OT_UNUSED_VARIABLE(a_extAddress_p);
+    
+    return OT_ERROR_NOT_IMPLEMENTED;
+}
+
+otError otPlatRadioAddCalibratedPower(otInstance    *a_instance_p,
+                                      uint8_t        a_channel,
+                                      int16_t        a_actualPower,
+                                      const uint8_t *a_rawPowerSetting_p,
+                                      uint16_t       a_rawPowerSettingLength){
+    OT_UNUSED_VARIABLE(a_instance_p);
+    OT_UNUSED_VARIABLE(a_channel);
+    OT_UNUSED_VARIABLE(a_actualPower);
+    OT_UNUSED_VARIABLE(a_rawPowerSetting_p);
+
+    return OT_ERROR_NOT_IMPLEMENTED;
+}
+
+otError otPlatRadioSetChannelTargetPower(otInstance    *a_instance_p,
+                                      uint8_t        a_channel,
+                                      int16_t        a_actualPower
+)
 {
-    s_lastEdResult=rssi;
+    OT_UNUSED_VARIABLE(a_instance_p);
+    OT_UNUSED_VARIABLE(a_channel);
+    OT_UNUSED_VARIABLE(a_actualPower);
+
+    return OT_ERROR_NOT_IMPLEMENTED;
 }
 
-void cb_samr21RadioRxDone(RxBuffer* buffer){
-    s_pendingRxBuffer=true;
-}
+static volatile bool s_pendingRxBuffer;
 
-void cb_samr21RadioRxRecivedNothing(){
-
-}
-
-void cb_samr21RadioTxDone(otRadioFrame* txFrameBuffer, otRadioFrame* txAckFrameBuffer){
-    otPlatRadioTxDone(s_instance, txFrameBuffer, txAckFrameBuffer, OT_ERROR_NONE);
-}
-
-void cb_samr21RadioTxStarted(otRadioFrame* txFrameBuffer){
-    otPlatRadioTxStarted(s_instance, txFrameBuffer);
-}
-
-void cb_samr21RadioTxFailed(otRadioFrame* txFrameBuffer, TxStatus failedAt){
-
-    otError error = OT_ERROR_ABORT;
-
-    if(failedAt == TX_STATUS_CCA){
-        error = OT_ERROR_CHANNEL_ACCESS_FAILURE;
-    }
-
-    if(failedAt == TX_STATUS_WAIT_FOR_ACK || failedAt == TX_STATUS_RECEIVING_ACK){
-        error = OT_ERROR_NO_ACK;
-    }
-    
-    otPlatRadioTxDone(s_instance, txFrameBuffer, NULL, error);
-}
-
-void samr21OtPlatRadioTask(){
-    if(s_lastEdResult != INT8_MAX){
-        otPlatRadioEnergyScanDone(s_instance, s_lastEdResult);
-        s_lastEdResult = INT8_MAX;
-    }
-
+void samr21OtPlatRadioReceiveTask(){
     if(s_pendingRxBuffer){
-        RxBuffer * buffer = samr21RadioRxGetPendingRxBuffer();
+        otRadioFrame* receivedFrame_p = samr21RadioGetReceivedFrame();
 
-        if(buffer == NULL){
-           s_pendingRxBuffer = 0;
-           return;
+        if (!receivedFrame_p)
+        {
+            //No new Frame available
+            s_pendingRxBuffer = false;
         }
-
-        otPlatRadioReceiveDone(s_instance,&buffer->otFrame,OT_ERROR_NONE);
-        buffer->status = RX_STATUS_IDLE;
+        else
+        {
+            otPlatRadioReceiveDone(s_instance_p, receivedFrame_p, OT_ERROR_NONE);
+        }
     }
+}
+
+void cb_samr21RadioEnergyDetectionDone(int8_t a_rssi){
+    otPlatRadioEnergyScanDone(s_instance_p, a_rssi);
+}
+
+void cb_samr21RadioReceptionDone(){
+    s_pendingRxBuffer = true;
+}
+
+
+void cb_samr21RadioTransmissionDone(transmissionStatus a_status){
+
+    switch (a_status)
+    {
+    case RADIO_TRANSMISSION_SUCCESSFUL:
+        otPlatRadioTxDone(
+            s_instance_p,
+            samr21RadioGetOtTxBuffer(),
+            samr21RadioGetLastReceivedAckFrame(),
+            OT_ERROR_NONE
+        );
+        return;
+    case RADIO_TRANSMISSION_CHANNEL_ACCESS_FAILED:
+        otPlatRadioTxDone(
+            s_instance_p,
+            samr21RadioGetOtTxBuffer(),
+            NULL,
+            OT_ERROR_CHANNEL_ACCESS_FAILURE
+        );
+        return;
+    case RADIO_TRANSMISSION_NO_ACK:
+        otPlatRadioTxDone(
+            s_instance_p,
+            samr21RadioGetOtTxBuffer(),
+            NULL,
+            OT_ERROR_NO_ACK
+        );
+        return;
+    default:
+        otPlatRadioTxDone(
+            s_instance_p,
+            samr21RadioGetOtTxBuffer(),
+            NULL,
+            OT_ERROR_ABORT
+        );
+        break;
+    }
+}
+
+void cb_samr21RadioTransmissionStarted(){
+    otPlatRadioTxStarted(s_instance_p, samr21RadioGetOtTxBuffer());
+}
+void cb_samr21RadioNoMessagesDuringSlot(){
 }

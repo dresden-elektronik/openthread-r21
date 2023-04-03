@@ -11,160 +11,239 @@
 
 #include "samr21Clock.h"
 
-//Setup GCLKGEN 1 to be sourced form At86rf233 MCLK
-//Setup SERCOM4 (SPI <-> At86rf233) to use GCLKGEN 1 (MCLK) to enable synchronous Transfers
-void samr21ClockTrxSrcInit(){
-
-        //Deinit Timer and Counter first (to prevent an Error after a soft reset while modifying the clocksystem)
-        samr21RtcDeinit();
-        samr21TimerDeinit();
-
-        
-  
+/**
+ * Sets all Clocks usually feed by derivatives of MCLK form the AT86RF233 to temporally us the internal OSC8M
+ * This is a WA so the MCU doesn't crash when SWRST of GCLK is called
+*/
+static void samr21ClockRemoveExternalSource(){
         //Setup GCLKGEN 0 (CPU Clock) to Use the internal OSC8M
-        //This is needed so a reliable Clock for the CPU is available while Clocks are being Setup
+    //This is needed so a reliable Clock for the CPU is available while Clocks are being Setup
 
-        //Make sure OSC8M is enabled
-        SYSCTRL->OSC8M.bit.ENABLE = 1;
+    //Make sure OSC8M is enabled
+    SYSCTRL->OSC8M.bit.ENABLE = 1;
 
-        samr21delaySysTick(100);
+    //Give some Setup Slack for the OSC8M
+    samr21delaySysTick(100);
 
-        //Setup GENDIV first
-        GCLK->GENDIV.reg = 
-            GCLK_GENDIV_ID(0) // GCLKGEN0
-            |GCLK_GENDIV_DIV(0x0)
-        ;
-        //Wait for synchronization 
-        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+    //Setup GENDIV first
+    GCLK->GENDIV.reg = 
+        GCLK_GENDIV_ID(0) // GCLKGEN0
+        |GCLK_GENDIV_DIV(0x0)
+    ;
+    //Wait for synchronization 
+    while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
 
-        //Setup GENCTRL after
-        GCLK->GENCTRL.reg = 
-            GCLK_GENCTRL_ID(0) // GCLKGEN0
-            |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_OSC8M_Val)
-            |GCLK_GENCTRL_RUNSTDBY
-            //|GCLK_GENCTRL_DIVSEL
+    //Setup GENCTRL after
+    GCLK->GENCTRL.reg = 
+        GCLK_GENCTRL_ID(0) // GCLKGEN0
+        |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_OSC8M_Val)
+        |GCLK_GENCTRL_RUNSTDBY
+        //|GCLK_GENCTRL_DIVSEL
 #ifdef _DEBUG
-            |GCLK_GENCTRL_OE
+        |GCLK_GENCTRL_OE
 #endif
-            //|GCLK_GENCTRL_OOV
-            |GCLK_GENCTRL_GENEN
-        ;
-        while(GCLK->STATUS.bit.SYNCBUSY);
+        //|GCLK_GENCTRL_OOV
+        |GCLK_GENCTRL_GENEN
+    ;
+    while(GCLK->STATUS.bit.SYNCBUSY);
 
-        //Disable DFLL
-        SYSCTRL->DFLLCTRL.reg = 0x00;
-        while(SYSCTRL->DFLLCTRL.bit.ENABLE);
+    //Disable DFLL
+    SYSCTRL->DFLLCTRL.reg = 0x00;
+    while(SYSCTRL->DFLLCTRL.bit.ENABLE);
 
-        //Reset GCLK
-        GCLK->CTRL.reg = GCLK_CTRL_SWRST;
+    //Setup GENDIV first
+    GCLK->GENDIV.reg = 
+        GCLK_GENDIV_ID(1) // GCLKGEN0
+        |GCLK_GENDIV_DIV(0x0)
+    ;
+    //Wait for synchronization 
+    while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
 
-        //Wait for synchronization 
-        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
-
-
-        //Setup PIN PC16 as Clockinput from MCLK from At86rf233
-        //Make Input
-        PORT->Group[2].DIRCLR.reg= PORT_PC16;
-
-        //Setup Mux Settings
-        PORT->Group[2].WRCONFIG.reg =
-            PORT_WRCONFIG_HWSEL
-            |PORT_WRCONFIG_WRPINCFG
-            |PORT_WRCONFIG_WRPMUX
-            |PORT_WRCONFIG_PMUX(MUX_PC16F_GCLK_IO1)
-            //PORT_WRCONFIG_PULLEN
-            |PORT_WRCONFIG_INEN
-            |PORT_WRCONFIG_PMUXEN
-            |PORT_WRCONFIG_PINMASK(PORT_PC16 >> 16) //upper Halfword
-        ;
-
-        // //Make PULLResistor -> Pulldown
-        // PORT->Group[2].OUTCLR.reg= PORT_PC16;
-
-        //Setup GENDIV
-        GCLK->GENDIV.reg = 
-            GCLK_GENDIV_ID(1)
-            |GCLK_GENDIV_DIV(0x0)
-        ;
-
-        //Wait for synchronization 
-        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
-
-        //Setup GENCTRL
-        GCLK->GENCTRL.reg = 
-            GCLK_GENCTRL_ID(1) // GCLKGEN1
-            |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_GCLKIN_Val)
-            |GCLK_GENCTRL_RUNSTDBY
-            //|GCLK_GENCTRL_DIVSEL
+    //Setup GENCTRL after
+    GCLK->GENCTRL.reg = 
+        GCLK_GENCTRL_ID(1) // GCLKGEN0
+        |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_OSC8M_Val)
+        |GCLK_GENCTRL_RUNSTDBY
+        //|GCLK_GENCTRL_DIVSEL
 #ifdef _DEBUG
-            |GCLK_GENCTRL_OE
+        |GCLK_GENCTRL_OE
 #endif
-            //|GCLK_GENCTRL_OOV
-            |GCLK_GENCTRL_GENEN
-        ;
+        //|GCLK_GENCTRL_OOV
+        |GCLK_GENCTRL_GENEN
+    ;
+    while(GCLK->STATUS.bit.SYNCBUSY);
 
-        //Wait for synchronization 
-        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+    //Setup GENDIV first
+    GCLK->GENDIV.reg = 
+        GCLK_GENDIV_ID(2) // GCLKGEN0
+        |GCLK_GENDIV_DIV(0x0)
+    ;
+    //Wait for synchronization 
+    while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
 
-        //Setup GENDIV
-        GCLK->GENDIV.reg = 
-            GCLK_GENDIV_ID(2)
-            |GCLK_GENDIV_DIV(16) //Use GCLKGEN 2 for RTC/Timer (16MHz -> 1Mhz (1us))
-        ;
-
-        //Wait for synchronization 
-        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
-
-        //Setup GENCTRL
-        GCLK->GENCTRL.reg = 
-            GCLK_GENCTRL_ID(2) // GCLKGEN2
-            |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_GCLKGEN1_Val)
-            |GCLK_GENCTRL_RUNSTDBY
-            //|GCLK_GENCTRL_DIVSEL
+    //Setup GENCTRL after
+    GCLK->GENCTRL.reg = 
+        GCLK_GENCTRL_ID(2) // GCLKGEN0
+        |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_OSC8M_Val)
+        |GCLK_GENCTRL_RUNSTDBY
+        //|GCLK_GENCTRL_DIVSEL
 #ifdef _DEBUG
-            |GCLK_GENCTRL_OE
+        |GCLK_GENCTRL_OE
 #endif
-            //|GCLK_GENCTRL_OOV
-            |GCLK_GENCTRL_GENEN
-        ;
+        //|GCLK_GENCTRL_OOV
+        |GCLK_GENCTRL_GENEN
+    ;
+    while(GCLK->STATUS.bit.SYNCBUSY);
 
-        //Wait for synchronization 
-        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+    //Setup GENDIV first
+    GCLK->GENDIV.reg = 
+        GCLK_GENDIV_ID(3) // GCLKGEN0
+        |GCLK_GENDIV_DIV(0x0)
+    ;
+    //Wait for synchronization 
+    while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+
+    //Setup GENCTRL after
+    GCLK->GENCTRL.reg = 
+        GCLK_GENCTRL_ID(3) // GCLKGEN0
+        |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_OSC8M_Val)
+        |GCLK_GENCTRL_RUNSTDBY
+        //|GCLK_GENCTRL_DIVSEL
+#ifdef _DEBUG
+        |GCLK_GENCTRL_OE
+#endif
+        //|GCLK_GENCTRL_OOV
+        |GCLK_GENCTRL_GENEN
+    ;
+    while(GCLK->STATUS.bit.SYNCBUSY);
 }
 
-//Setup GCLKGEN 3 as DFLL Ref Clock & RTC (divided down from 16MHz -> 1Mhz)
+
+//Setup GCLKGEN 1 to be sourced form At86rf233 MCLK
+//Setup SERCOM4 (SPI <-> At86rf233) to use GCLKGEN 1 (MCLK) to enable synchronous Transfers
+//Setup GCLKGEN 2 to be 1/16 of GCLKGEN 1 (16MHz -> 1MHz) for timer
+
+void samr21ClockTrxSrcInit(){
+
+    //Deinit all modules feed by MCLK from AT86RF233
+    samr21RtcDeinit();
+    samr21TimerDeinitAll();
+    samr21UsbDeinit();
+    samr21TrxInterruptDeinit();
+
+    //Deinit all Clock-Domains derived from MCLK AT86RF233
+    samr21ClockRemoveExternalSource();
+
+
+    //Reset GCLK
+    GCLK->CTRL.bit.SWRST = 1;
+
+    while (GCLK->CTRL.bit.SWRST);
+
+    //Wait for synchronization 
+    samr21delaySysTick(100);
+
+    //Setup PIN PC16 as Clock-Input from mClk-Pin from At86rf233
+    //Make Input
+    PORT->Group[2].DIRCLR.reg= PORT_PC16;
+
+    //Setup Mux Settings
+    PORT->Group[2].WRCONFIG.reg =
+        PORT_WRCONFIG_HWSEL
+        |PORT_WRCONFIG_WRPINCFG
+        |PORT_WRCONFIG_WRPMUX
+        |PORT_WRCONFIG_PMUX(MUX_PC16F_GCLK_IO1)
+        //PORT_WRCONFIG_PULLEN
+        |PORT_WRCONFIG_INEN
+        |PORT_WRCONFIG_PMUXEN
+        |PORT_WRCONFIG_PINMASK(PORT_PC16 >> 16) //upper Halfword
+    ;
+
+    //Setup GENDIV
+    GCLK->GENDIV.reg = 
+        GCLK_GENDIV_ID(1)
+        |GCLK_GENDIV_DIV(0x0)
+    ;
+
+    //Wait for synchronization 
+    while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+
+    //Setup GENCTRL
+    GCLK->GENCTRL.reg = 
+        GCLK_GENCTRL_ID(1) // GCLKGEN1
+        |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_GCLKIN_Val)
+        |GCLK_GENCTRL_RUNSTDBY
+        //|GCLK_GENCTRL_DIVSEL
+#ifdef _DEBUG
+        |GCLK_GENCTRL_OE
+#endif
+        //|GCLK_GENCTRL_OOV
+        |GCLK_GENCTRL_GENEN
+    ;
+
+    //Wait for synchronization 
+    while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+
+    //Setup GENDIV
+    GCLK->GENDIV.reg = 
+        GCLK_GENDIV_ID(2)
+        |GCLK_GENDIV_DIV(16) //Use GCLKGEN 2 for RTC/Timer (16MHz -> 1Mhz (1us))
+    ;
+
+    //Wait for synchronization 
+    while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+
+    //Setup GENCTRL
+    GCLK->GENCTRL.reg = 
+        GCLK_GENCTRL_ID(2) // GCLKGEN2
+        |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_GCLKGEN1_Val)
+        |GCLK_GENCTRL_RUNSTDBY
+        //|GCLK_GENCTRL_DIVSEL
+//#ifdef _DEBUG
+        |GCLK_GENCTRL_OE
+//#endif
+        //|GCLK_GENCTRL_OOV
+        |GCLK_GENCTRL_GENEN
+    ;
+
+    //Wait for synchronization 
+    while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+}
+
+//Setup GCLKGEN 3 as DFLL Ref Clock (needs to be stepped down cause DFLL needs a 32K Clock)
 //Setup GCLKGEN 0 for DFFL48M for CPU and USB
+
 void samr21ClockInitAfterTrxSetup(){
     
     //WA1 see R21 Datasheet ERRATA 47.1.5
     SYSCTRL->DFLLCTRL.bit.ONDEMAND = 0;
     while (!SYSCTRL->PCLKSR.bit.DFLLRDY);
 
-    //WA1 use GCLKGEN 3 as Devider for MCLK 16MHz (if configured correctly) down to 31.250kHz 
-        //Setup GENDIV first
-        GCLK->GENDIV.reg = 
-            GCLK_GENDIV_ID(3) // GCLKGEN3
-            |GCLK_GENDIV_DIV(8)
-        ;
+    //GCLKGEN 3 as Divider for MCLK 16MHz (if configured correctly) down to 31.250kHz 
+    //Setup GENDIV first
+    GCLK->GENDIV.reg = 
+        GCLK_GENDIV_ID(3) // GCLKGEN3
+        |GCLK_GENDIV_DIV(8)
+    ;
 
-        //Wait for synchronization 
-        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+    //Wait for synchronization 
+    while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
 
-        //Setup GENCTRL after
-        GCLK->GENCTRL.reg = 
-            GCLK_GENCTRL_ID(3) // GCLKGEN3
-            |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_GCLKGEN1_Val)
-            |GCLK_GENCTRL_RUNSTDBY
-            |GCLK_GENCTRL_DIVSEL
+    //Setup GENCTRL after
+    GCLK->GENCTRL.reg = 
+        GCLK_GENCTRL_ID(3) // GCLKGEN3
+        |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_GCLKGEN1_Val)
+        |GCLK_GENCTRL_RUNSTDBY
+        |GCLK_GENCTRL_DIVSEL
 #ifdef _DEBUG
-            |GCLK_GENCTRL_OE
+        |GCLK_GENCTRL_OE
 #endif
-            |GCLK_GENCTRL_OOV
-            |GCLK_GENCTRL_GENEN
-        ;
+        |GCLK_GENCTRL_OOV
+        |GCLK_GENCTRL_GENEN
+    ;
 
-        //Wait for synchronization 
-        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+    //Wait for synchronization 
+    while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
 
     //Use GCLKGEN 3 as Ref Freq for DFLL48M
     GCLK->CLKCTRL.reg =
@@ -193,6 +272,7 @@ void samr21ClockInitAfterTrxSetup(){
 
     while (!SYSCTRL->PCLKSR.bit.DFLLRDY);
 
+    //Set Calibration Values for DFLL
     SYSCTRL->DFLLMUL.reg=
         SYSCTRL_DFLLMUL_CSTEP(31) // Coarse step is 31, half of the max value
         |SYSCTRL_DFLLMUL_FSTEP(511) // Fine step is 511, half of the max value
@@ -202,28 +282,28 @@ void samr21ClockInitAfterTrxSetup(){
     while (!SYSCTRL->PCLKSR.bit.DFLLRDY || !SYSCTRL->PCLKSR.bit.DFLLLCKC || !SYSCTRL->PCLKSR.bit.DFLLLCKF);
 
     //Setup GCLKGEN 0 (CPU Clock) from DFLL48M
-        //Setup GENDIV first
-        GCLK->GENDIV.reg = 
-            GCLK_GENDIV_ID(0) // GCLKGEN0
-            |GCLK_GENDIV_DIV(0x0)
-        ;
+    //Setup GENDIV first
+    GCLK->GENDIV.reg = 
+        GCLK_GENDIV_ID(0) // GCLKGEN0
+        |GCLK_GENDIV_DIV(0x0)
+    ;
 
-        //Wait for synchronization 
-        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+    //Wait for synchronization 
+    while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
 
-        //Setup GENCTRL after
-        GCLK->GENCTRL.reg = 
-            GCLK_GENCTRL_ID(0) // GCLKGEN0
-            |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_DFLL48M_Val)
-            |GCLK_GENCTRL_RUNSTDBY
-            //|GCLK_GENCTRL_DIVSEL
+    //Setup GENCTRL after
+    GCLK->GENCTRL.reg = 
+        GCLK_GENCTRL_ID(0) // GCLKGEN0
+        |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_DFLL48M_Val)
+        |GCLK_GENCTRL_RUNSTDBY
+        //|GCLK_GENCTRL_DIVSEL
 #ifdef _DEBUG
-            |GCLK_GENCTRL_OE
+        |GCLK_GENCTRL_OE
 #endif
-            //|GCLK_GENCTRL_OOV
-            |GCLK_GENCTRL_GENEN
-        ;
+        //|GCLK_GENCTRL_OOV
+        |GCLK_GENCTRL_GENEN
+    ;
 
-        //Wait for synchronization 
-        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+    //Wait for synchronization 
+    while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
 }

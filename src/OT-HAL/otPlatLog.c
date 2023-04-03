@@ -1,9 +1,9 @@
-#include <code_utils.h>
+#include <otUtilities_codeUtils.h>
 #include <openthread/platform/logging.h>
 #include <openthread/platform/toolchain.h>
 
 #include "samr21Uart.h"
-
+ 
 #define LOG_PARSE_BUFFER_SIZE 128
 char sLogString[LOG_PARSE_BUFFER_SIZE + 1];
 
