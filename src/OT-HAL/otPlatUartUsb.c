@@ -1,109 +1,161 @@
 #include "otUtilities_uart.h"
 #include "samr21Usb.h"
-    
+
 volatile static bool s_dtr = false;
 
-struct waitForHostBuffer_s
+#define SIZE_WAIT_FOR_HOST_BUFFER 1024
+
+static struct 
 {
-    uint16_t len;
-    uint8_t  buf[];
-} s_waitForHostBuffer;
+    const uint8_t*      pendingTxBuffer;
+    uint16_t            pendingTxBufferLength;
+
+    bool                current_otUartEnabled;
+    bool                current_dataTerminalReady;
+
+    bool                last_otUartEnabled;
+    bool                last_dataTerminalReady;
+
+    bool                ongoingTransmit;
+    bool                finishedTransmit;
+
+
+}s_otPlatUartUsbVars;
 
 
 #ifdef _GCF_RELEASE_
 static const uint8_t gcfResetCommand[] =
-{
-    0x0B,
-    0x03,
-    0x00,
-    0x0C,
-    0x00,
-    0x05,
-    0x00,
-    0x26,
-    0x02,
-    0x00,
-    0x00,
-    0x00
-};
+    {
+        0x0B,
+        0x03,
+        0x00,
+        0x0C,
+        0x00,
+        0x05,
+        0x00,
+        0x26,
+        0x02,
+        0x00,
+        0x00,
+        0x00};
 extern volatile bool g_keepAlive;
 #endif
 
-void samr21OtPlatCommReceiveTask(){
-
-    tud_task(); 
-
-    //Check for Available RX-Data
-    if ( tud_cdc_available() )
+static void samr21OtPlatCommReceiveTask()
+{
+    // Check for Available RX-Data
+    if (tud_cdc_available())
     {
         char buf[64];
         uint32_t count = tud_cdc_read(buf, sizeof(buf));
 
-        otPlatUartReceived(buf,count);        
-    
+        otPlatUartReceived(buf, count);
+
 #ifdef _GCF_RELEASE_
-        if( ! strncmp( buf, gcfResetCommand, sizeof(gcfResetCommand) ) ){
+        if (!strncmp(buf, gcfResetCommand, sizeof(gcfResetCommand)))
+        {
             NVIC_SystemReset();
         }
 #endif
     }
 }
 
-otError otPlatUartEnable(void){
-    tusb_init();
+static void samr21OtPlatCommTransmitTask()
+{
+    if(s_otPlatUartUsbVars.current_dataTerminalReady && ( s_otPlatUartUsbVars.pendingTxBuffer != NULL ) ){
+
+        tud_cdc_write(s_otPlatUartUsbVars.pendingTxBuffer, s_otPlatUartUsbVars.pendingTxBufferLength);
+
+        s_otPlatUartUsbVars.ongoingTransmit         = true;
+        s_otPlatUartUsbVars.pendingTxBuffer         = NULL;
+        s_otPlatUartUsbVars.pendingTxBufferLength   = 0;
+
+        tud_cdc_write_flush();
+        return;
+    }
+
+    if(s_otPlatUartUsbVars.ongoingTransmit && s_otPlatUartUsbVars.finishedTransmit){
+        
+        s_otPlatUartUsbVars.ongoingTransmit       = false;
+        s_otPlatUartUsbVars.finishedTransmit      = false;
+
+        otPlatUartSendDone();
+        return;
+    }
+
+    if( (CFG_TUD_CDC_TX_BUFSIZE == tud_cdc_write_available()) && s_otPlatUartUsbVars.ongoingTransmit ){
+        
+        s_otPlatUartUsbVars.ongoingTransmit       = false;
+        s_otPlatUartUsbVars.finishedTransmit      = false;
+
+        otPlatUartSendDone();
+    }
+}
+
+void samr21OtPlatCommTask(){
+    tud_task();
+
+    s_otPlatUartUsbVars.current_dataTerminalReady = tud_cdc_connected();
+    samr21OtPlatCommReceiveTask();
+    samr21OtPlatCommTransmitTask();
+
+
+    s_otPlatUartUsbVars.last_dataTerminalReady = s_otPlatUartUsbVars.current_dataTerminalReady;
+    s_otPlatUartUsbVars.last_otUartEnabled = s_otPlatUartUsbVars.current_otUartEnabled;
+}
+
+otError otPlatUartEnable(void)
+{
+    s_otPlatUartUsbVars.last_otUartEnabled = true;
     return OT_ERROR_NONE;
 }
 
 otError otPlatUartDisable(void)
 {
+    s_otPlatUartUsbVars.last_otUartEnabled = false;
     return OT_ERROR_NONE;
 }
 
 otError otPlatUartFlush(void)
 {
-    tud_cdc_write_flush();
+    while(tud_cdc_write_flush());
+
+    s_otPlatUartUsbVars.ongoingTransmit       = false;
+    s_otPlatUartUsbVars.finishedTransmit      = false;
+
+    otPlatUartSendDone();
+
     return OT_ERROR_NONE;
 }
 
-otError otPlatUartSend(const uint8_t *aBuf, uint16_t aBufLength)
+otError otPlatUartSend(const uint8_t *a_buf_p, uint16_t a_bufLength)
 {
-    if( 
-        ( tud_cdc_write_available() < aBufLength )
-        || !s_dtr 
-    ){
-        memcpy(s_waitForHostBuffer.buf, aBuf, aBufLength);
-        s_waitForHostBuffer.len = aBufLength;
-        return OT_ERROR_NONE;
+    if(s_otPlatUartUsbVars.ongoingTransmit){
+        otPlatUartFlush();
     }
 
-    tud_cdc_write(aBuf, aBufLength);
-    tud_cdc_write_flush();
-    otPlatUartSendDone();
+#ifdef _DEBUG
+    assert(s_otPlatUartUsbVars.ongoingTransmit == false);
+    assert(s_otPlatUartUsbVars.finishedTransmit == false);
+#endif
+
+    if( s_otPlatUartUsbVars.current_dataTerminalReady ){
+        tud_cdc_write(a_buf_p, a_bufLength);
+
+        s_otPlatUartUsbVars.ongoingTransmit = true;
+
+        tud_cdc_write_flush();
+    }
+    else
+    {
+        s_otPlatUartUsbVars.pendingTxBuffer = a_buf_p;
+        s_otPlatUartUsbVars.pendingTxBufferLength = a_bufLength;
+    }
+
     return OT_ERROR_NONE;
 }
 
-otError otPlatWakeHost(){
-   //TODO 
-}
-
-void tud_cdc_tx_complete_cb(uint8_t itf){
-    otPlatUartSendDone();
-}
-
-void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts){
-    (void)itf;
-    (void)rts;
-    s_dtr = dtr;
-
-    if(s_waitForHostBuffer.len && dtr){
-        tud_cdc_write(s_waitForHostBuffer.buf, s_waitForHostBuffer.len);
-        //s_waitForHostBuffer.len = 0;
-        otPlatUartSendDone();
-    }
-
-
-    //Dirty WA
-    if(!dtr){
-        NVIC_SystemReset();
-    }
+otError otPlatWakeHost()
+{
+    tud_remote_wakeup();
 }

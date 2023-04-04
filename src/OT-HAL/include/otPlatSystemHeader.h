@@ -5,8 +5,10 @@
 
 
 //Handler that checks for new USB/UART Packages
-void samr21OtPlatCommReceiveTask();
+void samr21OtPlatCommTask();
 
-//Handler that notifies upper layer about received Frames
-void samr21OtPlatRadioReceiveTask();
+//Handler that notifies upper layer about received Frames and the status of ongoing transmissions
+void samr21OtPlatRadioTask();
+
+//Handler that Transmit Frames to the Host device
 #endif //_SAMR21_OT_PLATFORM_H_

@@ -534,7 +534,7 @@ static void samr21RadioRxDownloadAndHandleRemaining()
 
     // A Acknowledgment was requested
     // Send after Ack-InterFrame-Spacing delay
-    samr21RadioQueueDelayedAction(IEEE_15_4_AIFS_us, samr21RadioSendAck);
+    samr21RadioQueueDelayedAction(IEEE_15_4_ADJUSTED_AIFS_us, samr21RadioSendAck);
 
     s_radioVars.rxState = SAMR21_RADIO_RX_STATE_PREP_ACK;
     // Move TRX to Tx, so PLL is already dialed in when ack is about to be Transmitted
@@ -849,20 +849,14 @@ static void samr21RadioFinishTransmission(){
 
     //Stop Timeout
     samr21RadioRemoveQueuedAction();
-    if (s_txSecurityLevel)
-    {
-    otMacFrameProcessTransmitAesCcm(&s_txOtFrame, (uint8_t*) &s_radioVars.extendedAddress);
-    }
-    
 
     s_radioVars.txBusy = false;
 
-    //Inform UpperLayer
-    cb_samr21RadioTransmissionDone(RADIO_TRANSMISSION_SUCCESSFUL);
-
-
     //Move back to Receive
     samr21RadioReceive(0);
+
+    //Inform UpperLayer
+    cb_samr21RadioTransmissionDone(RADIO_TRANSMISSION_SUCCESSFUL);
 }
 
 static void samr21RadioAbortTransmission(){
@@ -1033,9 +1027,6 @@ static void samr21RadioStartTransmission(){
         samr21TrxSetSLP_TR(false);
     }
 
-    //Inform Upper Layer that Transmission started
-    cb_samr21RadioTransmissionStarted();
-
     s_radioVars.txState = SAMR21_RADIO_TX_STATE_WAIT_SENDING_END;
     // Set a handler for when the Frame is fully transmitted
     if(otMacFrameIsAckRequested(&s_txOtFrame))
@@ -1152,6 +1143,10 @@ void samr21RadioTransmit(otRadioFrame *a_otFrame)
         s_txSecurityLevel = otMacFrameGetSecurityLevel(&s_txOtFrame);
     }
 
+
+    //Inform Upper Layer that Transmission started
+    cb_samr21RadioTransmissionStarted();
+
     //Check if Transmission needs to be delayed
     if(s_txOtFrame.mInfo.mTxInfo.mTxDelay){
 
@@ -1164,7 +1159,9 @@ void samr21RadioTransmit(otRadioFrame *a_otFrame)
 
         return;
     }
-    
+
+
+
     if(s_txOtFrame.mInfo.mTxInfo.mCsmaCaEnabled){
         samr21RadioStartCca();
         return;
@@ -1174,7 +1171,10 @@ void samr21RadioTransmit(otRadioFrame *a_otFrame)
 }
 
 otRadioFrame* samr21RadioGetOtTxBuffer(){
-   return &s_txOtFrame;
+
+    while(s_radioVars.txBusy);
+
+    return &s_txOtFrame;
 }
 
 otRadioFrame* samr21RadioGetLastReceivedAckFrame(){

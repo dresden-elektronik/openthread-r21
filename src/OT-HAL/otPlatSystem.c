@@ -113,15 +113,8 @@ void otSysDeinit(void)
 
 void otSysProcessDrivers(otInstance *aInstance)
 {
-    samr21OtPlatCommReceiveTask();
-    samr21OtPlatRadioReceiveTask();
-
-#ifdef _GCF_RELEASE_
-    //WDT
-    if(g_keepAlive){
-        WDT->CLEAR.reg = WDT_CLEAR_CLEAR_KEY_Val;
-    }
-#endif
+    samr21OtPlatCommTask();
+    samr21OtPlatRadioTask();
 }
 
 otPlatResetReason otPlatGetResetReason(otInstance *aInstance){

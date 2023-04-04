@@ -61,6 +61,8 @@ void samr21UsbInit(){
         |PORT_WRCONFIG_PINMASK(PORT_PA25 >> 16) //upper Halfword
     ;
     PORT->Group[0].OUTCLR.reg= PORT_PA25;
+
+    tusb_init();
 }
 
 void samr21UsbDeinit(){
@@ -102,6 +104,8 @@ void samr21UsbDeinit(){
 //IRQ Handler wrapper
 void dcd_int_handler (uint8_t rhport);
 void USB_Handler(){
+    PORT->Group[0].OUTSET.reg = PORT_PA16;
     dcd_int_handler(0);
+    PORT->Group[0].OUTCLR.reg = PORT_PA16;
 }
 

@@ -9,98 +9,97 @@
  */
 #include "samr21Trx.h"
 
-static void samr21DebugPortsInit(){
+static void samr21DebugPortsInit()
+{
 
-        PORT->Group[0].DIRSET.reg= PORT_PA06;
+    PORT->Group[0].DIRSET.reg = PORT_PA06;
 
-        //Setup Mux Settings
-        PORT->Group[0].WRCONFIG.reg =
-            //PORT_WRCONFIG_HWSEL
-            PORT_WRCONFIG_WRPINCFG
-            //|PORT_WRCONFIG_WRPMUX
-            //|PORT_WRCONFIG_PMUX(MUX_PC16F_GCLK_IO1)
-            //PORT_WRCONFIG_PULLEN
-            //|PORT_WRCONFIG_INEN
-            //|PORT_WRCONFIG_PMUXEN
-            |PORT_WRCONFIG_PINMASK(PORT_PA06) //lower Halfword
+    // Setup Mux Settings
+    PORT->Group[0].WRCONFIG.reg =
+        // PORT_WRCONFIG_HWSEL
+        PORT_WRCONFIG_WRPINCFG
+        //|PORT_WRCONFIG_WRPMUX
+        //|PORT_WRCONFIG_PMUX(MUX_PC16F_GCLK_IO1)
+        // PORT_WRCONFIG_PULLEN
+        //|PORT_WRCONFIG_INEN
+        //|PORT_WRCONFIG_PMUXEN
+        | PORT_WRCONFIG_PINMASK(PORT_PA06) // lower Halfword
         ;
 
+    PORT->Group[0].DIRSET.reg = PORT_PA07;
 
-        PORT->Group[0].DIRSET.reg= PORT_PA07;
-
-        //Setup Mux Settings
-        PORT->Group[0].WRCONFIG.reg =
-            //PORT_WRCONFIG_HWSEL
-            PORT_WRCONFIG_WRPINCFG
-            //|PORT_WRCONFIG_WRPMUX
-            //|PORT_WRCONFIG_PMUX(MUX_PC16F_GCLK_IO1)
-            //PORT_WRCONFIG_PULLEN
-            //|PORT_WRCONFIG_INEN
-            //|PORT_WRCONFIG_PMUXEN
-            |PORT_WRCONFIG_PINMASK(PORT_PA07) //lower Halfword
+    // Setup Mux Settings
+    PORT->Group[0].WRCONFIG.reg =
+        // PORT_WRCONFIG_HWSEL
+        PORT_WRCONFIG_WRPINCFG
+        //|PORT_WRCONFIG_WRPMUX
+        //|PORT_WRCONFIG_PMUX(MUX_PC16F_GCLK_IO1)
+        // PORT_WRCONFIG_PULLEN
+        //|PORT_WRCONFIG_INEN
+        //|PORT_WRCONFIG_PMUXEN
+        | PORT_WRCONFIG_PINMASK(PORT_PA07) // lower Halfword
         ;
 
-        PORT->Group[0].DIRSET.reg= PORT_PA08;
+    PORT->Group[0].DIRSET.reg = PORT_PA08;
 
-        //Setup Mux Settings
-        PORT->Group[0].WRCONFIG.reg =
-            //PORT_WRCONFIG_HWSEL
-            PORT_WRCONFIG_WRPINCFG
-            //|PORT_WRCONFIG_WRPMUX
-            //|PORT_WRCONFIG_PMUX(MUX_PC16F_GCLK_IO1)
-            //PORT_WRCONFIG_PULLEN
-            //|PORT_WRCONFIG_INEN
-            //|PORT_WRCONFIG_PMUXEN
-            |PORT_WRCONFIG_PINMASK(PORT_PA08) //lower Halfword
+    // Setup Mux Settings
+    PORT->Group[0].WRCONFIG.reg =
+        // PORT_WRCONFIG_HWSEL
+        PORT_WRCONFIG_WRPINCFG
+        //|PORT_WRCONFIG_WRPMUX
+        //|PORT_WRCONFIG_PMUX(MUX_PC16F_GCLK_IO1)
+        // PORT_WRCONFIG_PULLEN
+        //|PORT_WRCONFIG_INEN
+        //|PORT_WRCONFIG_PMUXEN
+        | PORT_WRCONFIG_PINMASK(PORT_PA08) // lower Halfword
         ;
 
-        PORT->Group[0].DIRSET.reg= PORT_PA09;
+    PORT->Group[0].DIRSET.reg = PORT_PA09;
 
-        //Setup Mux Settings
-        PORT->Group[0].WRCONFIG.reg = 
-            //PORT_WRCONFIG_HWSEL
-            PORT_WRCONFIG_WRPINCFG
-            //|PORT_WRCONFIG_WRPMUX
-            //|PORT_WRCONFIG_PMUX(MUX_PC16F_GCLK_IO1)
-            //PORT_WRCONFIG_PULLEN
-            //|PORT_WRCONFIG_INEN
-            //|PORT_WRCONFIG_PMUXEN
-            |PORT_WRCONFIG_PINMASK(PORT_PA09) //lower Halfword
+    // Setup Mux Settings
+    PORT->Group[0].WRCONFIG.reg =
+        // PORT_WRCONFIG_HWSEL
+        PORT_WRCONFIG_WRPINCFG
+        //|PORT_WRCONFIG_WRPMUX
+        //|PORT_WRCONFIG_PMUX(MUX_PC16F_GCLK_IO1)
+        // PORT_WRCONFIG_PULLEN
+        //|PORT_WRCONFIG_INEN
+        //|PORT_WRCONFIG_PMUXEN
+        | PORT_WRCONFIG_PINMASK(PORT_PA09) // lower Halfword
         ;
 
-        PORT->Group[0].DIRSET.reg= PORT_PA09;
+    PORT->Group[0].DIRSET.reg = PORT_PA09;
 
-        //Setup Mux Settings
-        PORT->Group[0].WRCONFIG.reg = 
-            //PORT_WRCONFIG_HWSEL
-            PORT_WRCONFIG_WRPINCFG
-            //|PORT_WRCONFIG_WRPMUX
-            //|PORT_WRCONFIG_PMUX(MUX_PC16F_GCLK_IO1)
-            //PORT_WRCONFIG_PULLEN
-            //|PORT_WRCONFIG_INEN
-            //|PORT_WRCONFIG_PMUXEN
-            |PORT_WRCONFIG_PINMASK(PORT_PA09) //lower Halfword
+    // Setup Mux Settings
+    PORT->Group[0].WRCONFIG.reg =
+        // PORT_WRCONFIG_HWSEL
+        PORT_WRCONFIG_WRPINCFG
+        //|PORT_WRCONFIG_WRPMUX
+        //|PORT_WRCONFIG_PMUX(MUX_PC16F_GCLK_IO1)
+        // PORT_WRCONFIG_PULLEN
+        //|PORT_WRCONFIG_INEN
+        //|PORT_WRCONFIG_PMUXEN
+        | PORT_WRCONFIG_PINMASK(PORT_PA09) // lower Halfword
         ;
 
-        //Setup Mux Settings
-        PORT->Group[0].WRCONFIG.reg = 
-            //PORT_WRCONFIG_HWSEL
-            PORT_WRCONFIG_WRPINCFG
-            |PORT_WRCONFIG_WRPMUX
-            |PORT_WRCONFIG_PMUX(MUX_PC16F_GCLK_IO1)
-            //PORT_WRCONFIG_PULLEN
-            //|PORT_WRCONFIG_INEN
-            |PORT_WRCONFIG_PMUXEN
-            |PORT_WRCONFIG_PINMASK(PORT_PA16) //lower Halfword
+    PORT->Group[0].DIRSET.reg = PORT_PA16;
+
+    // Setup Mux Settings
+    PORT->Group[0].WRCONFIG.reg =
+        PORT_WRCONFIG_HWSEL
+        |PORT_WRCONFIG_WRPINCFG
+        //| PORT_WRCONFIG_WRPMUX 
+        //| PORT_WRCONFIG_PMUX(MUX_PC16F_GCLK_IO1)
+        //| PORT_WRCONFIG_PULLEN
+        //| PORT_WRCONFIG_INEN
+        //| PORT_WRCONFIG_PMUXEN 
+        | PORT_WRCONFIG_PINMASK(PORT_PA16) // lower Halfword
         ;
-
-
 }
 
-
 static ramCopyTrxRegister_t s_ramCopyTrxRegister = {
-    
-    //Default Config
+
+    // Default Config
     .trxCtrl1.bit.irqPolarity = 0,
     .trxCtrl1.bit.irqMaskMode = 0,
     .trxCtrl1.bit.spiCmdMode = 0x1,
@@ -124,8 +123,7 @@ void samr21TrxInterfaceInit()
     GCLK->CLKCTRL.reg =
         // GCLK_CLKCTRL_WRTLOCK
         GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(1) // GCLKGEN1 (Sourced from At86rf233 mClk)
-        | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_SERCOM4_CORE_Val)
-    ;
+        | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_SERCOM4_CORE_Val);
 
     // Wait for synchronization
     while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
@@ -134,8 +132,7 @@ void samr21TrxInterfaceInit()
     GCLK->CLKCTRL.reg =
         // GCLK_CLKCTRL_WRTLOCK
         GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(0) // GCLKGEN1
-        | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_SERCOMX_SLOW_Val)
-    ;
+        | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_SERCOMX_SLOW_Val);
 
     // Wait for synchronization
     while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
@@ -154,7 +151,7 @@ void samr21TrxInterfaceInit()
         PORT_WRCONFIG_HWSEL | PORT_WRCONFIG_WRPINCFG | PORT_WRCONFIG_WRPMUX | PORT_WRCONFIG_PMUX(MUX_PC19F_SERCOM4_PAD0)
         //|PORT_WRCONFIG_PULLEN
         | PORT_WRCONFIG_INEN | PORT_WRCONFIG_PMUXEN | PORT_WRCONFIG_PINMASK(PORT_PC19 >> 16) // upper Halfword
-    ;
+        ;
 
     // Setup PIN PB30 as MOSI <-> At86rf233 via SERCOM4
     // Make Output
@@ -166,7 +163,7 @@ void samr21TrxInterfaceInit()
         //|PORT_WRCONFIG_PULLEN
         //|PORT_WRCONFIG_INEN
         | PORT_WRCONFIG_PMUXEN | PORT_WRCONFIG_PINMASK(PORT_PB30 >> 16) // upper Halfword
-    ;
+        ;
 
     // Setup PIN PC18 as SCLK <-> At86rf233 via SERCOM4
     // Make Output
@@ -178,7 +175,7 @@ void samr21TrxInterfaceInit()
         //|PORT_WRCONFIG_PULLEN
         //|PORT_WRCONFIG_INEN
         | PORT_WRCONFIG_PMUXEN | PORT_WRCONFIG_PINMASK(PORT_PC18 >> 16) // upper Halfword
-    ;
+        ;
 
     // Setup PIN PB31 as SEL <-> At86rf233
     // SEL is configreud as Mnual PORT, cause we need Control over ist for
@@ -195,7 +192,7 @@ void samr21TrxInterfaceInit()
         //|PORT_WRCONFIG_INEN
         //|PORT_WRCONFIG_PMUXEN
         | PORT_WRCONFIG_PINMASK(PORT_PB31 >> 16) // upper Halfword
-    ;
+        ;
 
     // Set Default High
     PORT->Group[1].OUT.reg |= ((uint32_t)1 & 0x1) << 31;
@@ -214,7 +211,7 @@ void samr21TrxInterfaceInit()
         //|PORT_WRCONFIG_INEN
         //|PORT_WRCONFIG_PMUXEN
         | PORT_WRCONFIG_PINMASK(PORT_PB15) // lower Halfword
-    ;
+        ;
 
     // Set Default High
     PORT->Group[1].OUT.reg |= ((uint32_t)1 & 0x1) << 15;
@@ -291,34 +288,36 @@ void samr21TrxInterfaceInit()
     samr21TrxWriteRegister(TRX_CTRL_1_REG_ADDR, s_ramCopyTrxRegister.trxCtrl1.reg);
     samr21TrxWriteRegister(PHY_TX_PWR_REG_ADDR, s_ramCopyTrxRegister.phyTxPwr.reg);
 
-    //Enable Timer for Trx
+    // Enable Timer for Trx
     samr21Timer5Init(0); // 1MHz / (2^0) -> 1us resolution
 
     samr21DebugPortsInit();
 }
 
-void samr21TrxInterruptInit(){
+void samr21TrxInterruptInit()
+{
 
     // Get TRX into IDLE (STATUS_TRX_OFF) State
     samr21TrxForceMoveToIdle(true);
 
-    //Enable EIC in Power Manager
+    // Enable EIC in Power Manager
     PM->APBAMASK.bit.EIC_ = 1;
 
     // Enable IRQ via EIC
-    //Use GCLKGEN0 as core Clock for EIC (At86rf233, IRQ_Detect)
+    // Use GCLKGEN0 as core Clock for EIC (At86rf233, IRQ_Detect)
     GCLK->CLKCTRL.reg =
-        //GCLK_CLKCTRL_WRTLOCK
-        GCLK_CLKCTRL_CLKEN
-        |GCLK_CLKCTRL_GEN(0) // GCLKGEN1
-        |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_EIC_Val)
-    ;
-    //Wait for synchronization 
-    while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );  
+        // GCLK_CLKCTRL_WRTLOCK
+        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(0) // GCLKGEN1
+        | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_EIC_Val);
+    // Wait for synchronization
+    while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
+        ;
     // Reset first and wait for reset to finish
     EIC->CTRL.bit.SWRST = 1;
-    while (EIC->STATUS.bit.SYNCBUSY);
-    while (EIC->CTRL.bit.SWRST);
+    while (EIC->STATUS.bit.SYNCBUSY)
+        ;
+    while (EIC->CTRL.bit.SWRST)
+        ;
 
     // Enable EXINT[0]
     EIC->CONFIG[0].bit.FILTEN0 = 0;
@@ -327,47 +326,48 @@ void samr21TrxInterruptInit(){
 
     // Enable Module
     EIC->CTRL.bit.ENABLE = 1;
-    while (EIC->STATUS.bit.SYNCBUSY);
-    while (!(EIC->CTRL.bit.ENABLE));
+    while (EIC->STATUS.bit.SYNCBUSY)
+        ;
+    while (!(EIC->CTRL.bit.ENABLE))
+        ;
 
-
-    //Read Once to clear all pending Interrupts
+    // Read Once to clear all pending Interrupts
     samr21TrxReadRegister(IRQ_STATUS_REG_ADDR);
 
-    //cLEAR irq BEFORE ENABLING
+    // cLEAR irq BEFORE ENABLING
     EIC->INTFLAG.bit.EXTINT0 = 1;
-
-
 }
 
-void samr21TrxInterruptDeinit(){
-    
+void samr21TrxInterruptDeinit()
+{
+
     if (EIC->CTRL.bit.ENABLE)
     {
-        //Disable EIC Module
+        // Disable EIC Module
         EIC->CTRL.bit.ENABLE = 0;
-        while ((EIC->CTRL.bit.ENABLE));
+        while ((EIC->CTRL.bit.ENABLE))
+            ;
 
         // Reset after
         EIC->CTRL.bit.SWRST = 1;
-        while (EIC->STATUS.bit.SYNCBUSY);
-        while (EIC->CTRL.bit.SWRST);
+        while (EIC->STATUS.bit.SYNCBUSY)
+            ;
+        while (EIC->CTRL.bit.SWRST)
+            ;
 
-        //Disable GCLKGEN0 for EIC (At86rf233, IRQ_Detect)
+        // Disable GCLKGEN0 for EIC (At86rf233, IRQ_Detect)
         GCLK->CLKCTRL.reg =
-            //GCLK_CLKCTRL_WRTLOCK
-            GCLK_CLKCTRL_CLKEN
-            |GCLK_CLKCTRL_GEN(0) // GCLKGEN1
-            |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_EIC_Val)
-        ;
-        //Wait for synchronization 
-        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY ); 
+            // GCLK_CLKCTRL_WRTLOCK
+            GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(0) // GCLKGEN1
+            | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_EIC_Val);
+        // Wait for synchronization
+        while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
+            ;
     }
 
-    
-    
-    //Disable EIC in Power Manager
-    if(PM->APBAMASK.bit.EIC_){
+    // Disable EIC in Power Manager
+    if (PM->APBAMASK.bit.EIC_)
+    {
         PM->APBAMASK.bit.EIC_ = 0;
     }
 }
@@ -382,7 +382,6 @@ void samr21TrxSetupMClk(uint8_t a_clk)
 
     // Wait a bit for the  the Freq.-change to take place
     samr21delaySysTick(50);
-
 }
 
 uint8_t samr21TrxReadRegister(uint8_t a_addr)
@@ -415,7 +414,6 @@ void samr21TrxWriteRegister(uint8_t a_addr, uint8_t a_data)
     samr21TrxSpiCloseAccess();
 }
 
-
 static volatile bool s_spiActive;
 void samr21TrxSpiStartAccess(uint8_t a_command, uint8_t a_addr)
 {
@@ -424,8 +422,8 @@ void samr21TrxSpiStartAccess(uint8_t a_command, uint8_t a_addr)
         ;
 
     __disable_irq();
-    //NVIC_DisableIRQ(EIC_IRQn);
-    //NVIC_DisableIRQ(TC4_IRQn);
+    // NVIC_DisableIRQ(EIC_IRQn);
+    // NVIC_DisableIRQ(TC4_IRQn);
 
     s_spiActive = true;
     PORT->Group[1].OUTCLR.reg = 1 << 31; // SSel Low Active
@@ -466,11 +464,10 @@ void samr21TrxSpiCloseAccess()
 #endif
     s_spiActive = false;
 
-    //NVIC_EnableIRQ(EIC_IRQn);
-    //NVIC_EnableIRQ(TC4_IRQn);
+    // NVIC_EnableIRQ(EIC_IRQn);
+    // NVIC_EnableIRQ(TC4_IRQn);
     __enable_irq();
 }
-
 
 void samr21TrxUpdateStatusRegister()
 {
@@ -533,7 +530,7 @@ void samr21TrxSpiSendByteRawIgnoreResponse(uint8_t a_data)
     // Put data into the tranmitt buffer to start transmission
     SERCOM4->SPI.DATA.bit.DATA = a_data;
 
-    //Wait for Transmit to Complete
+    // Wait for Transmit to Complete
     while (!SERCOM4->SPI.INTFLAG.bit.TXC)
         ;
 }
@@ -566,21 +563,18 @@ uint8_t samr21TrxSpiReadByteRaw()
 static const uint8_t sc_validRxTrxStates[] =
     {
         TRX_STATUS_BUSY_RX,
-        TRX_STATUS_RX_ON
-    };
+        TRX_STATUS_RX_ON};
 
 static const uint8_t sc_validTxTrxStates[] =
     {
         TRX_STATUS_PLL_ON,
-        TRX_STATUS_BUSY_TX
-    };
+        TRX_STATUS_BUSY_TX};
 
 static const uint8_t sc_validIdleTrxStates[] =
     {
         TRX_STATUS_TRX_OFF,
         TRX_STATUS_SLEEP,
-        TRX_STATUS_P_ON
-    };
+        TRX_STATUS_P_ON};
 
 static void samr21TrxChangeStateBlocking(uint8_t a_cmd, uint8_t *a_desiredStates, uint8_t a_numDesiredStates)
 {
@@ -655,51 +649,57 @@ void samr21TrxForceMoveToIdle(bool a_blocking)
     samr21TrxChangeStateBlocking(TRX_CMD_FORCE_TRX_OFF, sc_validIdleTrxStates, sizeof(sc_validIdleTrxStates));
 }
 
-bool samr21TrxGetCcaResult(){
+bool samr21TrxGetCcaResult()
+{
     return s_ramCopyTrxRegister.trxStatus.bit.ccaStatus;
 }
 
 /*************************Channel Control*************************************/
-void samr21TrxSetChannel(uint8_t a_channel){
+void samr21TrxSetChannel(uint8_t a_channel)
+{
 #ifdef _DEBUG
     assert(a_channel >= 0x0B && a_channel <= 0x1A);
 #endif
-    if(a_channel == s_ramCopyTrxRegister.phyCcCca.bit.channel){
+    if (a_channel == s_ramCopyTrxRegister.phyCcCca.bit.channel)
+    {
         return;
     }
 
     s_ramCopyTrxRegister.phyCcCca.bit.channel = a_channel;
 
-    samr21TrxWriteRegister(PHY_CC_CCA_REG_ADDR,s_ramCopyTrxRegister.phyCcCca.reg);    
+    samr21TrxWriteRegister(PHY_CC_CCA_REG_ADDR, s_ramCopyTrxRegister.phyCcCca.reg);
 }
 
-uint8_t samr21TrxGetChannel(){
+uint8_t samr21TrxGetChannel()
+{
     return s_ramCopyTrxRegister.phyCcCca.bit.channel;
 }
 
-void samr21TrxStartCca(){
-    // Prepare CCA 
+void samr21TrxStartCca()
+{
+    // Prepare CCA
     s_ramCopyTrxRegister.phyCcCca.bit.ccaRequest = 1;
 
-    // Start CCA 
+    // Start CCA
     samr21TrxWriteRegister(PHY_CC_CCA_REG_ADDR, s_ramCopyTrxRegister.phyCcCca.reg);
 
     // Reset local copy of ccaRequest Bit
     s_ramCopyTrxRegister.phyCcCca.bit.ccaRequest = 0;
 }
 
-void samr21TrxStartEd(){
+void samr21TrxStartEd()
+{
     // Start ED by writing any value to PHY_ED_LEVEL_REG_ADDR
     // See samr21 datasheet: 37.5 Energy Detection (ED)
     samr21TrxWriteRegister(PHY_ED_LEVEL_REG_ADDR, 0xE7);
 }
 
-int8_t samr21TrxGetLastRssiValue(){
+int8_t samr21TrxGetLastRssiValue()
+{
 
     if (
-        s_ramCopyTrxRegister.trxStatus.bit.trxStatus != TRX_STATUS_RX_ON 
-        && s_ramCopyTrxRegister.trxStatus.bit.trxStatus != TRX_STATUS_RX_ON
-    ){
+        s_ramCopyTrxRegister.trxStatus.bit.trxStatus != TRX_STATUS_RX_ON && s_ramCopyTrxRegister.trxStatus.bit.trxStatus != TRX_STATUS_RX_ON)
+    {
         return INT8_MAX;
     }
 
@@ -732,35 +732,36 @@ int8_t samr21RadioCtrlGetCcaThreshold()
     return (AT86RF233_RSSI_BASE_VAL_dBm + (s_ramCopyTrxRegister.ccaThres.bit.ccaEdThres << 1)); // Multiply by 2
 }
 
-
 /*************************Tx Power Control*************************************/
-//TX Power 
+// TX Power
 #define SIZE_AT86RF233_TX_POWER_TABLE 16
 #ifdef _GCF_RELEASE_
-    static const float sc_txPowerTable_dBm_1D[SIZE_AT86RF233_TX_POWER_TABLE]={11.9,11.8,11.7,11.6,11.5,11.4,11.3,11.2,11,10.7,10.4,10.1,9.3,8.2,6.4,3.9,0.1,-5.8};
+static const float sc_txPowerTable_dBm_1D[SIZE_AT86RF233_TX_POWER_TABLE] = {11.9, 11.8, 11.7, 11.6, 11.5, 11.4, 11.3, 11.2, 11, 10.7, 10.4, 10.1, 9.3, 8.2, 6.4, 3.9, 0.1, -5.8};
 #else
-    static const float sc_txPowerTable_dBm_1D[SIZE_AT86RF233_TX_POWER_TABLE]={4,3.7,3.4,3,2.5,2,1,0,-1,-2,-3,-4,-6,-8,-12,-17};
+static const float sc_txPowerTable_dBm_1D[SIZE_AT86RF233_TX_POWER_TABLE] = {4, 3.7, 3.4, 3, 2.5, 2, 1, 0, -1, -2, -3, -4, -6, -8, -12, -17};
 #endif
 
-void samr21TrxSetTxPower(int8_t a_power_dbm){
-    for(uint8_t i = 0; i < SIZE_AT86RF233_TX_POWER_TABLE; i++){
-        if(
-            (sc_txPowerTable_dBm_1D[i] >= a_power_dbm)
-            && (sc_txPowerTable_dBm_1D[i+1] <= a_power_dbm)
-        ){
+void samr21TrxSetTxPower(int8_t a_power_dbm)
+{
+    for (uint8_t i = 0; i < SIZE_AT86RF233_TX_POWER_TABLE; i++)
+    {
+        if (
+            (sc_txPowerTable_dBm_1D[i] >= a_power_dbm) && (sc_txPowerTable_dBm_1D[i + 1] <= a_power_dbm))
+        {
             s_ramCopyTrxRegister.phyTxPwr.bit.txPwr = i;
             goto exit;
         }
     }
 
-    //Default
+    // Default
     s_ramCopyTrxRegister.phyTxPwr.bit.txPwr = 0x7;
 
 exit:
     samr21TrxWriteRegister(PHY_TX_PWR_REG_ADDR, s_ramCopyTrxRegister.phyTxPwr.reg);
 }
 
-int8_t samr21TrxGetTxPower(){
+int8_t samr21TrxGetTxPower()
+{
     return sc_txPowerTable_dBm_1D[s_ramCopyTrxRegister.phyTxPwr.bit.txPwr];
 }
 
@@ -834,10 +835,10 @@ uint8_t samr21TrxGetRandomByte()
 /*********************AES Engine*******************************/
 static s_aesBusy = false;
 
-
 void samr21TrxAesKeySetup(uint8_t *a_key_1D)
 {
-    while (s_aesBusy);
+    while (s_aesBusy)
+        ;
 
     PORT->Group[0].OUTSET.reg = PORT_PA07;
     samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, AES_CTRL_SRAM_ADDR);
@@ -892,8 +893,6 @@ static void samr21TrxAesEcbEncrypt(uint8_t *inDataBlock_1D, uint8_t *outDataBloc
 
     aesCtrl.bit.request = 1;
 
-
-
     if (outDataBlock_1D)
     {
         outDataBlock_1D[IEEE_15_4_AES_CCM_BLOCK_SIZE - 1] = samr21TrxSpiTransceiveByteRaw(aesCtrl.reg);
@@ -903,11 +902,9 @@ static void samr21TrxAesEcbEncrypt(uint8_t *inDataBlock_1D, uint8_t *outDataBloc
         samr21TrxSpiTransceiveByteRaw(aesCtrl.reg);
     }
 
-
     samr21TrxSpiCloseAccess();
     PORT->Group[0].OUTCLR.reg = PORT_PA07;
 }
-
 
 static void samr21TrxAesCbcEncrypt(uint8_t *inDataBlock_1D, uint8_t *outDataBlock_1D)
 {
@@ -962,12 +959,9 @@ static void samr21TrxAesCbcEncrypt(uint8_t *inDataBlock_1D, uint8_t *outDataBloc
         samr21TrxSpiTransceiveByteRaw(aesCtrl.reg);
     }
 
-
     samr21TrxSpiCloseAccess();
     PORT->Group[0].OUTCLR.reg = PORT_PA07;
 }
-
-
 
 /****************FRAMEBUFFER READ ACCESS************************/
 bool samr21TrxLiveFramebufferDownload(uint8_t *a_data_1D, uint8_t a_len)
@@ -982,7 +976,7 @@ bool samr21TrxLiveFramebufferDownload(uint8_t *a_data_1D, uint8_t a_len)
 
     // Set a Timeout
     volatile bool abortActionFlag = false;
-    samr21TrxStartTimeoutTimer((((uint16_t)(a_len) * 2) * IEEE_15_4_24GHZ_TIME_PER_OCTET_us), &abortActionFlag); // Shift for cheap multiply x2
+    samr21TrxStartTimeoutTimer((((uint16_t)(a_len)*2) * IEEE_15_4_24GHZ_TIME_PER_OCTET_us), &abortActionFlag); // Shift for cheap multiply x2
 
     samr21TrxSpiStartAccess(AT86RF233_CMD_FRAMEBUFFER_READ, NULL);
 
@@ -1060,8 +1054,8 @@ bool samr21TrxDownloadFramebuffer(uint8_t *a_psduLen, uint8_t *a_psdu_1D, uint8_
     *a_LQI_p = samr21TrxSpiReadByteRaw();
     *a_RSSI_p = AT86RF233_RSSI_BASE_VAL_dBm + samr21TrxSpiReadByteRaw();
 
-    //Check if CRC is correct (samr21 Datasheet 35.3.2 Frame Buffer Access Mode - Structure of RX_STATUS)
-    validFrame &= samr21TrxSpiReadByteRaw() >> 7 ;
+    // Check if CRC is correct (samr21 Datasheet 35.3.2 Frame Buffer Access Mode - Structure of RX_STATUS)
+    validFrame &= samr21TrxSpiReadByteRaw() >> 7;
 
 exit:
     samr21TrxSpiCloseAccess();
@@ -1123,7 +1117,6 @@ static struct trxSecurity_s
 
 } s_trxSecurity;
 
-
 static void samr21TrxUploadEncryptedToFramebuffer(uint8_t *a_data_1D, uint8_t *a_xorMask_1D, uint8_t a_len, uint8_t a_pos)
 {
 
@@ -1146,24 +1139,25 @@ static void samr21TrxUploadEncryptedToFramebuffer(uint8_t *a_data_1D, uint8_t *a
     PORT->Group[0].OUTCLR.reg = PORT_PA06;
 }
 
-static void samr21TrxAuthenticateFinish(){
+static void samr21TrxAuthenticateFinish()
+{
     // Start a DummyRound to retrieve the result of the last Round
     // TODO remove Dummy round!
     samr21TrxAesCbcEncrypt(NULL, s_trxSecurity.micBlock_1D);
-    
-    //Last AES Action took place, the engine can be unlocked again
+
+    // Last AES Action took place, the engine can be unlocked again
     s_aesBusy = false;
 
-    if(s_trxSecurity.micSize){
+    if (s_trxSecurity.micSize)
+    {
         samr21TrxUploadEncryptedToFramebuffer(
             s_trxSecurity.micBlock_1D,
             s_trxSecurity.encryptionMask_1D,
             s_trxSecurity.micSize,
-            s_trxSecurity.numBytesUploaded
-        );
+            s_trxSecurity.numBytesUploaded);
         s_trxSecurity.numBytesUploaded += s_trxSecurity.micSize;
     }
-    
+
     // FCS is done by TRX (samr21 datasheet 37.3.3 Automatic FCS Generation)
 
 #ifdef _DEBUG
@@ -1179,7 +1173,7 @@ static void samr21TrxAuthenticateLoop()
     {
         // start the next CBC-Round for a header Block
         samr21TrxAesCbcEncrypt(s_trxSecurity.aesCbcBlock_1D, NULL); // only the last round CBC output is relevant
-        //memcpy(AESCBCINPUT[AEStemp++],s_trxSecurity.aesCbcBlock_1D,IEEE_15_4_AES_CCM_BLOCK_SIZE);
+        // memcpy(AESCBCINPUT[AEStemp++],s_trxSecurity.aesCbcBlock_1D,IEEE_15_4_AES_CCM_BLOCK_SIZE);
 
         s_trxSecurity.numAuthenticationHeaderBlocksDone++;
     }
@@ -1187,14 +1181,13 @@ static void samr21TrxAuthenticateLoop()
     {
         // start the next CBC-Round for a Payload
         samr21TrxAesCbcEncrypt(s_trxSecurity.aesCbcBlock_1D, NULL); // only the last round CBC output is relevant
-        //memcpy(AESCBCINPUT[AEStemp++],s_trxSecurity.aesCbcBlock_1D,IEEE_15_4_AES_CCM_BLOCK_SIZE);
+        // memcpy(AESCBCINPUT[AEStemp++],s_trxSecurity.aesCbcBlock_1D,IEEE_15_4_AES_CCM_BLOCK_SIZE);
 
         s_trxSecurity.numAuthenticationPayloadBlocksDone++;
     }
 
-    if( s_trxSecurity.numAuthenticationPayloadBlocksDone == s_trxSecurity.numAuthenticationPayloadBlocksNeeded
-        && s_trxSecurity.numAuthenticationHeaderBlocksDone == s_trxSecurity.numAuthenticationHeaderBlocksNeeded
-    ){
+    if (s_trxSecurity.numAuthenticationPayloadBlocksDone == s_trxSecurity.numAuthenticationPayloadBlocksNeeded && s_trxSecurity.numAuthenticationHeaderBlocksDone == s_trxSecurity.numAuthenticationHeaderBlocksNeeded)
+    {
         // Start a Timer for when the AES-Engine is done
         samr21TrxQueueDelayedAction(AT86RF233_ADJUSTED_AES_BUSY_TIME_us, samr21TrxAuthenticateFinish);
         return;
@@ -1248,9 +1241,9 @@ static void samr21TrxAuthenticateStart()
     // Nonce is already in CBC block because of union within the s_trxSecurity struct
     s_trxSecurity.aesCbcBlock_1D[0] =
         (s_trxSecurity.headerLen != 0 ? 0b01000000 : 0x0) | (((s_trxSecurity.micSize - 2) >> 1) << 3) | 1; // L always 2
-    s_trxSecurity.aesCbcBlock_1D[IEEE_15_4_AES_CCM_BLOCK_SIZE - 2] = 0;                                                     // always 0 cause maxlenght is 127
+    s_trxSecurity.aesCbcBlock_1D[IEEE_15_4_AES_CCM_BLOCK_SIZE - 2] = 0;                                    // always 0 cause maxlenght is 127
     s_trxSecurity.aesCbcBlock_1D[IEEE_15_4_AES_CCM_BLOCK_SIZE - 1] = s_trxSecurity.payloadLen;
-    
+
     // start the first CBC-Round with init vector (plain ECB, r21 datasheet 40.1.4.2 Cipher Block Chaining (CBC))
     // simultaneously retrieve the MIC encryptionBlock from the CTR-Section
     samr21TrxAesEcbEncrypt(s_trxSecurity.aesCbcBlock_1D, s_trxSecurity.encryptionMask_1D);
@@ -1288,7 +1281,6 @@ static void samr21TrxAuthenticateStart()
     samr21TrxQueueDelayedAction(AT86RF233_ADJUSTED_AES_BUSY_TIME_us, samr21TrxAuthenticateLoop);
 }
 
-
 static void samr21TrxEncryptAndUploadPayload()
 {
     while (s_trxSecurity.numEncryptionBlocksDone < s_trxSecurity.numEncryptionBlocksNeeded)
@@ -1310,10 +1302,7 @@ static void samr21TrxEncryptAndUploadPayload()
         else
         {
 
-            uint8_t lastEncryptedPayloadBlockSize = (
-                (s_trxSecurity.payloadLen % IEEE_15_4_AES_CCM_BLOCK_SIZE) ? 
-                (s_trxSecurity.payloadLen % IEEE_15_4_AES_CCM_BLOCK_SIZE) : IEEE_15_4_AES_CCM_BLOCK_SIZE
-            );
+            uint8_t lastEncryptedPayloadBlockSize = ((s_trxSecurity.payloadLen % IEEE_15_4_AES_CCM_BLOCK_SIZE) ? (s_trxSecurity.payloadLen % IEEE_15_4_AES_CCM_BLOCK_SIZE) : IEEE_15_4_AES_CCM_BLOCK_SIZE);
 
             // set Nonce Counter to 0 for later encryption of MIC
             s_trxSecurity.aesCtrBlock_1D[(IEEE_15_4_AES_CCM_BLOCK_SIZE - 1)] = 0;
@@ -1332,10 +1321,11 @@ static void samr21TrxEncryptAndUploadPayload()
         s_trxSecurity.numEncryptionBlocksDone++;
     }
 
-    //Delay is needed here cause if the last PayloadBlock is pretty short
-    //There could be a Edge Case where the time it take to upload this last Block
-    //Is shorter then the AES Cycle Time
-    if(s_trxSecurity.micSize){
+    // Delay is needed here cause if the last PayloadBlock is pretty short
+    // There could be a Edge Case where the time it take to upload this last Block
+    // Is shorter then the AES Cycle Time
+    if (s_trxSecurity.micSize)
+    {
         samr21TrxAuthenticateStart();
     }
 }
@@ -1347,15 +1337,15 @@ void samr21TrxSendFrameAndApplyMacSecurity(uint8_t *a_header_p, uint8_t *a_paylo
     assert(a_secLevel >= 0b100);
 #endif
 
-    //Block AES Engine, so no Key Change takes places while frame is being transmitted
+    // Block AES Engine, so no Key Change takes places while frame is being transmitted
     s_aesBusy = true;
 
-        // Upload the unecrypted Part of the Message first. This is done o the Framebuffer doesn't get empty, while AES-CCM* is ongoing
+    // Upload the unecrypted Part of the Message first. This is done o the Framebuffer doesn't get empty, while AES-CCM* is ongoing
     // Frame Transmission and AES-CCM* is done in Parallel
     s_trxSecurity.headerLen = (uint8_t)(a_payload_p - a_header_p);
     samr21TrxUploadToFramebuffer(a_header_p, s_trxSecurity.headerLen, 0);
 
-    //Start Transmission
+    // Start Transmission
     samr21TrxSetSLP_TR(true);
 
     // Prep CTR Block (input for AES-Engine, Output get XORed with payload)
@@ -1368,7 +1358,6 @@ void samr21TrxSendFrameAndApplyMacSecurity(uint8_t *a_header_p, uint8_t *a_paylo
     samr21TrxAesEcbEncrypt(s_trxSecurity.aesCtrBlock_1D, NULL);
     // Start Timer for when result AES-Engine is done
     samr21TrxQueueDelayedAction(AT86RF233_ADJUSTED_AES_BUSY_TIME_us, samr21TrxEncryptAndUploadPayload);
-
 
     // Prep part of the Memory for the next Actions
     s_trxSecurity.numBytesUploaded = s_trxSecurity.headerLen;
@@ -1410,9 +1399,8 @@ void samr21TrxSendFrameAndApplyMacSecurity(uint8_t *a_header_p, uint8_t *a_paylo
         break;
     }
 
-    //Transmission Should have started by now
+    // Transmission Should have started by now
     samr21TrxSetSLP_TR(false);
-
 }
 
 /**********TRX EVENT HANDLER********/
@@ -1420,11 +1408,11 @@ void samr21TrxSendFrameAndApplyMacSecurity(uint8_t *a_header_p, uint8_t *a_paylo
 // External IRQs form TRX
 static void (*s_currentIsrHandler_fktPtr[NUM_TRX_IRQS])(void) = {NULL};
 
-
-void samr21TrxSetIrqHandler(uint8_t a_irqType, void (*a_handler_fktPtr)(void)){
+void samr21TrxSetIrqHandler(uint8_t a_irqType, void (*a_handler_fktPtr)(void))
+{
 
 #ifdef _DEBUG
-    assert(a_irqType <= ( NUM_TRX_IRQS -1 ) );
+    assert(a_irqType <= (NUM_TRX_IRQS - 1));
 #endif
 
     s_currentIsrHandler_fktPtr[a_irqType] = a_handler_fktPtr;
@@ -1438,22 +1426,25 @@ void samr21TrxRemoveAllHandler()
     }
 }
 
-void samr21TrxDisableAllIrq(){
+void samr21TrxDisableAllIrq()
+{
     s_ramCopyTrxRegister.irqMask.reg = 0x00;
 
     samr21TrxWriteRegister(IRQ_MASK_REG_ADDR, s_ramCopyTrxRegister.irqMask.reg);
 }
 
-void samr21TrxEnableIrq(uint8_t a_irqType){
+void samr21TrxEnableIrq(uint8_t a_irqType)
+{
 
 #ifdef _DEBUG
-    assert(a_irqType <= ( NUM_TRX_IRQS -1 ) );
+    assert(a_irqType <= (NUM_TRX_IRQS - 1));
 #endif
 
     uint8_t shiftedIrqEnableBit = 1 << a_irqType;
 
-    if(shiftedIrqEnableBit & s_ramCopyTrxRegister.irqMask.reg){
-        //Already enabled
+    if (shiftedIrqEnableBit & s_ramCopyTrxRegister.irqMask.reg)
+    {
+        // Already enabled
         return;
     }
 
@@ -1462,16 +1453,18 @@ void samr21TrxEnableIrq(uint8_t a_irqType){
     samr21TrxWriteRegister(IRQ_MASK_REG_ADDR, s_ramCopyTrxRegister.irqMask.reg);
 }
 
-void samr21TrxDisableIrq(uint8_t a_irqType){
+void samr21TrxDisableIrq(uint8_t a_irqType)
+{
 
 #ifdef _DEBUG
-    assert(a_irqType <= ( NUM_TRX_IRQS -1 ) );
+    assert(a_irqType <= (NUM_TRX_IRQS - 1));
 #endif
 
     uint8_t shiftedIrqDisableBit = 1 << a_irqType;
 
-    if(shiftedIrqDisableBit & ~s_ramCopyTrxRegister.irqMask.reg){
-        //Already disabled
+    if (shiftedIrqDisableBit & ~s_ramCopyTrxRegister.irqMask.reg)
+    {
+        // Already disabled
         return;
     }
 
@@ -1480,8 +1473,6 @@ void samr21TrxDisableIrq(uint8_t a_irqType){
     samr21TrxWriteRegister(IRQ_MASK_REG_ADDR, s_ramCopyTrxRegister.irqMask.reg);
 }
 
-
-
 void EIC_Handler()
 {
     // Clear IRQ
@@ -1489,42 +1480,42 @@ void EIC_Handler()
 
     s_ramCopyTrxRegister.irqStatus.reg = samr21TrxReadRegister(IRQ_STATUS_REG_ADDR);
 
-    if (s_ramCopyTrxRegister.irqStatus.bit.rxStart && ( s_currentIsrHandler_fktPtr[TRX_IRQ_RX_START] != NULL ))
+    if (s_ramCopyTrxRegister.irqStatus.bit.rxStart && (s_currentIsrHandler_fktPtr[TRX_IRQ_RX_START] != NULL))
     {
         (*s_currentIsrHandler_fktPtr[TRX_IRQ_RX_START])();
     }
 
-    if (s_ramCopyTrxRegister.irqStatus.bit.trxEnd && ( s_currentIsrHandler_fktPtr[TRX_IRQ_TRX_END] != NULL ))
+    if (s_ramCopyTrxRegister.irqStatus.bit.trxEnd && (s_currentIsrHandler_fktPtr[TRX_IRQ_TRX_END] != NULL))
     {
         (*s_currentIsrHandler_fktPtr[TRX_IRQ_TRX_END])();
     }
 
-    if (s_ramCopyTrxRegister.irqStatus.bit.pllLock && ( s_currentIsrHandler_fktPtr[TRX_IRQ_PLL_LOCK] != NULL ))
+    if (s_ramCopyTrxRegister.irqStatus.bit.pllLock && (s_currentIsrHandler_fktPtr[TRX_IRQ_PLL_LOCK] != NULL))
     {
         (*s_currentIsrHandler_fktPtr[TRX_IRQ_TRX_END])();
     }
 
-    if (s_ramCopyTrxRegister.irqStatus.bit.pllUnlock && ( s_currentIsrHandler_fktPtr[TRX_IRQ_PLL_UNLOCK] != NULL ))
+    if (s_ramCopyTrxRegister.irqStatus.bit.pllUnlock && (s_currentIsrHandler_fktPtr[TRX_IRQ_PLL_UNLOCK] != NULL))
     {
         (*s_currentIsrHandler_fktPtr[TRX_IRQ_PLL_UNLOCK])();
     }
 
-    if (s_ramCopyTrxRegister.irqStatus.bit.ccaEdDone && ( s_currentIsrHandler_fktPtr[TRX_IRQ_CCA_ED_DONE] != NULL ))
+    if (s_ramCopyTrxRegister.irqStatus.bit.ccaEdDone && (s_currentIsrHandler_fktPtr[TRX_IRQ_CCA_ED_DONE] != NULL))
     {
         (*s_currentIsrHandler_fktPtr[TRX_IRQ_CCA_ED_DONE])();
     }
 
-    if (s_ramCopyTrxRegister.irqStatus.bit.addressMatch && ( s_currentIsrHandler_fktPtr[TRX_IRQ_AMI] != NULL ))
+    if (s_ramCopyTrxRegister.irqStatus.bit.addressMatch && (s_currentIsrHandler_fktPtr[TRX_IRQ_AMI] != NULL))
     {
         (*s_currentIsrHandler_fktPtr[TRX_IRQ_AMI])();
     }
-    
-    if (s_ramCopyTrxRegister.irqStatus.bit.bufferUnderRun && ( s_currentIsrHandler_fktPtr[TRX_IRQ_TRX_UR] != NULL ))
+
+    if (s_ramCopyTrxRegister.irqStatus.bit.bufferUnderRun && (s_currentIsrHandler_fktPtr[TRX_IRQ_TRX_UR] != NULL))
     {
         (*s_currentIsrHandler_fktPtr[TRX_IRQ_TRX_UR])();
     }
 
-    if (s_ramCopyTrxRegister.irqStatus.bit.batteryLow && ( s_currentIsrHandler_fktPtr[TRX_IRQ_BAT_LOW] != NULL ))
+    if (s_ramCopyTrxRegister.irqStatus.bit.batteryLow && (s_currentIsrHandler_fktPtr[TRX_IRQ_BAT_LOW] != NULL))
     {
         (*s_currentIsrHandler_fktPtr[TRX_IRQ_BAT_LOW])();
     }

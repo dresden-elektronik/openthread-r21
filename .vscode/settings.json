@@ -60,7 +60,9 @@
         "system_samr21.h": "c",
         "stat.h": "c",
         "samr21clock.h": "c",
-        "samr21debugpins.h": "c"
+        "samr21debugpins.h": "c",
+        "usbh.h": "c",
+        "usbd.h": "c"
     },
     "cmake.configureOnOpen": false,
     "cortex-debug.variableUseNaturalFormat": false,

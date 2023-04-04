@@ -14,6 +14,7 @@
 
 #include "samr21.h"
 #include "tusb.h"
+#include "tusb_config.h"
 
 
 /**
