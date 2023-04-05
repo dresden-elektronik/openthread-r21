@@ -335,6 +335,8 @@ static uint8_t s_rxAckSecurityLevel;
 static void samr21RadioAbortReception()
 {
     PORT->Group[0].OUTCLR.reg = PORT_PA09;
+    PORT->Group[0].OUTCLR.reg = PORT_PA17;
+
     s_radioVars.rxState = SAMR21_RADIO_RX_STATE_IDLE;
 
     s_radioVars.rxBusy = false;
@@ -356,6 +358,7 @@ static void samr21RadioAbortReception()
 static void samr21RadioFinishReception()
 {
     PORT->Group[0].OUTCLR.reg = PORT_PA09;
+    PORT->Group[0].OUTCLR.reg = PORT_PA17;
     s_radioVars.rxState = SAMR21_RADIO_RX_STATE_IDLE;
 
     s_radioVars.rxBusy = false;
@@ -379,9 +382,11 @@ static void samr21RadioFinishReception()
 
 static void samr21RadioSendAck()
 {
+    PORT->Group[0].OUTSET.reg = PORT_PA17;
     s_radioVars.rxState = SAMR21_RADIO_RX_STATE_SENDING_ACK;
-    // Start Transmission with a empty Framebuffer, cause the there is time to fill it while Preamble and sfd is transmitted first
-    samr21TrxSetSLP_TR(true);
+    
+    // Set a handler for when the Ack is successfully transmitted
+    samr21TrxSetIrqHandler(TRX_IRQ_TRX_END, samr21RadioFinishReception);
 
     if (s_rxAckSecurityLevel)
     {
@@ -396,15 +401,12 @@ static void samr21RadioSendAck()
     }
     else
     {
+        samr21TrxSetSLP_TR(true);
         samr21TrxUploadToFramebuffer(s_rxAckFrameBuffer, s_rxAckFrameBuffer[0], 0);
+        samr21TrxSetSLP_TR(false);
     }
 
-    samr21TrxSetSLP_TR(false);
-
     s_radioVars.rxState = SAMR21_RADIO_RX_STATE_WAIT_ACK_END;
-
-    // Set a handler for when the Ack is successfully transmitted
-    samr21TrxSetIrqHandler(TRX_IRQ_TRX_END, samr21RadioFinishReception);
 
     // Set a Timeout in case the Trx never get triggered
     samr21RadioQueueDelayedAction(IEEE_15_4_FRAME_SIZE * IEEE_15_4_24GHZ_TIME_PER_OCTET_us, samr21RadioAbortReception);
@@ -522,6 +524,7 @@ static void samr21RadioRxDownloadAndHandleRemaining()
         return;
     }
 
+    PORT->Group[0].OUTCLR.reg = PORT_PA09;
     bool ackRequested  = otMacFrameIsAckRequested(&(s_rxBuffer[s_activeRxBuffer].otFrame));
 
     // A Message has been fully received at this point
@@ -535,6 +538,7 @@ static void samr21RadioRxDownloadAndHandleRemaining()
     // A Acknowledgment was requested
     // Send after Ack-InterFrame-Spacing delay
     samr21RadioQueueDelayedAction(IEEE_15_4_ADJUSTED_AIFS_us, samr21RadioSendAck);
+
 
     s_radioVars.rxState = SAMR21_RADIO_RX_STATE_PREP_ACK;
     // Move TRX to Tx, so PLL is already dialed in when ack is about to be Transmitted
@@ -775,6 +779,7 @@ static void samr21RadioFinishQueuedReceiveSlot(){
     //Wait for Current Reception to finish
     while(s_radioVars.rxBusy);
 
+    //Put Radio to sleep
     samr21RadioCtrlSleep();
 
     if(s_radioVars.numReceivedFramesDuringSlot == 0){
@@ -917,34 +922,15 @@ static void samr21RadioEvaluateAck(){
 
 static void samr21RadioAckReceptionStarted(){
 
+    //Add a Handler for when Ack is fully received
+    samr21TrxSetIrqHandler(TRX_IRQ_TRX_END, samr21RadioEvaluateAck);
+
     s_radioVars.txState = SAMR21_RADIO_TX_STATE_WAIT_FOR_ACK_END;
 
     //Add a Timestamp for the Ack reception started
     s_txAckOtFrame.mInfo.mRxInfo.mTimestamp = samr21RtcGetTimestamp();
-
-    //Add a Handler for when Ack is fully received
-    samr21TrxSetIrqHandler(TRX_IRQ_TRX_END, samr21RadioEvaluateAck);
-
 }
 
-static void samr21RadioPrepareForAckReception(){
-
-    PORT->Group[0].OUTCLR.reg = PORT_PA08;
-
-    s_radioVars.txState = SAMR21_RADIO_TX_STATE_WAIT_FOR_ACK_START;
-
-    //Stop Timeout
-    samr21RadioRemoveQueuedAction();
-
-    //Change Radio Mode to RX
-    samr21TrxQueueMoveToRx(true);
-
-    //Add a Handler for when Ack is received
-    samr21TrxSetIrqHandler(TRX_IRQ_RX_START, samr21RadioAckReceptionStarted);
-
-    //Add a Timeout in case there is no Ack
-    samr21RadioQueueDelayedAction(SAMR21_SOFTWARE_RADIO_ACK_TIMEOUT_us, samr21RadioRetryTransmission);
-}
 
     
 static void samr21RadioRetryTransmission(){
@@ -1027,20 +1013,25 @@ static void samr21RadioStartTransmission(){
         samr21TrxSetSLP_TR(false);
     }
 
-    s_radioVars.txState = SAMR21_RADIO_TX_STATE_WAIT_SENDING_END;
     // Set a handler for when the Frame is fully transmitted
     if(otMacFrameIsAckRequested(&s_txOtFrame))
-    {
-        samr21TrxSetIrqHandler(TRX_IRQ_TRX_END, samr21RadioPrepareForAckReception);
+    {   
+        //Add a Handler for when Ack is received
+        samr21TrxSetIrqHandler(TRX_IRQ_RX_START, samr21RadioAckReceptionStarted);
+        //Queue Radio Mode Change to RX after Transmission is completed
+        samr21TrxQueueMoveToRx(false);
+
+        //Add a Timeout in case there is no Ack
+        samr21RadioQueueDelayedAction(SAMR21_SOFTWARE_RADIO_ACK_TIMEOUT_us, samr21RadioRetryTransmission);
+        s_radioVars.rxState = SAMR21_RADIO_RX_STATE_WAIT_ACK_START;
     }
     else
     {
         samr21TrxSetIrqHandler(TRX_IRQ_TRX_END, samr21RadioFinishTransmission);
+        // Set a Timeout in case the TrxEnd IRQ never happens
+        samr21RadioQueueDelayedAction(SAMR21_SOFTWARE_RADIO_TRX_END_TIMEOUT_us, samr21RadioRetryTransmission);
+        s_radioVars.txState = SAMR21_RADIO_TX_STATE_WAIT_SENDING_END;
     }
-    
-    // Set a Timeout in case the TrxEnd IRQ never happens
-    samr21RadioQueueDelayedAction(IEEE_15_4_FRAME_SIZE * IEEE_15_4_24GHZ_TIME_PER_OCTET_us, samr21RadioRetryTransmission);
-
 }
 
 static void samr21RadioEvaluateCcaResult(){

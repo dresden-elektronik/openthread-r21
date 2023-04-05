@@ -25,8 +25,8 @@
 #define IEEE_15_5_STATIC_HEADER_SIZE        (IEEE_15_4_FCF_SIZE + IEEE_15_4_PHY_LEN_SIZE + IEEE_15_4_DSN_SIZE)
 
 #define IEEE_15_4_24GHZ_TIME_PER_OCTET_us   32
-#define IEEE_15_4_AIFS_us                   64
-#define IEEE_15_4_ADJUSTED_AIFS_us          30
+#define IEEE_15_4_AIFS_us                   192
+#define IEEE_15_4_ADJUSTED_AIFS_us          100
 
 #define IEEE_15_4_MIN_BACKOFF_EXPONENT      3
 #define IEEE_15_4_MAX_BACKOFF_EXPONENT      7
