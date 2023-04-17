@@ -15,8 +15,8 @@
  * Sets all Clocks usually feed by derivatives of MCLK form the AT86RF233 to temporally us the internal OSC8M
  * This is a WA so the MCU doesn't crash when SWRST of GCLK is called
 */
-static void samr21ClockRemoveExternalSource(){
-        //Setup GCLKGEN 0 (CPU Clock) to Use the internal OSC8M
+void samr21ClockRemoveExternalSource(){
+    //Setup GCLKGEN 0 (CPU Clock) to Use the internal OSC8M
     //This is needed so a reliable Clock for the CPU is available while Clocks are being Setup
 
     //Make sure OSC8M is enabled

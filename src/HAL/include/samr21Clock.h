@@ -20,6 +20,11 @@
 
 
 /**
+ * Deinitialize all Clocks Derived from the Crystal on the AT86rf233 (MCLK)
+*/
+void samr21ClockRemoveExternalSource();
+
+/**
  * Inits the Clocking System of the SAMR21
  * Activates a Clock Source GCLKIN derived from the Crystal on the AT86rf233 (MCLK)
  * 

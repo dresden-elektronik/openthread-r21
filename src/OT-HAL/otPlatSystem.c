@@ -233,5 +233,15 @@ otPlatResetReason otPlatGetResetReason(otInstance *aInstance){
 }
 
 void otPlatReset(otInstance *aInstance){
-   NVIC_SystemReset();
+    
+    //Deinit all modules feed by MCLK from AT86RF233
+    samr21RtcDeinit();
+    samr21TimerDeinitAll();
+    samr21UsbDeinit();
+    samr21TrxInterruptDeinit();
+
+    //Deinit all Clock-Domains derived from MCLK AT86RF233
+    samr21ClockRemoveExternalSource();
+
+    NVIC_SystemReset();
 }

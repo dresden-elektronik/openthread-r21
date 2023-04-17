@@ -61,7 +61,7 @@ static void samr21OtPlatCommReceiveTask()
             {
                 if(++s_gcfResetCommandMatchLen == sizeof(s_gcfResetCommand))
                 {
-                    NVIC_SystemReset();
+                    otPlatReset();
                 }
             }
             else
