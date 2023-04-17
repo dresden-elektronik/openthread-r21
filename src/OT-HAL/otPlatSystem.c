@@ -119,16 +119,10 @@ static void samr21DebugPortsInit()
 }
 #endif
 
+void samr21TickleWatchdog()
+{
 #ifdef _GCF_RELEASE_
-    volatile bool g_keepAlive = true;
-#endif
-
-void conbeeTickleWdt(){
-#ifdef _GCF_RELEASE_
-    //WDT
-    if(g_keepAlive){
-        WDT->CLEAR.reg = WDT_CLEAR_CLEAR_KEY_Val;
-    }
+    WDT->CLEAR.reg = WDT_CLEAR_CLEAR_KEY_Val;
 #endif
 }
 
@@ -141,46 +135,36 @@ void otSysInit(int argc, char *argv[])
     samr21DebugPortsInit();
 #endif
 
-#ifdef _GCF_RELEASE_   
     samr21NvmInit();
 
-    conbeeTickleWdt();
+    samr21TickleWatchdog();
     samr21ClockTrxSrcInit();
 
-    conbeeTickleWdt();
+    samr21TickleWatchdog();
     samr21TrxInterfaceInit();
     
-    conbeeTickleWdt();
+    samr21TickleWatchdog();
     samr21TrxSetupMClk(0x5); //MCLK 1MHz -> 16 Mhz
     
-    conbeeTickleWdt();
+    samr21TickleWatchdog();
     samr21ClockInitAfterTrxSetup();
     
-    conbeeTickleWdt();
+    samr21TickleWatchdog();
     samr21RtcInit();
 
-    conbeeTickleWdt();
+    samr21TickleWatchdog();
     samr21UsbInit();
 
-    conbeeTickleWdt();
+#ifdef _GCF_RELEASE_
+    samr21TickleWatchdog();
     samr21FeCtrlInit();
 
     //Confirm the App Started to Bootloader
     uint8_t confirmedBtlFlag = 0x77;
     samr21NvmWriteWithinRow(0x4FFF, &confirmedBtlFlag, sizeof(uint8_t));
-#else
-
-    samr21NvmInit();
-    
-    samr21ClockTrxSrcInit();
-    samr21TrxInterfaceInit();
-    samr21TrxSetupMClk(0x5); //MCLK 1MHz -> 16 Mhz
-
-    samr21ClockInitAfterTrxSetup();
-    samr21RtcInit();
-    samr21UsbInit();
-
 #endif
+
+    samr21TickleWatchdog();
 
     //TCC1 Used by OT Micros Alarm
     samr21Timer1Init(0); // 1MHz / (2^0) -> 1us resolution
@@ -217,7 +201,7 @@ void otSysProcessDrivers(otInstance *aInstance)
     samr21OtPlatRadioTask();
 
 #ifdef _GCF_RELEASE_   
-    conbeeTickleWdt();
+    samr21TickleWatchdog();
 #endif
 
 }

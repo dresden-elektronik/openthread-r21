@@ -24,8 +24,9 @@ static struct
 
 
 #ifdef _GCF_RELEASE_
-static const uint8_t gcfResetCommand[] =
+static const uint8_t s_gcfResetCommand[] =
     {
+        0xC0, //Slip END Flag
         0x0B,
         0x03,
         0x00,
@@ -37,8 +38,11 @@ static const uint8_t gcfResetCommand[] =
         0x02,
         0x00,
         0x00,
-        0x00};
-extern volatile bool g_keepAlive;
+        0x00
+    };
+
+static uint8_t s_gcfResetCommandMatchLen = 0;
+
 #endif
 
 static void samr21OtPlatCommReceiveTask()
@@ -52,10 +56,21 @@ static void samr21OtPlatCommReceiveTask()
         otPlatUartReceived(buf, count);
 
 #ifdef _GCF_RELEASE_
-        if (!strncmp(buf, gcfResetCommand, sizeof(gcfResetCommand)))
-        {
-            NVIC_SystemReset();
+        for(uint8_t i = 0; i < count; i++){
+            if(buf[i] == s_gcfResetCommand[s_gcfResetCommandMatchLen])
+            {
+                if(++s_gcfResetCommandMatchLen == sizeof(s_gcfResetCommand))
+                {
+                    NVIC_SystemReset();
+                }
+            }
+            else
+            {
+                s_gcfResetCommandMatchLen = 0;
+                break;
+            }
         }
+
 #endif
     }
 }

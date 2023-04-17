@@ -65,7 +65,7 @@ STACK_SIZE = DEFINED(STACK_SIZE) ? STACK_SIZE : DEFINED(__stack_size__) ? __stac
 SECTIONS
 {
     .vectors : {
-        . = ALIGN(4);c
+        . = ALIGN(4);
         _sfixed = .;
         KEEP(*(.vectors .vectors.*))
     } > vec_rom
@@ -129,7 +129,7 @@ SECTIONS
     _etext = .;
 
     .nvmem : {
-        . = ALIGN(4);c
+        . = ALIGN(4);
         _snvmem = .;
     } > nvmem
 

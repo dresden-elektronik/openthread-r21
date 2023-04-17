@@ -23,7 +23,7 @@ static ramCopyTrxRegister_t s_ramCopyTrxRegister = {
 
 #ifdef _GCF_RELEASE_
     .trxCtrl1.bit.paExtnEn = 1,
-    .phyTrxPwr.bit.txPwr = 0x7
+    .phyTxPwr.bit.txPwr = 0x7
 #else
     .trxCtrl1.bit.paExtnEn = 0,
     .phyTxPwr.bit.txPwr = 0x0
@@ -648,7 +648,7 @@ int8_t samr21RadioCtrlGetCcaThreshold()
 // TX Power
 #define SIZE_AT86RF233_TX_POWER_TABLE 16
 #ifdef _GCF_RELEASE_
-static const float sc_txPowerTable_dBm_1D[SIZE_AT86RF233_TX_POWER_TABLE] = {11.9, 11.8, 11.7, 11.6, 11.5, 11.4, 11.3, 11.2, 11, 10.7, 10.4, 10.1, 9.3, 8.2, 6.4, 3.9, 0.1, -5.8};
+static const float sc_txPowerTable_dBm_1D[SIZE_AT86RF233_TX_POWER_TABLE] = {11.9, 11.7, 11.6, 11.5, 11.3, 11.2, 11, 10.7, 10.4, 10.1, 9.3, 8.2, 6.4, 3.9, 0.1, -5.8};
 #else
 static const float sc_txPowerTable_dBm_1D[SIZE_AT86RF233_TX_POWER_TABLE] = {4, 3.7, 3.4, 3, 2.5, 2, 1, 0, -1, -2, -3, -4, -6, -8, -12, -17};
 #endif
