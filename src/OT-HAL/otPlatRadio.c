@@ -463,6 +463,8 @@ static void samr21OtPlatRadioReceiveTask()
 
 static volatile bool s_pendingTxStartedEvent = false;
 static volatile bool s_pendingTxFinishedEvent = false;
+static volatile otRadioFrame* s_txOtFrame_p = NULL;
+
 static transmissionStatus s_currentTransmissionStatus;
 static void samr21OtPlatRadioTransmitTask()
 {
@@ -470,7 +472,7 @@ static void samr21OtPlatRadioTransmitTask()
     {
         s_pendingTxStartedEvent = false;
 
-        otPlatRadioTxStarted(s_instance_p, samr21RadioGetOtTxBuffer());
+        otPlatRadioTxStarted(s_instance_p, s_txOtFrame_p);
     }
 
     if (s_pendingTxFinishedEvent)
@@ -482,28 +484,28 @@ static void samr21OtPlatRadioTransmitTask()
         case RADIO_TRANSMISSION_SUCCESSFUL:
             otPlatRadioTxDone(
                 s_instance_p,
-                samr21RadioGetOtTxBuffer(),
+                s_txOtFrame_p,
                 samr21RadioGetLastReceivedAckFrame(),
                 OT_ERROR_NONE);
             return;
         case RADIO_TRANSMISSION_CHANNEL_ACCESS_FAILED:
             otPlatRadioTxDone(
                 s_instance_p,
-                samr21RadioGetOtTxBuffer(),
+                s_txOtFrame_p,
                 NULL,
                 OT_ERROR_CHANNEL_ACCESS_FAILURE);
             return;
         case RADIO_TRANSMISSION_NO_ACK:
             otPlatRadioTxDone(
                 s_instance_p,
-                samr21RadioGetOtTxBuffer(),
+                s_txOtFrame_p,
                 NULL,
                 OT_ERROR_NO_ACK);
             return;
         default:
             otPlatRadioTxDone(
                 s_instance_p,
-                samr21RadioGetOtTxBuffer(),
+                s_txOtFrame_p,
                 NULL,
                 OT_ERROR_ABORT);
             break;
@@ -527,16 +529,18 @@ void cb_samr21RadioReceptionDone()
     s_pendingRxBuffer = true;
 }
 
-void cb_samr21RadioTransmissionDone(transmissionStatus a_status)
+void cb_samr21RadioTransmissionDone(transmissionStatus a_status,  otRadioFrame* a_frame_p)
 {
 
     s_pendingTxFinishedEvent = true;
     s_currentTransmissionStatus = a_status;
+    s_txOtFrame_p = a_frame_p;
 }
 
-void cb_samr21RadioTransmissionStarted()
+void cb_samr21RadioTransmissionStarted(otRadioFrame* a_frame_p)
 {
     s_pendingTxStartedEvent = true;
+    s_txOtFrame_p = a_frame_p;
 }
 
 void cb_samr21RadioNoMessagesDuringSlot()

@@ -4,9 +4,9 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "buid RCP",
+            "label": "buid All",
             "type": "shell",
-            "command": "${workspaceFolder}/script/build.sh",
+            "command": "${workspaceFolder}/script/buildAll.sh",
             "presentation": {
                 "reveal": "silent",
                 "revealProblems": "onProblem",

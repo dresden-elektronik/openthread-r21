@@ -104,8 +104,6 @@ void samr21UsbDeinit(){
 //IRQ Handler wrapper
 void dcd_int_handler (uint8_t rhport);
 void USB_Handler(){
-    PORT->Group[0].OUTSET.reg = PORT_PA16;
     dcd_int_handler(0);
-    PORT->Group[0].OUTCLR.reg = PORT_PA16;
 }
 

@@ -12,6 +12,7 @@
 #include "samr21NopDelay.h"
 #include "samr21Timer.h"
 #include "samr21Usb.h"
+#include "samr21Uart.h"
 
 #define _DEBUG 1
 
@@ -75,47 +76,6 @@ static void samr21DebugPortsInit()
         | PORT_WRCONFIG_PINMASK(PORT_PA09) // lower Halfword
         ;
 
-    PORT->Group[0].DIRSET.reg = PORT_PA09;
-
-    // Setup Mux Settings
-    PORT->Group[0].WRCONFIG.reg =
-        // PORT_WRCONFIG_HWSEL
-        PORT_WRCONFIG_WRPINCFG
-        //|PORT_WRCONFIG_WRPMUX
-        //|PORT_WRCONFIG_PMUX(MUX_PC16F_GCLK_IO1)
-        // PORT_WRCONFIG_PULLEN
-        //|PORT_WRCONFIG_INEN
-        //|PORT_WRCONFIG_PMUXEN
-        | PORT_WRCONFIG_PINMASK(PORT_PA09) // lower Halfword
-        ;
-
-    PORT->Group[0].DIRSET.reg = PORT_PA16;
-
-    // Setup Mux Settings
-    PORT->Group[0].WRCONFIG.reg =
-        PORT_WRCONFIG_HWSEL
-        |PORT_WRCONFIG_WRPINCFG
-        //| PORT_WRCONFIG_WRPMUX 
-        //| PORT_WRCONFIG_PMUX(MUX_PC16F_GCLK_IO1)
-        //| PORT_WRCONFIG_PULLEN
-        //| PORT_WRCONFIG_INEN
-        //| PORT_WRCONFIG_PMUXEN 
-        | PORT_WRCONFIG_PINMASK(PORT_PA16) // lower Halfword
-        ;
-
-    PORT->Group[0].DIRSET.reg = PORT_PA17;
-
-    // Setup Mux Settings
-    PORT->Group[0].WRCONFIG.reg =
-        PORT_WRCONFIG_HWSEL
-        |PORT_WRCONFIG_WRPINCFG
-        //| PORT_WRCONFIG_WRPMUX 
-        //| PORT_WRCONFIG_PMUX(MUX_PC16F_GCLK_IO1)
-        //| PORT_WRCONFIG_PULLEN
-        //| PORT_WRCONFIG_INEN
-        //| PORT_WRCONFIG_PMUXEN 
-        | PORT_WRCONFIG_PINMASK(PORT_PA17) // lower Halfword
-        ;
 }
 #endif
 
@@ -165,6 +125,7 @@ void otSysInit(int argc, char *argv[])
 #endif
 
     samr21TickleWatchdog();
+    samr21LogInit();
 
     //TCC1 Used by OT Micros Alarm
     samr21Timer1Init(0); // 1MHz / (2^0) -> 1us resolution

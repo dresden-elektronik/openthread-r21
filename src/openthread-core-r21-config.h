@@ -42,13 +42,14 @@
 extern uint32_t __d_nv_mem_start;
 extern uint32_t __d_nv_mem_end;
 
+
 /**
  * @def OPENTHREAD_CONFIG_PLATFORM_INFO
  *
  * The platform-specific string to insert into the OpenThread version string.
  *
  */
-#define OPENTHREAD_CONFIG_PLATFORM_INFO "SAMR21"
+#define OPENTHREAD_CONFIG_PLATFORM_INFO "CONBEE2_RASPBEE2"
 
 /**
  * @def OPENTHREAD_CONFIG_PLATFORM_FLASH_API_ENABLE

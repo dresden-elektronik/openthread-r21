@@ -62,10 +62,11 @@
         "samr21clock.h": "c",
         "samr21debugpins.h": "c",
         "usbh.h": "c",
-        "usbd.h": "c"
+        "usbd.h": "c",
+        "samr21uart.h": "c"
     },
     "cmake.configureOnOpen": false,
-    "cortex-debug.variableUseNaturalFormat": false,
+    "cortex-debug.variableUseNaturalFormat": true,
     "cSpell.words": [
         "Framebuffer",
         "Pdsu",

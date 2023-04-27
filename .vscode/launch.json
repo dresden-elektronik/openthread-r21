@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Cortex Debug",
+            "name": "RCP Debug",
             "cwd": "${workspaceFolder}",
             "executable": "${workspaceFolder}/out/build/bin/ot-rcp",
             "request": "launch",
@@ -15,10 +15,23 @@
             "gdbTarget": "localhost:3333",
             "gdbPath" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-gdb",
             "toolchainPrefix" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-",
-            "preLaunchTask": "buid RCP"
+            "preLaunchTask": "buid All"
         },
         {
-            "name": "Cortex Debug Live",
+            "name": "CLI MTD Debug",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/out/build/bin/ot-cli-mtd",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "openocd",
+            "configFiles": [ "${workspaceFolder}/test/OpenOCD_config/ATMEL-ICE-OpenOCD-samr21e18a.cfg" ],
+            "gdbTarget": "localhost:3333",
+            "gdbPath" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-gdb",
+            "toolchainPrefix" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-",
+            "preLaunchTask": "buid All"
+        },
+        {
+            "name": "RCP Debug Live",
             "cwd": "${workspaceFolder}",
             "executable": "${workspaceFolder}/out/build/bin/ot-rcp",
             "request": "attach",
@@ -27,7 +40,21 @@
             "configFiles": [ "${workspaceFolder}/test/OpenOCD_config/ATMEL-ICE-OpenOCD-samr21e18a.cfg" ],
             "gdbTarget": "localhost:3333",
             "gdbPath" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-gdb",
-            "toolchainPrefix" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-"
-        }
+            "toolchainPrefix" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-",
+            "preLaunchTask": "buid All"
+        },
+        {
+            "name": "CLI MTD Debug Live",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/out/build/bin/ot-cli-mtd",
+            "request": "attach",
+            "type": "cortex-debug",
+            "servertype": "openocd",
+            "configFiles": [ "${workspaceFolder}/test/OpenOCD_config/ATMEL-ICE-OpenOCD-samr21e18a.cfg" ],
+            "gdbTarget": "localhost:3333",
+            "gdbPath" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-gdb",
+            "toolchainPrefix" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-",
+            "preLaunchTask": "buid All"
+        },
     ]
 }

@@ -11,16 +11,27 @@
 
 static otInstance *s_instance = NULL;
 
-void otPlatAlarmMilliStartAt(otInstance *a_instance, uint32_t a_t0, uint32_t a_dT)
+void otPlatAlarmMilliStartAt(otInstance *a_instance, uint32_t a_t0_ms, uint32_t a_dT_ms)
 {
     s_instance = a_instance;
-    samr21Timer2Set( a_dT - ( samr21RtcGetTimestamp() - a_t0 ) );
+
+    uint32_t now_ms = samr21RtcGetTimestamp()  /  1000;
+
+    uint32_t offset_ms = now_ms  - a_t0_ms;
+
+    samr21Timer2Set( a_dT_ms  -  offset_ms);
 }
 
-void otPlatAlarmMicroStartAt(otInstance *a_Instance, uint32_t a_t0, uint32_t a_dT)
+void otPlatAlarmMicroStartAt(otInstance *a_Instance, uint32_t a_t0_ms, uint32_t a_dT_ms)
 {
     s_instance = a_Instance;
-    samr21Timer1Set( a_dT - ( samr21RtcGetTimestamp() - a_t0 ) );
+
+
+    uint32_t now_ms = samr21RtcGetTimestamp();
+
+    uint32_t offset_ms = now_ms  - a_t0_ms;
+
+    samr21Timer1Set( a_dT_ms - ( samr21RtcGetTimestamp() - a_t0_ms ) );
 }
 
 void otPlatAlarmMilliStop(otInstance *a_Instance)

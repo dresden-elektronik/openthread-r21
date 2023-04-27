@@ -11,6 +11,7 @@
 
 #include "samr21Clock.h"
 
+
 /**
  * Sets all Clocks usually feed by derivatives of MCLK form the AT86RF233 to temporally us the internal OSC8M
  * This is a WA so the MCU doesn't crash when SWRST of GCLK is called
@@ -53,7 +54,7 @@ void samr21ClockRemoveExternalSource(){
 
     //Setup GENDIV first
     GCLK->GENDIV.reg = 
-        GCLK_GENDIV_ID(1) // GCLKGEN0
+        GCLK_GENDIV_ID(1) // GCLKGEN1
         |GCLK_GENDIV_DIV(0x0)
     ;
     //Wait for synchronization 
@@ -61,7 +62,7 @@ void samr21ClockRemoveExternalSource(){
 
     //Setup GENCTRL after
     GCLK->GENCTRL.reg = 
-        GCLK_GENCTRL_ID(1) // GCLKGEN0
+        GCLK_GENCTRL_ID(1) // GCLKGEN1
         |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_OSC8M_Val)
         |GCLK_GENCTRL_RUNSTDBY
         //|GCLK_GENCTRL_DIVSEL
@@ -75,7 +76,7 @@ void samr21ClockRemoveExternalSource(){
 
     //Setup GENDIV first
     GCLK->GENDIV.reg = 
-        GCLK_GENDIV_ID(2) // GCLKGEN0
+        GCLK_GENDIV_ID(2) // GCLKGEN2
         |GCLK_GENDIV_DIV(0x0)
     ;
     //Wait for synchronization 
@@ -83,7 +84,7 @@ void samr21ClockRemoveExternalSource(){
 
     //Setup GENCTRL after
     GCLK->GENCTRL.reg = 
-        GCLK_GENCTRL_ID(2) // GCLKGEN0
+        GCLK_GENCTRL_ID(2) // GCLKGEN2
         |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_OSC8M_Val)
         |GCLK_GENCTRL_RUNSTDBY
         //|GCLK_GENCTRL_DIVSEL
@@ -97,7 +98,7 @@ void samr21ClockRemoveExternalSource(){
 
     //Setup GENDIV first
     GCLK->GENDIV.reg = 
-        GCLK_GENDIV_ID(3) // GCLKGEN0
+        GCLK_GENDIV_ID(3) // GCLKGEN3
         |GCLK_GENDIV_DIV(0x0)
     ;
     //Wait for synchronization 
@@ -105,7 +106,7 @@ void samr21ClockRemoveExternalSource(){
 
     //Setup GENCTRL after
     GCLK->GENCTRL.reg = 
-        GCLK_GENCTRL_ID(3) // GCLKGEN0
+        GCLK_GENCTRL_ID(3) // GCLKGEN3
         |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_OSC8M_Val)
         |GCLK_GENCTRL_RUNSTDBY
         //|GCLK_GENCTRL_DIVSEL
@@ -184,6 +185,23 @@ void samr21ClockTrxSrcInit(){
     //Wait for synchronization 
     while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
 
+
+         //Make Output
+        PORT->Group[0].DIRSET.reg= PORT_PA16;
+
+        //Setup Mux Settings
+        PORT->Group[0].WRCONFIG.reg =
+            PORT_WRCONFIG_HWSEL
+            |PORT_WRCONFIG_WRPINCFG
+            |PORT_WRCONFIG_WRPMUX
+            |PORT_WRCONFIG_PMUX(MUX_PA16H_GCLK_IO2)
+            //|PORT_WRCONFIG_INEN
+            //|PORT_WRCONFIG_PULLEN
+            |PORT_WRCONFIG_PMUXEN
+            |PORT_WRCONFIG_PINMASK(PORT_PA16 >> 16) //upper Halfword
+        ;
+
+
     //Setup GENDIV
     GCLK->GENDIV.reg = 
         GCLK_GENDIV_ID(2)
@@ -199,10 +217,8 @@ void samr21ClockTrxSrcInit(){
         |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_GCLKGEN1_Val)
         |GCLK_GENCTRL_RUNSTDBY
         //|GCLK_GENCTRL_DIVSEL
-//#ifdef _DEBUG
         |GCLK_GENCTRL_OE
-//#endif
-        //|GCLK_GENCTRL_OOV
+        |GCLK_GENCTRL_OOV
         |GCLK_GENCTRL_GENEN
     ;
 

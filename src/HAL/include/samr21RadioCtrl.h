@@ -315,7 +315,7 @@ void cb_samr21RadioReceptionDone();
 
 void cb_samr21RadioNoMessagesDuringSlot();
 
-void cb_samr21RadioTransmissionDone(transmissionStatus status);
-void cb_samr21RadioTransmissionStarted();
+void cb_samr21RadioTransmissionDone(transmissionStatus status, otRadioFrame* a_frame_p);
+void cb_samr21RadioTransmissionStarted(otRadioFrame* a_frame_p);
 
 #endif

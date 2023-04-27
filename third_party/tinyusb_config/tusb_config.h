@@ -41,7 +41,7 @@
 
 // RHPort max operational speed can defined by board.mk
 #ifndef BOARD_TUD_MAX_SPEED
-#define BOARD_TUD_MAX_SPEED   OPT_MODE_FULL_SPEED
+#define BOARD_TUD_MAX_SPEED   OPT_MODE_LOW_SPEED
 #endif
 
 #ifndef TUP_DCD_ENDPOINT_MAX
