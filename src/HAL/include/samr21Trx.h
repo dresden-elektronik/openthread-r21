@@ -268,10 +268,11 @@ bool samr21TrxLiveFramebufferDownload(uint8_t *data, uint8_t len);
  * @param[out]  psdu     pointer to buffer the psdu is written to
  * @param[out]  LQI      pointer to to a uint8 to write the LQI to
  * @param[out]  RSSI     pointer to to a uint8 to write the RSSI to
+ * @param[in]  live         set True if frame reception is still ongoing
  *
  * @returns  true if the downloaded content of Framebuffer is valid, false if the content is invalid or a timeout triggered
  */
-bool samr21TrxDownloadFramebuffer(uint8_t *psduLen, uint8_t *psdu, uint8_t *LQI, int8_t *RSSI);
+bool samr21TrxDownloadFramebuffer(uint8_t *psduLen, uint8_t *psdu, uint8_t *LQI, int8_t *RSSI, bool live);
 
 /**
  *

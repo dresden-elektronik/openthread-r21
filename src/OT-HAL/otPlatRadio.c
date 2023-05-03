@@ -337,7 +337,8 @@ uint32_t otPlatRadioGetPreferredChannelMask(otInstance *a_instance_p)
 {
     OT_UNUSED_VARIABLE(a_instance_p);
 
-    return 0b00000001000010000100010000000000;
+    // return 0b00000001000010000100010000000000;
+    return 0b00000000100000000000000000000000;
 }
 
 // TODO

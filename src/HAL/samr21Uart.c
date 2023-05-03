@@ -7,7 +7,7 @@ void samr21UartInit(){
         GCLK->CLKCTRL.reg =
             //GCLK_CLKCTRL_WRTLOCK
             GCLK_CLKCTRL_CLKEN
-            |GCLK_CLKCTRL_GEN(2) // GCLKGEN1
+            |GCLK_CLKCTRL_GEN(0) // GCLKGEN1
             |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_SERCOM2_CORE_Val)
         ;
         //Wait for synchronization 
@@ -61,7 +61,7 @@ void samr21UartInit(){
         
         //F_ref = 16MHz (if At86r233 ist setup correctly) F_baud = F_ref / 2*(BAUD+1) ---> BAUD = 7 F_baud = 3MBAUD
         SERCOM2->USART.BAUD.reg=
-            SERCOM_SPI_BAUD_BAUD(0) 
+            SERCOM_SPI_BAUD_BAUD(7) 
         ;
 
         SERCOM2->USART.CTRLB.reg=

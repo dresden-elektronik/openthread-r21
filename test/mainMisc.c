@@ -167,7 +167,7 @@ int main(int argc, char const *argv[])
         samr21AesEcbEncryptBlocking(inout);
         PORT->Group[0].OUTCLR.reg = PORT_PA06;  
         
-        samr21Timer1Set(500);
+        samr21Timer1Oneshot(500);
         tempLock=true;
         while (tempLock);
     }

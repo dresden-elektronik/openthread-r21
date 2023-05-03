@@ -66,7 +66,7 @@ static void samr21RadioStartTimeoutTimer(uint16_t a_duration_us, bool *a_trigger
 {
     s_timeoutFlag = a_triggerFlag;
     s_currentTimerHandler_fktPtr = &samr21RadioTimeoutTriggered;
-    samr21Timer4Set(a_duration_us);
+    samr21Timer4Oneshot(a_duration_us);
 }
 
 static void samr21RadioStopTimeoutTimer()
@@ -79,7 +79,7 @@ static void samr21RadioStopTimeoutTimer()
 static void samr21RadioQueueDelayedAction(uint16_t a_delay_us, void (*a_queuedAction_fktPtr)(void))
 {
     s_currentTimerHandler_fktPtr = a_queuedAction_fktPtr;
-    samr21Timer4Set(a_delay_us);
+    samr21Timer4Oneshot(a_delay_us);
 }
 
 static void samr21RadioRemoveQueuedAction()
@@ -145,7 +145,7 @@ void samr21RadioCtrlEnable()
     __NVIC_EnableIRQ(EIC_IRQn);
 
     // Enable Radio Timer
-    samr21Timer4Init(0); // 1MHz / (2^0) -> 1us resolution
+    samr21Timer4Init(0,true,true); // 1MHz / (2^0) -> 1us resolution
 
     // HardwareTrx is always initiated cause the clk is sourced from the TRX
     s_radioVars.initiated = true;
@@ -516,7 +516,8 @@ static void samr21RadioRxDownloadAndHandleRemaining()
             &s_rxBuffer[s_activeRxBuffer].otFrame.mLength,
             s_rxBuffer[s_activeRxBuffer].otFrame.mPsdu,
             &s_rxBuffer[s_activeRxBuffer].otFrame.mInfo.mRxInfo.mLqi,
-            &s_rxBuffer[s_activeRxBuffer].otFrame.mInfo.mRxInfo.mRssi 
+            &s_rxBuffer[s_activeRxBuffer].otFrame.mInfo.mRxInfo.mRssi,
+            true 
         )
     ){
         // Timeout or invalid Frame Length
@@ -903,7 +904,8 @@ static void samr21RadioEvaluateAck(){
         &s_txAckOtFrame.mLength,
         s_txAckOtFrame.mPsdu,
         &s_txAckOtFrame.mInfo.mRxInfo.mLqi,
-        &s_txAckOtFrame.mInfo.mRxInfo.mRssi
+        &s_txAckOtFrame.mInfo.mRxInfo.mRssi,
+        false
     );
 
     if (

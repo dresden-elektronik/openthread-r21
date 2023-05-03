@@ -11,6 +11,7 @@ readonly OT_SRCDIR
 OT_OPTIONS=(
     "-DCMAKE_TOOLCHAIN_FILE=${OT_SRCDIR}/src/arm-none-eabi-gcc.cmake"
     "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
+    "-DOT_LOG_LEVEL=NONE"
     "-DOT_PLATFORM=external"
     "-DOT_SLAAC=ON"
     "-DOT_APP_RCP=ON"
@@ -33,9 +34,9 @@ build()
     cmake -GNinja -DOT_COMPILE_WARNING_AS_ERROR=ON "$@" "${OT_SRCDIR}"
 
     if [[ -n ${OT_CMAKE_NINJA_TARGET[*]} ]]; then
-        ninja "${OT_CMAKE_NINJA_TARGET[@]}"
+        ninja "${OT_CMAKE_NINJA_TARGET[@]}"  -
     else
-        ninja
+        ninja 
     fi
 
     cd "${OT_SRCDIR}"

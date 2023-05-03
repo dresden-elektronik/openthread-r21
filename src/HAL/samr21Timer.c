@@ -38,7 +38,8 @@ static struct
 }s_timerVars;
 
 
-static void samr21TimerClk01Init(){
+static void samr21TimerClk01Init()
+{
     // Use GCLKGEN 2 (1MHz) for TCC0 / TCC1
     GCLK->CLKCTRL.reg =
         // GCLK_CLKCTRL_WRTLOCK
@@ -51,7 +52,8 @@ static void samr21TimerClk01Init(){
     s_timerVars.timer0ClkActive = true;
 }
 
-static void samr21TimerClk23Init(){
+static void samr21TimerClk23Init()
+{
     // Use GCLKGEN 2 (1MHz) for TCC2 TC3
     GCLK->CLKCTRL.reg =
         // GCLK_CLKCTRL_WRTLOCK
@@ -64,7 +66,8 @@ static void samr21TimerClk23Init(){
     s_timerVars.timer2ClkActive = true;
 }
 
-static void samr21TimerClk45Init(){
+static void samr21TimerClk45Init()
+{
     // Use GCLKGEN 2 (1MHz) for TC4 TC5
     GCLK->CLKCTRL.reg =
         // GCLK_CLKCTRL_WRTLOCK
@@ -78,7 +81,8 @@ static void samr21TimerClk45Init(){
 }
 
 //TCC0
-void samr21Timer0Init(uint8_t a_divider){
+void samr21Timer0Init(uint8_t a_divider, bool a_oneshot, bool a_interrupt)
+{
     if(s_timerVars.timer0Active){
         return;
     }
@@ -101,7 +105,13 @@ void samr21Timer0Init(uint8_t a_divider){
         ;
 
     // Setup TC Modules
-    TCC0->INTENSET.bit.OVF = 1;
+    
+    if(a_interrupt)
+    {
+            // Enable IRQ in NVIC
+            TCC0->INTENSET.bit.OVF = 1;
+    }
+    
     TCC0->CTRLA.reg =
         TCC_CTRLA_ENABLE | TCC_CTRLA_RESOLUTION(TCC_CTRLA_RESOLUTION_NONE_Val) | TCC_CTRLA_PRESCALER(a_divider) | TCC_CTRLA_RUNSTDBY | TCC_CTRLA_PRESCSYNC(TCC_CTRLA_PRESCSYNC_GCLK_Val)
         //|TCC_CTRLA_ALOCK
@@ -114,7 +124,11 @@ void samr21Timer0Init(uint8_t a_divider){
         ;
 
     TCC0->CTRLBSET.reg =
-        TCC_CTRLBSET_CMD_STOP | TCC_CTRLBSET_DIR | TCC_CTRLBSET_ONESHOT;
+        TCC_CTRLBSET_CMD_STOP 
+        | TCC_CTRLBSET_DIR 
+        | ( a_oneshot ? TCC_CTRLBSET_ONESHOT : 0x00)
+    ;
+
     while (TCC0->SYNCBUSY.bit.CTRLB)
         ;
 
@@ -127,8 +141,12 @@ void samr21Timer0Init(uint8_t a_divider){
     TCC0->INTFLAG.bit.OVF = 1;
     NVIC_ClearPendingIRQ(TCC0_IRQn);
 
-    // Enable IRQ in NVIC
-    NVIC_EnableIRQ(TCC0_IRQn);
+    if(a_interrupt)
+    {
+            // Enable IRQ in NVIC
+            NVIC_EnableIRQ(TCC0_IRQn);
+    }
+
 
     s_timerVars.timer0Active = true;
 }
@@ -153,7 +171,8 @@ void samr21Timer0Stop()
 }
 
 //TCC1 Used by OT Micros Alarm
-void samr21Timer1Init(uint8_t a_divider){
+void samr21Timer1Init(uint8_t a_divider, bool a_oneshot, bool a_interrupt)
+{
     if(s_timerVars.timer1Active){
         return;
     }
@@ -176,7 +195,11 @@ void samr21Timer1Init(uint8_t a_divider){
         ;
 
     // Setup TC Modules
-    TCC1->INTENSET.bit.OVF = 1;
+    if(a_interrupt)
+    {
+        TCC1->INTENSET.bit.OVF = 1;
+    }
+
     TCC1->CTRLA.reg =
         TCC_CTRLA_ENABLE | TCC_CTRLA_RESOLUTION(TCC_CTRLA_RESOLUTION_NONE_Val) | TCC_CTRLA_PRESCALER(a_divider) | TCC_CTRLA_RUNSTDBY | TCC_CTRLA_PRESCSYNC(TCC_CTRLA_PRESCSYNC_GCLK_Val)
         //|TCC_CTRLA_ALOCK
@@ -194,21 +217,28 @@ void samr21Timer1Init(uint8_t a_divider){
         ;
 
     TCC1->CTRLBSET.reg =
-        TCC_CTRLBSET_CMD_STOP | TCC_CTRLBSET_DIR | TCC_CTRLBSET_ONESHOT;
+        TCC_CTRLBSET_CMD_STOP 
+        | TCC_CTRLBSET_DIR 
+        |(a_oneshot ? TCC_CTRLBSET_ONESHOT : 0x00)
+    ;
+
     while (TCC1->SYNCBUSY.bit.CTRLB)
         ;
 
     // clear pending interrupt in TC Module
     TCC1->INTFLAG.bit.OVF = 1;
     NVIC_ClearPendingIRQ(TCC1_IRQn);
-
-    // Enable IRQ in NVIC
-    NVIC_EnableIRQ(TCC1_IRQn);
+    
+    if(a_interrupt)
+    {
+        // Enable IRQ in NVIC
+        NVIC_EnableIRQ(TCC1_IRQn);
+    }
 
     s_timerVars.timer1Active = true;
 }
 
-void samr21Timer1Set(uint32_t a_timerTicks)
+void samr21Timer1Oneshot(uint32_t a_timerTicks)
 {
     while (TCC1->SYNCBUSY.reg)
         ;
@@ -228,7 +258,8 @@ void samr21Timer1Stop()
 }
 
 //TCC2 Used by OT Millis Alarm
-void samr21Timer2Init(uint8_t a_divider){
+void samr21Timer2Init(uint8_t a_divider , bool a_oneshot, bool a_interrupt)
+{
     if(s_timerVars.timer2Active){
         return;
     }
@@ -251,7 +282,11 @@ void samr21Timer2Init(uint8_t a_divider){
         ;
 
     // Setup TC Modules
-    TCC2->INTENSET.bit.OVF = 1;
+    if(a_interrupt)
+    {
+        TCC2->INTENSET.bit.OVF = 1;
+    }
+
     TCC2->CTRLA.reg =
         TCC_CTRLA_ENABLE | TCC_CTRLA_RESOLUTION(TCC_CTRLA_RESOLUTION_NONE_Val) | TCC_CTRLA_PRESCALER(a_divider) | TCC_CTRLA_RUNSTDBY | TCC_CTRLA_PRESCSYNC(TCC_CTRLA_PRESCSYNC_GCLK_Val)
         //|TCC_CTRLA_ALOCK
@@ -269,21 +304,27 @@ void samr21Timer2Init(uint8_t a_divider){
         ;
 
     TCC2->CTRLBSET.reg =
-        TCC_CTRLBSET_CMD_STOP | TCC_CTRLBSET_DIR | TCC_CTRLBSET_ONESHOT;
-    while (TCC2->SYNCBUSY.bit.CTRLB)
-        ;
+        TCC_CTRLBSET_CMD_STOP 
+        | TCC_CTRLBSET_DIR 
+        | (a_oneshot ? TCC_CTRLBSET_ONESHOT : 0x00)
+    ;
+    
+    while (TCC2->SYNCBUSY.bit.CTRLB);
 
     // clear pending interrupt in TC Module
     TCC2->INTFLAG.bit.OVF = 1;
     NVIC_ClearPendingIRQ(TCC2_IRQn);
 
-    // Enable IRQ in NVIC
-    NVIC_EnableIRQ(TCC2_IRQn);
+    if(a_interrupt)
+    {
+        // Enable IRQ in NVIC
+        NVIC_EnableIRQ(TCC2_IRQn);
+    }
 
     s_timerVars.timer2Active = true;
 }
 
-void samr21Timer2Set(uint16_t a_timerTicks)
+void samr21Timer2Oneshot(uint16_t a_timerTicks)
 {
     while (TCC0->SYNCBUSY.reg)
         ;
@@ -304,7 +345,8 @@ void samr21Timer2Stop()
 }
 
 //TC3
-void samr21Timer3Init(uint8_t a_divider){
+void samr21Timer3Init(uint8_t a_divider , bool a_oneshot, bool a_interrupt)
+{
     if(s_timerVars.timer3Active){
         return;
     }
@@ -327,7 +369,13 @@ void samr21Timer3Init(uint8_t a_divider){
         ;
 
     // Setup TC Modules
-    TC3->COUNT16.INTENSET.bit.OVF = 1;
+
+    if(a_interrupt)
+    {
+        TC3->COUNT16.INTENSET.bit.OVF = 1;
+    }
+
+
     TC3->COUNT16.CTRLA.reg =
         TC_CTRLA_ENABLE | TC_CTRLA_MODE(TC_CTRLA_MODE_COUNT16_Val) | TC_CTRLA_WAVEGEN(TC_CTRLA_WAVEGEN_MFRQ_Val) | TC_CTRLA_PRESCALER(a_divider) // 1Mhz
         | TC_CTRLA_RUNSTDBY | TC_CTRLA_PRESCSYNC(TC_CTRLA_PRESCSYNC_GCLK);
@@ -335,7 +383,11 @@ void samr21Timer3Init(uint8_t a_divider){
         ;
     
     TC3->COUNT16.CTRLBSET.reg =
-        TC_CTRLBSET_CMD_STOP | TC_CTRLBSET_DIR | TC_CTRLBSET_ONESHOT;
+        TC_CTRLBSET_CMD_STOP 
+        | TC_CTRLBSET_DIR
+        | ( a_oneshot  ?  TC_CTRLBSET_ONESHOT : 0x00 )
+    ;
+
     while (TC3->COUNT16.STATUS.bit.SYNCBUSY)
         ;
 
@@ -343,13 +395,28 @@ void samr21Timer3Init(uint8_t a_divider){
     TC3->COUNT16.INTFLAG.bit.OVF = 1;
     NVIC_ClearPendingIRQ(TC3_IRQn);
 
-    // Enable IRQ in NVIC
-    NVIC_EnableIRQ(TC3_IRQn);
+    if(a_interrupt)
+    {
+        // Enable IRQ in NVIC
+        NVIC_EnableIRQ(TC3_IRQn);
+    }
 
     s_timerVars.timer3Active = true;
 }
 
-void samr21Timer3Set(uint16_t a_timerTicks)
+void samr21Timer3Oneshot(uint16_t a_timerTicks)
+{
+    while (TC3->COUNT16.STATUS.bit.SYNCBUSY)
+        ;
+
+    TC3->COUNT16.CC[0] = a_timerTicks;
+    TC3->COUNT16.COUNT.reg = a_timerTicks;
+
+    TC3->COUNT16.CTRLBSET.reg =
+        TC_CTRLBSET_CMD_RETRIGGER;
+}
+
+void samr21Timer3SetContinuousPeriod(uint16_t a_timerTicks)
 {
     while (TC3->COUNT16.STATUS.bit.SYNCBUSY)
         ;
@@ -370,7 +437,8 @@ void samr21Timer3Stop()
 }
 
 //TC4 Used by Soft-Radio Driver
-void samr21Timer4Init(uint8_t a_divider){
+void samr21Timer4Init(uint8_t a_divider , bool a_oneshot, bool a_interrupt)
+{
     if(s_timerVars.timer4Active){
         return;
     }
@@ -393,7 +461,12 @@ void samr21Timer4Init(uint8_t a_divider){
         ;
 
     // Setup TC Modules
-    TC4->COUNT16.INTENSET.bit.OVF = 1;
+
+    if(a_interrupt)
+    {
+        TC4->COUNT16.INTENSET.bit.OVF = 1;
+    }
+
     TC4->COUNT16.CTRLA.reg =
         TC_CTRLA_ENABLE | TC_CTRLA_MODE(TC_CTRLA_MODE_COUNT16_Val) | TC_CTRLA_WAVEGEN(TC_CTRLA_WAVEGEN_MFRQ_Val) | TC_CTRLA_PRESCALER(a_divider) // 1Mhz
         | TC_CTRLA_RUNSTDBY | TC_CTRLA_PRESCSYNC(TC_CTRLA_PRESCSYNC_GCLK);
@@ -401,7 +474,11 @@ void samr21Timer4Init(uint8_t a_divider){
         ;
     
     TC4->COUNT16.CTRLBSET.reg =
-        TC_CTRLBSET_CMD_STOP | TC_CTRLBSET_DIR | TC_CTRLBSET_ONESHOT;
+        TC_CTRLBSET_CMD_STOP 
+        | TC_CTRLBSET_DIR 
+        | (a_oneshot ? TC_CTRLBSET_ONESHOT : 0x00)
+    ;
+
     while (TC4->COUNT16.STATUS.bit.SYNCBUSY)
         ;
 
@@ -409,13 +486,16 @@ void samr21Timer4Init(uint8_t a_divider){
     TC4->COUNT16.INTFLAG.bit.OVF = 1;
     NVIC_ClearPendingIRQ(TC4_IRQn);
 
-    // Enable IRQ in NVIC
-    NVIC_EnableIRQ(TC4_IRQn);
+    if(a_interrupt)
+    {
+        // Enable IRQ in NVIC
+        NVIC_EnableIRQ(TC4_IRQn);
+    }
 
     s_timerVars.timer4Active = true;
 }
 
-void samr21Timer4Set(uint16_t a_timerTicks)
+void samr21Timer4Oneshot(uint16_t a_timerTicks)
 {
     while (TC4->COUNT16.STATUS.bit.SYNCBUSY)
         ;
@@ -436,7 +516,7 @@ void samr21Timer4Stop()
 }
 
 //TC5 Used by TRX Driver
-void samr21Timer5Init(uint8_t a_divider){
+void samr21Timer5Init(uint8_t a_divider, bool a_oneshot, bool a_interrupt){
     if(s_timerVars.timer5Active){
         return;
     }
@@ -459,7 +539,11 @@ void samr21Timer5Init(uint8_t a_divider){
         ;
 
     // Setup TC Modules
-    TC5->COUNT16.INTENSET.bit.OVF = 1;
+    if(a_interrupt)
+    {
+        TC5->COUNT16.INTENSET.bit.OVF = 1;
+    }
+
     TC5->COUNT16.CTRLA.reg =
         TC_CTRLA_ENABLE | TC_CTRLA_MODE(TC_CTRLA_MODE_COUNT16_Val) | TC_CTRLA_WAVEGEN(TC_CTRLA_WAVEGEN_MFRQ_Val) | TC_CTRLA_PRESCALER(a_divider) // 1Mhz
         | TC_CTRLA_RUNSTDBY | TC_CTRLA_PRESCSYNC(TC_CTRLA_PRESCSYNC_GCLK);
@@ -467,21 +551,28 @@ void samr21Timer5Init(uint8_t a_divider){
         ;
     
     TC5->COUNT16.CTRLBSET.reg =
-        TC_CTRLBSET_CMD_STOP | TC_CTRLBSET_DIR | TC_CTRLBSET_ONESHOT;
+        TC_CTRLBSET_CMD_STOP 
+        | TC_CTRLBSET_DIR
+        | (a_oneshot ? TC_CTRLBSET_ONESHOT : 0x00)
+    ;
+
     while (TC5->COUNT16.STATUS.bit.SYNCBUSY)
         ;
 
     // clear pending interrupt in TC Module
     TC5->COUNT16.INTFLAG.bit.OVF = 1;
     NVIC_ClearPendingIRQ(TC5_IRQn);
-
-    // Enable IRQ in NVIC
-    NVIC_EnableIRQ(TC5_IRQn);
+    
+    if(a_interrupt)
+    {
+        // Enable IRQ in NVIC
+        NVIC_EnableIRQ(TC5_IRQn);
+    }
 
     s_timerVars.timer5Active = true;
 }
 
-void samr21Timer5Set(uint16_t a_timerTicks)
+void samr21Timer5Oneshot(uint16_t a_timerTicks)
 {
     while (TC5->COUNT16.STATUS.bit.SYNCBUSY)
         ;

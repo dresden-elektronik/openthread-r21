@@ -9,6 +9,27 @@
  */
 #include "samr21Trx.h"
 
+static struct trxVars_s
+{
+    bool spiActive;
+    DmacDescriptor txDmacDescriptor;
+}s_trxVars =
+{
+    .spiActive = false,
+
+    .txDmacDescriptor.BTCTRL.bit.VALID = 0,
+    .txDmacDescriptor.BTCTRL.bit.EVOSEL = DMAC_BTCTRL_EVOSEL_DISABLE_Val,
+    .txDmacDescriptor.BTCTRL.bit.BLOCKACT = DMAC_BTCTRL_BLOCKACT_INT_Val,
+    .txDmacDescriptor.BTCTRL.bit.BEATSIZE = DMAC_BTCTRL_BEATSIZE_BYTE_Val,
+    .txDmacDescriptor.BTCTRL.bit.SRCINC = 1,
+    .txDmacDescriptor.BTCTRL.bit.DSTINC = 0,
+    .txDmacDescriptor.BTCTRL.bit.STEPSEL = DMAC_BTCTRL_STEPSEL_SRC_Val,
+    .txDmacDescriptor.BTCTRL.bit.STEPSIZE =DMAC_BTCTRL_STEPSIZE_X1_Val ,
+
+    .txDmacDescriptor.DSTADDR.bit.DSTADDR = &SERCOM4->SPI.DATA,
+    
+    .txDmacDescriptor.DESCADDR.bit.DESCADDR= 0x00000000 
+};
 
 
 static ramCopyTrxRegister_t s_ramCopyTrxRegister = {
@@ -32,7 +53,7 @@ static ramCopyTrxRegister_t s_ramCopyTrxRegister = {
 
 void samr21TrxInterfaceInit()
 {
-    // Setup Clocks for TRX-SPI
+    // Setup Clocks for TRX-SPI Sercom
     // Use GCLKGEN1 as core Clock for SPI At86rf233 (SERCOM4, Synchronous)
     GCLK->CLKCTRL.reg =
         // GCLK_CLKCTRL_WRTLOCK
@@ -45,14 +66,14 @@ void samr21TrxInterfaceInit()
 
     GCLK->CLKCTRL.reg =
         // GCLK_CLKCTRL_WRTLOCK
-        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(0) // GCLKGEN1
+        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(1) // GCLKGEN1
         | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_SERCOMX_SLOW_Val);
 
     // Wait for synchronization
     while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
         ;
-
-    // Enable in Power manager
+    
+    // Enable Sercom  in Power manager
     PM->APBCMASK.bit.SERCOM4_ = 1;
 
     // Setup Ports for TRX
@@ -198,12 +219,62 @@ void samr21TrxInterfaceInit()
     while (SERCOM4->SPI.SYNCBUSY.reg)
         ;
 
-    // Write predefined Operating-Values to Config Registers of AT86rf233
+    // Write predefined Operating-Values to Config Registers of the AT86rf233
     samr21TrxWriteRegister(TRX_CTRL_1_REG_ADDR, s_ramCopyTrxRegister.trxCtrl1.reg);
     samr21TrxWriteRegister(PHY_TX_PWR_REG_ADDR, s_ramCopyTrxRegister.phyTxPwr.reg);
 
-    // Enable Timer for Trx
-    samr21Timer5Init(0); // 1MHz / (2^0) -> 1us resolution
+    // Enable Timer 5 for Trx Orchestration
+    samr21Timer5Init(0,true,true); // 1MHz / (2^0) -> 1us resolution 
+    
+    // Enable Timer 3 for DMA Paceing
+    samr21Timer3Init(0,false,true); // 1MHz / (2^0) -> 1us resolution
+
+
+
+
+    //Enable DMA in Power Manager for Framebuffer Upload purposes
+    PM->APBBMASK.bit.DMAC_ =1;
+    PM->AHBMASK.bit.DMAC_ = 1;
+
+    //Disable DMA (and the adjacent CRC-Module) at first
+    DMAC->CTRL.bit.DMAENABLE = 0;
+    DMAC->CTRL.bit.CRCENABLE = 0;
+
+    //Wait till both are disabled
+    while (DMAC->CTRL.bit.DMAENABLE || DMAC->CTRL.bit.CRCENABLE );
+
+    //Reset DMA Module 
+    DMAC->CTRL.bit.SWRST = 1;
+
+    //Wait for reset to finish
+    while (DMAC->CTRL.bit.SWRST );
+
+    //Set relevant DMAC DIscriptor Adresses
+    DMAC->BASEADDR.reg= &s_trxVars.txDmacDescriptor;
+    DMAC->WRBADDR.reg= &s_trxVars.txDmacDescriptor;
+
+    //Enable the DMAC Module and Prio-Level 0  (Noy really needed cause there is only one active DMA)
+   DMAC->CTRL.reg =
+        DMAC_CTRL_DMAENABLE,
+        DMAC_CTRL_LVLEN0
+    ;
+
+    //Select Channel 0 for configuration
+    DMAC->CHID.bit.ID = 0x0;
+
+    //Setup channel 0 for Transmission of 1 Byte till Sercom is ready for the next byte
+    DMAC->CHCTRLB.reg = 
+        DMAC_CHCTRLB_CMD_NOACT
+        | DMAC_CHCTRLB_TRIGACT_BEAT
+        | DMAC_CHCTRLB_TRIGSRC(0x0A)     //Sercom4 TX Complete
+        | DMAC_CHCTRLB_LVL_LVL0                 //Set Prio-Level 0  (Not really needed cause there is only one DMA-Action going on at a time)
+        //| DMAC_CHCTRLB_EVOE                   //Event Generation is disabled
+        //| DMAC_CHCTRLB_EVIE                     //Event Input is disabled
+        | DMAC_CHCTRLB_EVACT_NOACT      //Not Action defined for an input Event
+    ;
+
+
+
 }
 
 void samr21TrxInterruptInit()
@@ -246,7 +317,7 @@ void samr21TrxInterruptInit()
     // Read Once to clear all pending Interrupts
     samr21TrxReadRegister(IRQ_STATUS_REG_ADDR);
 
-    // cLEAR irq BEFORE ENABLING
+    // Clear Irqflag once before returning
     EIC->INTFLAG.bit.EXTINT0 = 1;
 }
 
@@ -326,18 +397,17 @@ void samr21TrxWriteRegister(uint8_t a_addr, uint8_t a_data)
     samr21TrxSpiCloseAccess();
 }
 
-static volatile bool s_spiActive;
 void samr21TrxSpiStartAccess(uint8_t a_command, uint8_t a_addr)
 {
     // Wait for other ongoing SPI Access to End
-    while (s_spiActive)
+    while (s_trxVars.spiActive)
         ;
 
     __disable_irq();
     // NVIC_DisableIRQ(EIC_IRQn);
     // NVIC_DisableIRQ(TC4_IRQn);
 
-    s_spiActive = true;
+    s_trxVars.spiActive = true;
     PORT->Group[1].OUTCLR.reg = 1 << 31; // SSel Low Active
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
@@ -374,7 +444,7 @@ void samr21TrxSpiCloseAccess()
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
     samr21delaySysTick(CPU_WAIT_CYCLES_AFTER_SSEL_LOW);
 #endif
-    s_spiActive = false;
+    s_trxVars.spiActive = false;
 
     // NVIC_EnableIRQ(EIC_IRQn);
     // NVIC_EnableIRQ(TC4_IRQn);
@@ -384,11 +454,11 @@ void samr21TrxSpiCloseAccess()
 void samr21TrxUpdateStatusRegister()
 {
 
-    while (s_spiActive)
+    while (s_trxVars.spiActive)
         ;
     __disable_irq();
     PORT->Group[1].OUTCLR.reg = 1 << 31; // SSel Low Active
-    s_spiActive = true;
+    s_trxVars.spiActive  = true;
 
     s_ramCopyTrxRegister.trxStatus.reg = samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
 
@@ -691,7 +761,7 @@ static void samr21TrxStartTimeoutTimer(uint16_t a_duration_us, bool *a_triggerFl
 {
     s_timeoutFlag = a_triggerFlag;
     s_currentTimerHandler_fktPtr = &samr21TrxTimeoutTriggered;
-    samr21Timer5Set(a_duration_us);
+    samr21Timer5Oneshot(a_duration_us);
 }
 
 static void samr21TrxStopTimeoutTimer()
@@ -704,7 +774,7 @@ static void samr21TrxStopTimeoutTimer()
 static void samr21TrxQueueDelayedAction(uint16_t a_delay_us, void (*a_queuedAction_fktPtr)(void))
 {
     s_currentTimerHandler_fktPtr = a_queuedAction_fktPtr;
-    samr21Timer5Set(a_delay_us);
+    samr21Timer5Oneshot(a_delay_us);
 }
 
 static void samr21TrxRemoveQueuedAction()
@@ -770,10 +840,12 @@ static void samr21TrxAesEcbEncrypt(uint8_t *inDataBlock_1D, uint8_t *outDataBloc
     PORT->Group[0].OUTSET.reg = PORT_PA07;
     samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, AES_CTRL_SRAM_ADDR);
 
-    ramCopyTrxAesCtrl_t aesCtrl = {
+    ramCopyTrxAesCtrl_t aesCtrl =
+    {
         .bit.dir = 0,
         .bit.mode = AT86RF233_AES_MODE_ECB,
-        .bit.request = 0};
+        .bit.request = 0
+    };
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
     samr21delaySysTick(SAMR21_NUM_CPU_WAIT_CYCLES_BETWEEN_SPI_BYTES_FAST_ACCESS);
@@ -888,7 +960,7 @@ bool samr21TrxLiveFramebufferDownload(uint8_t *a_data_1D, uint8_t a_len)
 
     // Set a Timeout
     volatile bool abortActionFlag = false;
-    samr21TrxStartTimeoutTimer((((uint16_t)(a_len)*2) * IEEE_15_4_24GHZ_TIME_PER_OCTET_us), &abortActionFlag); // Shift for cheap multiply x2
+    samr21TrxStartTimeoutTimer((((uint16_t)(a_len)*2) * IEEE_15_4_24GHZ_TIME_PER_OCTET_us), &abortActionFlag);
 
     samr21TrxSpiStartAccess(AT86RF233_CMD_FRAMEBUFFER_READ, NULL);
 
@@ -916,7 +988,7 @@ exit:
     return !abortActionFlag;
 }
 
-bool samr21TrxDownloadFramebuffer(uint8_t *a_psduLen, uint8_t *a_psdu_1D, uint8_t *a_LQI_p, int8_t *a_RSSI_p)
+bool samr21TrxDownloadFramebuffer(uint8_t *a_psduLen, uint8_t *a_psdu_1D, uint8_t *a_LQI_p, int8_t *a_RSSI_p, bool a_live)
 {
 
 #ifdef _DEBUG
@@ -949,8 +1021,13 @@ bool samr21TrxDownloadFramebuffer(uint8_t *a_psduLen, uint8_t *a_psdu_1D, uint8_
     {
         //(see r21 datasheet, 40.7 Frame Buffer Empty Indicator)
         samr21delaySysTick(SAMR21_NUM_CPU_WAIT_CYCLES_FOR_FRAME_BUFFER_EMPTY_FLAG);
-        while ((PORT->Group[1].IN.reg & PORT_PB00) && !abortActionFlag)
+
+        if(a_live)
+        {
+             while ((PORT->Group[1].IN.reg & PORT_PB00) && !abortActionFlag)
             ;
+        }
+
 
         if (abortActionFlag)
         {
@@ -983,6 +1060,26 @@ void samr21TrxUploadToFramebuffer(uint8_t *a_data_1D, uint8_t a_len, uint8_t a_p
     assert((a_pos + a_len) <= IEEE_802_15_4_FRAME_SIZE);
     assert(a_data_1D);
 #endif
+
+    PORT->Group[0].OUTSET.reg = PORT_PA06;
+    samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, a_pos);
+    samr21TrxSpiTransceiveBytesRaw(a_data_1D, NULL, a_len); // phyLen not in psduLen
+    samr21TrxSpiCloseAccess();
+    PORT->Group[0].OUTCLR.reg = PORT_PA06;
+}
+
+void samr21TrxUploadToFramebufferViaDma(uint8_t *a_data_1D, uint8_t a_len, uint8_t a_pos)
+{
+#ifdef _DEBUG
+    assert(a_len <= IEEE_802_15_4_FRAME_SIZE);
+    assert((a_pos + a_len) <= IEEE_802_15_4_FRAME_SIZE);
+    assert(a_data_1D);
+#endif
+
+    s_trxVars.txDmacDescriptor.BTCNT.bit.BTCNT = a_len;
+    s_trxVars.txDmacDescriptor.SRCADDR.bit.SRCADDR= a_data_1D;
+
+
     PORT->Group[0].OUTSET.reg = PORT_PA06;
     samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, a_pos);
     samr21TrxSpiTransceiveBytesRaw(a_data_1D, NULL, a_len); // phyLen not in psduLen

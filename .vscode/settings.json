@@ -63,15 +63,29 @@
         "samr21debugpins.h": "c",
         "usbh.h": "c",
         "usbd.h": "c",
-        "samr21uart.h": "c"
+        "samr21uart.h": "c",
+        "*.tcc": "cpp",
+        "optional": "cpp",
+        "istream": "cpp",
+        "ostream": "cpp",
+        "ratio": "cpp",
+        "system_error": "cpp",
+        "array": "cpp",
+        "functional": "cpp",
+        "regex": "cpp",
+        "tuple": "cpp",
+        "utility": "cpp",
+        "variant": "cpp",
+        "expected": "cpp"
     },
     "cmake.configureOnOpen": false,
-    "cortex-debug.variableUseNaturalFormat": true,
+    "cortex-debug.variableUseNaturalFormat": false,
     "cSpell.words": [
         "Framebuffer",
         "Pdsu",
         "RSSI",
-        "SAMR"
+        "SAMR",
+        "Sercom"
     ],
     "editor.tokenColorCustomizations": {
         "textMateRules": [

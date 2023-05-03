@@ -128,16 +128,16 @@ void otSysInit(int argc, char *argv[])
     samr21LogInit();
 
     //TCC1 Used by OT Micros Alarm
-    samr21Timer1Init(0); // 1MHz / (2^0) -> 1us resolution
+    samr21Timer1Init(0,true,true); // 1MHz / (2^0) -> 1us resolution
     //TCC2 Used by OT Millis Alarm
-    samr21Timer2Init(7); // 1MHz / (2^7) -> ~1ms resolution
+    samr21Timer2Init(7, true,true); // 1MHz / (2^7) -> ~1ms resolution
 
 
     //192 Lowest, 0 Highest
     NVIC_SetPriority(TCC0_IRQn, 192); //Unused 
     NVIC_SetPriority(TCC1_IRQn, 5); //Used by OT Micro Alarm
     NVIC_SetPriority(TCC2_IRQn, 4); //Used by OT Millis Alarm
-    NVIC_SetPriority(TC3_IRQn, 192); //Unused
+    NVIC_SetPriority(TC3_IRQn, 1); //Timer for DMA-Pace while uploading to framebuffer
     NVIC_SetPriority(TC4_IRQn, 2); //Timer For Mac-Orchestration 
     NVIC_SetPriority(TC5_IRQn, 0); //Critical Timer for Mac-Security Feature
     NVIC_SetPriority(EIC_IRQn, 1); //IRQs from AT86RF233

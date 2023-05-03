@@ -86,7 +86,7 @@ extern uint32_t __d_nv_mem_end;
  *
  */
 #ifndef OPENTHREAD_CONFIG_NCP_HDLC_ENABLE
-#define OPENTHREAD_CONFIG_NCP_HDLC_ENABLE 1
+#define OPENTHREAD_CONFIG_NCP_HDLC_ENABLE 0
 #endif
 
 /**
@@ -128,6 +128,10 @@ extern uint32_t __d_nv_mem_end;
  */
 #ifndef OPENTHREAD_CONFIG_TCP_ENABLE
 #define OPENTHREAD_CONFIG_TCP_ENABLE 0
+#endif
+
+#ifndef OPENTHREAD_RADIO
+    #define OPENTHREAD_CONFIG_COAP_API_ENABLE 1
 #endif
 
 /**
