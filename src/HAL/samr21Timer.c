@@ -409,7 +409,7 @@ void samr21Timer3Oneshot(uint16_t a_timerTicks)
     while (TC3->COUNT16.STATUS.bit.SYNCBUSY)
         ;
 
-    TC3->COUNT16.CC[0] = a_timerTicks;
+    TC3->COUNT16.CC[0].reg = a_timerTicks;
     TC3->COUNT16.COUNT.reg = a_timerTicks;
 
     TC3->COUNT16.CTRLBSET.reg =
