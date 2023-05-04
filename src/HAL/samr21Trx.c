@@ -11,15 +11,18 @@
 
 static struct trxVars_s
 {
-    bool spiActive;
     DmacDescriptor txDmacDescriptor;
+    DmacDescriptor txDmacDescriptorWB;
+
+    volatile bool spiActive;
+    volatile bool dmaActive;
 }s_trxVars =
 {
     .spiActive = false,
 
     .txDmacDescriptor.BTCTRL.bit.VALID = 0,
     .txDmacDescriptor.BTCTRL.bit.EVOSEL = DMAC_BTCTRL_EVOSEL_DISABLE_Val,
-    .txDmacDescriptor.BTCTRL.bit.BLOCKACT = DMAC_BTCTRL_BLOCKACT_INT_Val,
+    .txDmacDescriptor.BTCTRL.bit.BLOCKACT = DMAC_BTCTRL_BLOCKACT_BOTH_Val,
     .txDmacDescriptor.BTCTRL.bit.BEATSIZE = DMAC_BTCTRL_BEATSIZE_BYTE_Val,
     .txDmacDescriptor.BTCTRL.bit.SRCINC = 1,
     .txDmacDescriptor.BTCTRL.bit.DSTINC = 0,
@@ -27,13 +30,12 @@ static struct trxVars_s
     .txDmacDescriptor.BTCTRL.bit.STEPSIZE =DMAC_BTCTRL_STEPSIZE_X1_Val ,
 
     .txDmacDescriptor.DSTADDR.bit.DSTADDR = &SERCOM4->SPI.DATA,
-    
     .txDmacDescriptor.DESCADDR.bit.DESCADDR= 0x00000000 
 };
 
 
-static ramCopyTrxRegister_t s_ramCopyTrxRegister = {
-
+static ramCopyTrxRegister_t s_ramCopyTrxRegister = 
+{
     // Default Config
     .trxCtrl1.bit.irqPolarity = 0,
     .trxCtrl1.bit.irqMaskMode = 0,
@@ -251,7 +253,7 @@ void samr21TrxInterfaceInit()
 
     //Set relevant DMAC DIscriptor Adresses
     DMAC->BASEADDR.reg= &s_trxVars.txDmacDescriptor;
-    DMAC->WRBADDR.reg= &s_trxVars.txDmacDescriptor;
+    DMAC->WRBADDR.reg= &s_trxVars.txDmacDescriptorWB;
 
     //Enable the DMAC Module and Prio-Level 0  (Noy really needed cause there is only one active DMA)
    DMAC->CTRL.reg =
@@ -266,15 +268,22 @@ void samr21TrxInterfaceInit()
     DMAC->CHCTRLB.reg = 
         DMAC_CHCTRLB_CMD_NOACT
         | DMAC_CHCTRLB_TRIGACT_BEAT
-        | DMAC_CHCTRLB_TRIGSRC(0x0A)     //Sercom4 TX Complete
+        | DMAC_CHCTRLB_TRIGSRC(0x18)     //Sercom4 TX Complete
         | DMAC_CHCTRLB_LVL_LVL0                 //Set Prio-Level 0  (Not really needed cause there is only one DMA-Action going on at a time)
         //| DMAC_CHCTRLB_EVOE                   //Event Generation is disabled
         //| DMAC_CHCTRLB_EVIE                     //Event Input is disabled
         | DMAC_CHCTRLB_EVACT_NOACT      //Not Action defined for an input Event
     ;
 
+    DMAC->CHINTENSET.reg=
+        DMAC_CHINTENSET_TERR
+        | DMAC_CHINTENSET_TCMPL
+    ;
 
+    //TODO Remove in Release
+    DMAC->DBGRUN.reg= 1;
 
+    NVIC_EnableIRQ(DMAC_IRQn);
 }
 
 void samr21TrxInterruptInit()
@@ -343,6 +352,7 @@ void samr21TrxInterruptDeinit()
             // GCLK_CLKCTRL_WRTLOCK
             GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(0) // GCLKGEN1
             | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_EIC_Val);
+
         // Wait for synchronization
         while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
             ;
@@ -353,6 +363,7 @@ void samr21TrxInterruptDeinit()
     {
         PM->APBAMASK.bit.EIC_ = 0;
     }
+
 }
 
 void samr21TrxSetupMClk(uint8_t a_clk)
@@ -403,9 +414,7 @@ void samr21TrxSpiStartAccess(uint8_t a_command, uint8_t a_addr)
     while (s_trxVars.spiActive)
         ;
 
-    __disable_irq();
-    // NVIC_DisableIRQ(EIC_IRQn);
-    // NVIC_DisableIRQ(TC4_IRQn);
+    NVIC_DisableIRQ(EIC_IRQn);
 
     s_trxVars.spiActive = true;
     PORT->Group[1].OUTCLR.reg = 1 << 31; // SSel Low Active
@@ -446,9 +455,8 @@ void samr21TrxSpiCloseAccess()
 #endif
     s_trxVars.spiActive = false;
 
-    // NVIC_EnableIRQ(EIC_IRQn);
+    NVIC_EnableIRQ(EIC_IRQn);
     // NVIC_EnableIRQ(TC4_IRQn);
-    __enable_irq();
 }
 
 void samr21TrxUpdateStatusRegister()
@@ -1068,6 +1076,23 @@ void samr21TrxUploadToFramebuffer(uint8_t *a_data_1D, uint8_t a_len, uint8_t a_p
     PORT->Group[0].OUTCLR.reg = PORT_PA06;
 }
 
+
+
+//IRQ ISR from DMAC
+void DMAC_Handler()
+{
+    samr21Timer3Stop();
+    samr21TrxSpiCloseAccess();
+
+    DMAC->CHID.reg = 0x00; 
+    DMAC->CHCTRLA.bit.ENABLE=0;
+
+    s_trxVars.txDmacDescriptor.BTCTRL.bit.VALID =  0;
+
+    s_trxVars.dmaActive = false;    
+    PORT->Group[0].OUTCLR.reg = PORT_PA06;
+}
+
 void samr21TrxUploadToFramebufferViaDma(uint8_t *a_data_1D, uint8_t a_len, uint8_t a_pos)
 {
 #ifdef _DEBUG
@@ -1078,13 +1103,21 @@ void samr21TrxUploadToFramebufferViaDma(uint8_t *a_data_1D, uint8_t a_len, uint8
 
     s_trxVars.txDmacDescriptor.BTCNT.bit.BTCNT = a_len;
     s_trxVars.txDmacDescriptor.SRCADDR.bit.SRCADDR= a_data_1D;
+    s_trxVars.txDmacDescriptor.BTCTRL.bit.VALID =  1;
+
 
 
     PORT->Group[0].OUTSET.reg = PORT_PA06;
     samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, a_pos);
-    samr21TrxSpiTransceiveBytesRaw(a_data_1D, NULL, a_len); // phyLen not in psduLen
-    samr21TrxSpiCloseAccess();
-    PORT->Group[0].OUTCLR.reg = PORT_PA06;
+
+    DMAC->CHID.reg = 0x00; 
+    DMAC->CHCTRLA.bit.ENABLE=1;
+
+
+    samr21Timer3SetContinuousPeriod(32); //   8Bit / 250Kbits --> 32us per Byte
+    s_trxVars.dmaActive = true;
+
+   while (s_trxVars.dmaActive);
 }
 
 /*********FRAMEBUFFER WRITE ACCESS (with Security)**************/

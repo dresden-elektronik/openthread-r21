@@ -994,7 +994,8 @@ static void samr21RadioStartTransmission(){
     if (s_txSecurityLevel && otMacFrameIsKeyIdMode1(&s_txOtFrame) && !s_txOtFrame.mInfo.mTxInfo.mIsSecurityProcessed)
     {
         s_radioVars.txState = SAMR21_RADIO_TX_STATE_SENDING_SECURITY;
-        samr21TrxSendFrameAndApplyMacSecurity(
+        samr21TrxSendFrameAndApplyMacSecurity
+        (
             &s_txFrameBuffer[0],
             s_txPayload,
             s_txFooter,
@@ -1009,7 +1010,7 @@ static void samr21RadioStartTransmission(){
 
         //Start Transmission
         samr21TrxSetSLP_TR(true);
-        samr21TrxUploadToFramebuffer(s_txFrameBuffer, s_txFrameBuffer[0], 0);
+        samr21TrxUploadToFramebufferViaDma(s_txFrameBuffer, s_txFrameBuffer[0], 0);
 
         //Transmission Should have started by now
         samr21TrxSetSLP_TR(false);

@@ -89,12 +89,21 @@ void samr21Timer2Stop();
  * @param[in] interrupt if true the TC3_Handler() gets called once the timer fires
  */
 void samr21Timer3Init(uint8_t divider, bool oneshot, bool interrupt);
+
+/**
+ * Sets a periodic timer on TC3 (16 Bit)
+ * 
+ * @param[in] timerTicks amount of TimerTicks until it the Timer fires
+ */
+void samr21Timer3SetContinuousPeriod(uint16_t timerTicks);
+
 /**
  * Sets a oneshot timer on TC3 (16 Bit)
  * 
  * @param[in] timerTicks amount of TimerTicks until it the Timer fires
  */
 void samr21Timer3Oneshot(uint16_t timerTicks);
+
 /**
  * Aborts the currently running Oneshot Timer on TC3
  * 
