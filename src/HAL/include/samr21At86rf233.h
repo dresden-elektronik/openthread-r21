@@ -14,6 +14,7 @@
 
 #define IEEE_15_4_FRAME_SIZE                128
 #define IEEE_15_4_PDSU_SIZE                 127
+#define IEEE_15_4_PHR_SIZE                 1
 #define IEEE_15_4_CRC_SIZE                  2
 #define IEEE_15_4_FCF_SIZE                  2
 #define IEEE_15_4_DSN_SIZE                  1

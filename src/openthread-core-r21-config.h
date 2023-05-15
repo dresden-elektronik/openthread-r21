@@ -62,6 +62,15 @@ extern uint32_t __d_nv_mem_end;
 #define OPENTHREAD_CONFIG_PLATFORM_FLASH_API_ENABLE 1
 
 /**
+ * @def OPENTHREAD_CONFIG_MAC_SOFTWARE_TX_SECURITY_ENABLE
+ *
+ * Define to 1 to enable software transmission security logic.
+ *
+ */
+#define OPENTHREAD_CONFIG_MAC_SOFTWARE_TX_SECURITY_ENABLE 1
+
+
+/**
  * @def RADIO_CONFIG_SRC_MATCH_ENTRY_NUM
  *
  * The number of source address table entries.

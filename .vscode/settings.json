@@ -76,7 +76,10 @@
         "tuple": "cpp",
         "utility": "cpp",
         "variant": "cpp",
-        "expected": "cpp"
+        "expected": "cpp",
+        "compare": "c",
+        "cstdint": "c",
+        "format": "c"
     },
     "cmake.configureOnOpen": false,
     "cortex-debug.variableUseNaturalFormat": false,

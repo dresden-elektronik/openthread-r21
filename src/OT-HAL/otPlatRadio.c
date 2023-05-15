@@ -61,7 +61,7 @@ void otPlatRadioSetExtendedAddress(otInstance *a_instance_p, const otExtAddress 
 {
     OT_UNUSED_VARIABLE(a_instance_p);
 
-    samr21RadioCtrlSetExtendedAddress(a_address_p->m8);
+    samr21RadioCtrlSetExtendedAddress(a_address_p);
 }
 
 void otPlatRadioSetShortAddress(otInstance *a_instance_p, uint16_t a_address_p)
@@ -158,11 +158,13 @@ void otPlatRadioSetMacKey(otInstance *a_instance_p,
     OT_UNUSED_VARIABLE(a_keyType);
 #endif
 
-    samr21RadioCtrlSetMacKeys(
+    samr21RadioCtrlSetMacKeys
+    (
         a_keyId,
-        a_prevKey_p->mKeyMaterial.mKey.m8,
-        a_currKey_p->mKeyMaterial.mKey.m8,
-        a_nextKey_p->mKeyMaterial.mKey.m8);
+        a_prevKey_p,
+        a_currKey_p,
+        a_nextKey_p
+    );
 }
 
 void otPlatRadioSetMacFrameCounter(otInstance *a_instance_p, uint32_t a_macFrameCounter)
@@ -338,7 +340,7 @@ uint32_t otPlatRadioGetPreferredChannelMask(otInstance *a_instance_p)
     OT_UNUSED_VARIABLE(a_instance_p);
 
     // return 0b00000001000010000100010000000000;
-    return 0b00000000100000000000000000000000;
+    return 0b00000011111111111111110000000000;
 }
 
 // TODO

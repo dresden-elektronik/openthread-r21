@@ -13,14 +13,16 @@
 #include "otUtilities_sourceMatch.h"
 #include "otUtilities_linkMetrics.h"
 
+
+
 static struct radioVars_s
 {
     bool        initiated;
     bool        rxActive;
 
-    uint16_t    shortAddress;
-    uint16_t    panId;
-    uint64_t    extendedAddress;
+    otShortAddress      shortAddress;
+    otExtAddress          extendedAddress;
+    otPanId                     panId;
 
     bool        txBusy;
     bool        rxBusy;
@@ -33,9 +35,10 @@ static struct radioVars_s
 
     uint8_t     currentMacKeyId;
 
-    uint8_t     previousMacKey[IEEE_15_4_AES_CCM_KEY_SIZE];
-    uint8_t     currentMacKey[IEEE_15_4_AES_CCM_KEY_SIZE];
-    uint8_t     nextMacKey[IEEE_15_4_AES_CCM_KEY_SIZE];
+    otMacKeyMaterial    previousMacKey;
+    otMacKeyMaterial    currentMacKey;
+    otMacKeyMaterial    nextMacKey;
+
 
 #if OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
     uint32_t    cslSampleTime;
@@ -237,51 +240,52 @@ uint16_t samr21RadioCtrlCslGetPhase()
 
 #endif
 
-void samr21RadioCtrlSetMacKeys(
-
+void samr21RadioCtrlSetMacKeys
+(
     uint8_t a_keyId,
-    const uint8_t *a_previousKey_1D,
-    const uint8_t *a_currentKey_1D,
-    const uint8_t *a_nextKey_1D)
+    const otMacKeyMaterial *a_previousKey_p,
+    const otMacKeyMaterial *a_currentKey_p,
+    const otMacKeyMaterial *a_nextKey_p
+)
 {
     __disable_irq();
 
     s_radioVars.currentMacKeyId = a_keyId;
 
-     memcpy(s_radioVars.previousMacKey, a_previousKey_1D, IEEE_15_4_AES_CCM_KEY_SIZE);
-     memcpy(s_radioVars.currentMacKey, a_currentKey_1D, IEEE_15_4_AES_CCM_KEY_SIZE);
-     memcpy(s_radioVars.nextMacKey, a_nextKey_1D, IEEE_15_4_AES_CCM_KEY_SIZE);
+    s_radioVars.previousMacKey= *a_previousKey_p;
+    s_radioVars.currentMacKey= *a_currentKey_p;
+    s_radioVars.nextMacKey= *a_nextKey_p;
 
     __enable_irq();
 
-    samr21TrxAesKeySetup(s_radioVars.currentMacKey);
 }
 
-void samr21RadioCtrlSetPanId(uint16_t a_panId){
+void samr21RadioCtrlSetPanId(otPanId a_panId){
     s_radioVars.panId = a_panId;
 }
 uint16_t samr21RadioCtrlGetPanId(){
     return s_radioVars.panId;
 }
 
-void samr21RadioCtrlSetShortAddress(uint16_t a_shortAddress){
+void samr21RadioCtrlSetShortAddress(otShortAddress a_shortAddress){
     s_radioVars.shortAddress = a_shortAddress;
 }
 uint16_t samr21RadioCtrlGetShortAddr(){
     return s_radioVars.shortAddress;
 }
 
-void samr21RadioCtrlSetExtendedAddress(uint8_t* a_extendedAddress_1D){
+void samr21RadioCtrlSetExtendedAddress(otExtAddress* a_extendedAddress_p){
 
-    uint8_t * extendedAddress_p = (uint8_t*) &s_radioVars.extendedAddress;
-
-    for(uint8_t i = 0; i < IEEE_15_4_EXTENDED_ADDR_SIZE; i++){
-        extendedAddress_p[i] = a_extendedAddress_1D[(IEEE_15_4_EXTENDED_ADDR_SIZE-1)-i];
-    }
+   __disable_irq();
+   for(uint8_t i = 0; i < sizeof(uint64_t); i++)
+   {
+        s_radioVars.extendedAddress.m8[i] = a_extendedAddress_p->m8[sizeof(uint64_t)-1-i];
+   }
+   __enable_irq();
 }
 
 uint8_t* samr21RadioCtrlGetExtendedAddress(){
-    return (uint8_t*) &s_radioVars.extendedAddress;
+    return (uint8_t*) &s_radioVars.extendedAddress.m8;
 }
 
 
@@ -388,22 +392,17 @@ static void samr21RadioSendAck()
     // Set a handler for when the Ack is successfully transmitted
     samr21TrxSetIrqHandler(TRX_IRQ_TRX_END, samr21RadioFinishReception);
 
+     //Start Transmission
+    samr21TrxSetSLP_TR(true);
+    samr21TrxStartJustInTimeUploadToFramebuffer(s_rxAckFrameBuffer, s_rxAckFrameBuffer[0] + IEEE_15_4_PHR_SIZE , 0);
+
+     //Transmission Should have started by now
+    samr21TrxSetSLP_TR(false);
+
     if (s_rxAckSecurityLevel)
     {
-        samr21TrxSendFrameAndApplyMacSecurity(
-            &s_rxAckFrameBuffer[0],
-            s_rxAckPayload,
-            s_rxAckFooter,
-            s_rxAckSecurityLevel,
-            s_radioVars.currentMacKey,
-            s_rxAckNonce
-        );
-    }
-    else
-    {
-        samr21TrxSetSLP_TR(true);
-        samr21TrxUploadToFramebuffer(s_rxAckFrameBuffer, s_rxAckFrameBuffer[0], 0);
-        samr21TrxSetSLP_TR(false);
+        otMacFrameProcessTransmitAesCcm(&s_rxOtAckFrame, &s_radioVars.extendedAddress);
+        s_rxOtAckFrame.mInfo.mTxInfo.mIsSecurityProcessed = true;
     }
 
     s_radioVars.rxState = SAMR21_RADIO_RX_STATE_WAIT_ACK_END;
@@ -428,10 +427,8 @@ static void samr21RadioPrepareImmediateAck()
 // IEEE 802.15.4 2015+
 static void samr21RadioPrepareEnhancedAck()
 {
-    s_rxAckSecurityLevel = 0;
-
     // Prepare Data for Header-IE
-    uint8_t ieData[IEEE_15_4_PDSU_SIZE]; // TODO can be smaller
+    uint8_t ieData[OT_ACK_IE_MAX_SIZE]; 
     uint8_t ieDataLen = 0;
 
 #if OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
@@ -471,12 +468,14 @@ static void samr21RadioPrepareEnhancedAck()
     }
 #endif
 
-    otMacFrameGenerateEnhAck(
+    otMacFrameGenerateEnhAck
+    (
         &(s_rxBuffer[s_activeRxBuffer].otFrame),
         s_rxBuffer[s_activeRxBuffer].framePending,
         ieData,
         ieDataLen,
-        &s_rxOtAckFrame);
+        &s_rxOtAckFrame
+    );
 
     s_rxAckFrameBuffer[0] = s_rxOtAckFrame.mLength;
     s_rxBuffer[s_activeRxBuffer].otFrame.mInfo.mRxInfo.mAckedWithFramePending = s_rxBuffer[s_activeRxBuffer].framePending;
@@ -494,18 +493,13 @@ static void samr21RadioPrepareEnhancedAck()
         if (otMacFrameIsKeyIdMode1(&s_rxOtAckFrame))
         {
             otMacFrameSetKeyId(&s_rxOtAckFrame, s_radioVars.currentMacKeyId);
+            s_rxOtAckFrame.mInfo.mTxInfo.mAesKey = &s_radioVars.currentMacKey;
             s_rxBuffer[s_activeRxBuffer].otFrame.mInfo.mRxInfo.mAckKeyId = s_radioVars.currentMacKeyId;
         }
         __enable_irq();
-
-        // Generate Nonce
-        otMacGenerateNonce(&s_rxOtAckFrame, s_radioVars.extendedAddress, s_rxAckNonce);
-        
-        //Set some Makers for AES-CCM
-        s_rxAckFooter = otMacFrameGetFooter(&s_rxOtAckFrame);
-        s_rxAckSecurityLevel = otMacFrameGetSecurityLevel(&s_rxOtAckFrame);
     }
 }
+
 
 static void samr21RadioRxDownloadAndHandleRemaining()
 {
@@ -526,6 +520,10 @@ static void samr21RadioRxDownloadAndHandleRemaining()
     }
 
     PORT->Group[0].OUTCLR.reg = PORT_PA09;
+
+    uint8_t LEN = s_rxBuffer[s_activeRxBuffer].otFrame.mLength;
+
+
     bool ackRequested  = otMacFrameIsAckRequested(&(s_rxBuffer[s_activeRxBuffer].otFrame));
 
     // A Message has been fully received at this point
@@ -538,7 +536,7 @@ static void samr21RadioRxDownloadAndHandleRemaining()
 
     // A Acknowledgment was requested
     // Send after Ack-InterFrame-Spacing delay
-    samr21RadioQueueDelayedAction(IEEE_15_4_ADJUSTED_AIFS_us, samr21RadioSendAck);
+    samr21RadioQueueDelayedAction(IEEE_15_4_AIFS_us, samr21RadioSendAck);
 
 
     s_radioVars.rxState = SAMR21_RADIO_RX_STATE_PREP_ACK;
@@ -574,7 +572,7 @@ static void samr21RadioRxDownloadAndHandleAddrField()
                                   &(s_rxBuffer[s_activeRxBuffer].otFrame),
                                   s_radioVars.panId,
                                   s_radioVars.shortAddress,
-                                  (uint8_t*) &s_radioVars.extendedAddress
+                                  &s_radioVars.extendedAddress
                         );
 
     if (!s_radioVars.promiscuousMode && !isRecipient)
@@ -832,9 +830,9 @@ static void samr21RadioEvaluateCcaResult();
 static void samr21RadioStartCca();
 
 static uint8_t s_txFrameBuffer[IEEE_15_4_FRAME_SIZE];
-static uint8_t a_txAckFrameBuffer[IEEE_15_4_FRAME_SIZE];
+static uint8_t s_txAckFrameBuffer[IEEE_15_4_FRAME_SIZE];
 static otRadioFrame s_txOtFrame = { .mPsdu = &s_txFrameBuffer[1]};
-static otRadioFrame s_txAckOtFrame = { .mPsdu = &a_txAckFrameBuffer[1]};
+static otRadioFrame s_txAckOtFrame = { .mPsdu = &s_txAckFrameBuffer[1]};
 
 static uint8_t s_txNumTransmissionRetries;
 static uint8_t s_txNumCsmaBackoff;
@@ -953,12 +951,26 @@ static void samr21RadioRetryTransmission(){
     samr21RadioAbortTransmission();
 }
 
+
+
+
+
 static void samr21RadioStartTransmission(){
 
     s_radioVars.txState = SAMR21_RADIO_TX_STATE_SENDING;
 
-    samr21TrxForceMoveToTx(true);
     PORT->Group[0].OUTSET.reg = PORT_PA08; 
+    samr21TrxForceMoveToTx(true);
+
+    //Start Transmission
+
+    __disable_irq();
+
+    samr21TrxSetSLP_TR(true);
+    samr21TrxStartJustInTimeUploadToFramebuffer(s_txFrameBuffer, s_txFrameBuffer[0] + IEEE_15_4_PHR_SIZE , 0);
+
+     //Transmission Should have started by now
+    samr21TrxSetSLP_TR(false);
 
     if (!s_txOtFrame.mInfo.mTxInfo.mIsHeaderUpdated)
     {
@@ -991,30 +1003,18 @@ static void samr21RadioStartTransmission(){
     }
 
     
-    if (s_txSecurityLevel && otMacFrameIsKeyIdMode1(&s_txOtFrame) && !s_txOtFrame.mInfo.mTxInfo.mIsSecurityProcessed)
+    if (otMacFrameIsSecurityEnabled(&s_txOtFrame) && otMacFrameIsKeyIdMode1(&s_txOtFrame) && !s_txOtFrame.mInfo.mTxInfo.mIsSecurityProcessed)
     {
         s_radioVars.txState = SAMR21_RADIO_TX_STATE_SENDING_SECURITY;
-        samr21TrxSendFrameAndApplyMacSecurity
-        (
-            &s_txFrameBuffer[0],
-            s_txPayload,
-            s_txFooter,
-            s_txSecurityLevel,
-            s_txAesKey,
-            s_txNonce
-        );
+        otMacFrameProcessTransmitAesCcm(&s_txOtFrame, &s_radioVars.extendedAddress);
+        s_txOtFrame.mInfo.mTxInfo.mIsSecurityProcessed = true;
     }
     else
     {   
         s_radioVars.txState = SAMR21_RADIO_TX_STATE_SENDING_RAW;
-
-        //Start Transmission
-        samr21TrxSetSLP_TR(true);
-        samr21TrxUploadToFramebufferViaDma(s_txFrameBuffer, s_txFrameBuffer[0], 0);
-
-        //Transmission Should have started by now
-        samr21TrxSetSLP_TR(false);
     }
+
+    __enable_irq();
 
     // Set a handler for when the Frame is fully transmitted
     if(otMacFrameIsAckRequested(&s_txOtFrame))
@@ -1035,6 +1035,9 @@ static void samr21RadioStartTransmission(){
         samr21RadioQueueDelayedAction(SAMR21_SOFTWARE_RADIO_TRX_END_TIMEOUT_us, samr21RadioRetryTransmission);
         s_radioVars.txState = SAMR21_RADIO_TX_STATE_WAIT_SENDING_END;
     }
+
+    //Inform Upper Layer that Transmission started
+    cb_samr21RadioTransmissionStarted( &s_txOtFrame);
 }
 
 static void samr21RadioEvaluateCcaResult(){
@@ -1123,23 +1126,10 @@ void samr21RadioTransmit(otRadioFrame *a_otFrame)
         if (otMacFrameIsKeyIdMode1(&s_txOtFrame))
         {
             otMacFrameSetKeyId(&s_txOtFrame, s_radioVars.currentMacKeyId);
-            s_txOtFrame.mInfo.mTxInfo.mAesKey = (const otMacKeyMaterial *)s_radioVars.currentMacKey;
-            s_txAesKey = s_radioVars.currentMacKey;
+            s_txOtFrame.mInfo.mTxInfo.mAesKey =  &s_radioVars.currentMacKey;
         }
         __enable_irq();
-
-        // Generate Nonce
-        otMacGenerateNonce(&s_txOtFrame, (uint8_t*) &s_radioVars.extendedAddress, s_txNonce);
-
-        //Set some Makers for AES-CCM
-        s_txPayload = otMacFrameGetPayload(&s_txOtFrame);
-        s_txFooter = otMacFrameGetFooter(&s_txOtFrame);
-        s_txSecurityLevel = otMacFrameGetSecurityLevel(&s_txOtFrame);
     }
-
-
-    //Inform Upper Layer that Transmission started
-    cb_samr21RadioTransmissionStarted( &s_txOtFrame);
 
     //Check if Transmission needs to be delayed
     if(s_txOtFrame.mInfo.mTxInfo.mTxDelay){
@@ -1150,7 +1140,6 @@ void samr21RadioTransmit(otRadioFrame *a_otFrame)
             s_txOtFrame.mInfo.mTxInfo.mTxDelayBaseTime + s_txOtFrame.mInfo.mTxInfo.mTxDelay,
             s_txOtFrame.mInfo.mTxInfo.mCsmaCaEnabled ? samr21RadioStartCca : samr21RadioStartTransmission
         );
-
         return;
     }
 

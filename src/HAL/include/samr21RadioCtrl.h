@@ -184,7 +184,7 @@ uint16_t samr21RadioCtrlCslGetPhase();
  * @param[in]  nextKey  pointer to 16 Byte Array of the next AES-Key
  *
  */
-void samr21RadioCtrlSetMacKeys(uint8_t keyId, const uint8_t *previousKey, const uint8_t *currentKey, const uint8_t *nextKey);
+void samr21RadioCtrlSetMacKeys(uint8_t keyId, const otMacKeyMaterial*previousKey, const otMacKeyMaterial *currentKey, const otMacKeyMaterial *nextKey);
 
 /**
  * Sets a new Pan ID
@@ -192,7 +192,7 @@ void samr21RadioCtrlSetMacKeys(uint8_t keyId, const uint8_t *previousKey, const 
  * @param[in]  panId  new Pan ID 
  *
  */
-void samr21RadioCtrlSetPanId(uint16_t panId);
+void samr21RadioCtrlSetPanId(otPanId panId);
 
 /**
  * Sets a new Short Address
@@ -200,7 +200,7 @@ void samr21RadioCtrlSetPanId(uint16_t panId);
  * @param[in]  shortAddress  new Short Address
  *
  */
-void samr21RadioCtrlSetShortAddress(uint16_t shortAddress);
+void samr21RadioCtrlSetShortAddress(otShortAddress shortAddress);
 
 /**
  * Sets a new extended Address
@@ -208,7 +208,7 @@ void samr21RadioCtrlSetShortAddress(uint16_t shortAddress);
  * @param[in]  extendedAddress  pointer to new Extended Address
  *
  */
-void samr21RadioCtrlSetExtendedAddress(uint8_t* extendedAddress);
+void samr21RadioCtrlSetExtendedAddress(otExtAddress* extendedAddress);
 
 /**
  * Returns the current Pan ID

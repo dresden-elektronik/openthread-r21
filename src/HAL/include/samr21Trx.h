@@ -287,14 +287,16 @@ void samr21TrxUploadToFramebuffer(uint8_t *data, uint8_t len, uint8_t pos);
 
 /**
  *
- * Uploads data of a specified length to a given position in the Framebuffer via DMA
+ * Uploads data of a specified length to a given position in the Framebuffer 
+ * Each byte is uploaded individually each 32us (802.15.4 Datarate) 
+ * After This function Call the Content of the given Framebuffer in SRAM can still be modified
  *
  * @param[in]  data  pointer to buffer of the data to be uploaded
  * @param[in]   len   length of the data to be uploaded
  * @param[in]   pos   offset inside the Framebuffer where the data is uploaded to
  *
  */
-void samr21TrxUploadToFramebufferViaDma(uint8_t *data, uint8_t len, uint8_t pos);
+void samr21TrxStartJustInTimeUploadToFramebuffer(uint8_t *data, uint8_t len, uint8_t pos);
 
 
 /**

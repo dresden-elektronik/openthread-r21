@@ -61,7 +61,7 @@ void samr21UartInit(){
         
         //F_ref = 16MHz (if At86r233 ist setup correctly) F_baud = F_ref / 2*(BAUD+1) ---> BAUD = 7 F_baud = 3MBAUD
         SERCOM2->USART.BAUD.reg=
-            SERCOM_SPI_BAUD_BAUD(7) 
+            SERCOM_SPI_BAUD_BAUD(0) 
         ;
 
         SERCOM2->USART.CTRLB.reg=
