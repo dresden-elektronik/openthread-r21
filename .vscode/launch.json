@@ -54,7 +54,6 @@
             "gdbTarget": "localhost:3333",
             "gdbPath" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-gdb",
             "toolchainPrefix" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-",
-            "preLaunchTask": "buid All"
         },
         {
             "name": "CLI MTD Debug Live",
@@ -67,7 +66,6 @@
             "gdbTarget": "localhost:3333",
             "gdbPath" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-gdb",
             "toolchainPrefix" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-",
-            "preLaunchTask": "buid All"
         },
         {
             "name": "CLI FTD Debug Live",
@@ -80,7 +78,6 @@
             "gdbTarget": "localhost:3333",
             "gdbPath" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-gdb",
             "toolchainPrefix" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-",
-            "preLaunchTask": "buid All"
         },
     ]
 }

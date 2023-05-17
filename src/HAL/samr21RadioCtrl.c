@@ -338,8 +338,6 @@ static uint8_t s_rxAckSecurityLevel;
 
 static void samr21RadioAbortReception()
 {
-    PORT->Group[0].OUTCLR.reg = PORT_PA09;
-    PORT->Group[0].OUTCLR.reg = PORT_PA17;
 
     s_radioVars.rxState = SAMR21_RADIO_RX_STATE_IDLE;
 
@@ -361,8 +359,6 @@ static void samr21RadioAbortReception()
 
 static void samr21RadioFinishReception()
 {
-    PORT->Group[0].OUTCLR.reg = PORT_PA09;
-    PORT->Group[0].OUTCLR.reg = PORT_PA17;
     s_radioVars.rxState = SAMR21_RADIO_RX_STATE_IDLE;
 
     s_radioVars.rxBusy = false;
@@ -386,7 +382,6 @@ static void samr21RadioFinishReception()
 
 static void samr21RadioSendAck()
 {
-    PORT->Group[0].OUTSET.reg = PORT_PA17;
     s_radioVars.rxState = SAMR21_RADIO_RX_STATE_SENDING_ACK;
     
     // Set a handler for when the Ack is successfully transmitted
@@ -519,7 +514,6 @@ static void samr21RadioRxDownloadAndHandleRemaining()
         return;
     }
 
-    PORT->Group[0].OUTCLR.reg = PORT_PA09;
 
     uint8_t LEN = s_rxBuffer[s_activeRxBuffer].otFrame.mLength;
 
@@ -625,7 +619,6 @@ static void samr21RadioRxDownloadAndHandleFcf()
     s_radioVars.rxBusy = true;
     s_radioVars.rxState = SAMR21_RADIO_RX_STATE_PARSE_FCF;
     
-    PORT->Group[0].OUTSET.reg = PORT_PA09;
 
     s_rxBuffer[s_activeRxBuffer].otFrame.mInfo.mRxInfo.mTimestamp = samr21RtcGetTimestamp();
     s_rxBuffer[s_activeRxBuffer].otFrame.mChannel = samr21TrxGetChannel(); 
@@ -849,7 +842,6 @@ static uint8_t s_txSecurityLevel;
 static void samr21RadioFinishTransmission(){
 
     s_radioVars.txState = SAMR21_RADIO_TX_STATE_IDLE;
-    PORT->Group[0].OUTCLR.reg = PORT_PA08;
 
     //Stop Timeout
     samr21RadioRemoveQueuedAction();
@@ -865,7 +857,6 @@ static void samr21RadioFinishTransmission(){
 
 static void samr21RadioAbortTransmission(){
     
-    PORT->Group[0].OUTCLR.reg = PORT_PA08;
     s_radioVars.txState = SAMR21_RADIO_TX_STATE_IDLE;
     
     //Stop Timeout
@@ -959,7 +950,6 @@ static void samr21RadioStartTransmission(){
 
     s_radioVars.txState = SAMR21_RADIO_TX_STATE_SENDING;
 
-    PORT->Group[0].OUTSET.reg = PORT_PA08; 
     samr21TrxForceMoveToTx(true);
 
     //Start Transmission

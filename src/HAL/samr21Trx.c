@@ -59,7 +59,7 @@ void samr21TrxInterfaceInit()
     // Use GCLKGEN1 as core Clock for SPI At86rf233 (SERCOM4, Synchronous)
     GCLK->CLKCTRL.reg =
         // GCLK_CLKCTRL_WRTLOCK
-        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(1) // GCLKGEN1 (Sourced from At86rf233 mClk)
+        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(2) // GCLKGEN1 (Sourced from At86rf233 mClk)
         | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_SERCOM4_CORE_Val);
 
     // Wait for synchronization
@@ -68,7 +68,7 @@ void samr21TrxInterfaceInit()
 
     GCLK->CLKCTRL.reg =
         // GCLK_CLKCTRL_WRTLOCK
-        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(1) // GCLKGEN1
+        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(2) // GCLKGEN1
         | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_SERCOMX_SLOW_Val);
 
     // Wait for synchronization
@@ -190,7 +190,7 @@ void samr21TrxInterfaceInit()
 
     // Setup SERCOM4
 
-    // F_ref = 16MHz (if At86r233 ist setup correctly) F_baud = F_ref / 2*(BAUD+1) ---> BAUD = 0 F_baud = 8Mhz
+    // F_ref = 8MHz (if At86r233 ist setup correctly) F_baud = F_ref / 2*(BAUD+1) ---> BAUD = 0 F_baud = 4Mhz
     SERCOM4->SPI.BAUD.reg =
         SERCOM_SPI_BAUD_BAUD(0x0);
 
@@ -496,14 +496,12 @@ uint8_t samr21TrxSpiTransceiveByteRaw(uint8_t a_data)
     while (!SERCOM4->SPI.INTFLAG.bit.DRE)
         ;
     // Put data into the tranmitt buffer to start transmission
-    // PORT->Group[0].OUTTGL.reg= PORT_PA07;
     SERCOM4->SPI.DATA.bit.DATA = a_data;
 
     while (!SERCOM4->SPI.INTFLAG.bit.TXC)
         ;
     while (!SERCOM4->SPI.INTFLAG.bit.RXC)
         ;
-    // PORT->Group[0].OUTTGL.reg= PORT_PA07;
 
     // return recived Answerto
     return SERCOM4->SPI.DATA.bit.DATA;
@@ -816,137 +814,6 @@ uint8_t samr21TrxGetRandomByte()
     return rVal;
 }
 
-/*********************AES Engine*******************************/
-static s_aesBusy = false;
-
-void samr21TrxAesKeySetup(uint8_t *a_key_1D)
-{
-    while (s_aesBusy)
-        ;
-
-    PORT->Group[0].OUTSET.reg = PORT_PA07;
-    samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, AES_CTRL_SRAM_ADDR);
-
-    ramCopyTrxAesCtrl_t temp_aesCtrl = {
-        .bit.dir = 0,
-        .bit.mode = AT86RF233_AES_MODE_KEY,
-        .bit.request = 0};
-    samr21TrxSpiTransceiveByteRaw(temp_aesCtrl.reg);
-    samr21TrxSpiTransceiveBytesRaw(a_key_1D, NULL, IEEE_15_4_AES_CCM_BLOCK_SIZE);
-    samr21TrxSpiCloseAccess();
-    PORT->Group[0].OUTCLR.reg = PORT_PA07;
-}
-
-static void samr21TrxAesEcbEncrypt(uint8_t *inDataBlock_1D, uint8_t *outDataBlock_1D)
-{
-    PORT->Group[0].OUTSET.reg = PORT_PA07;
-    samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, AES_CTRL_SRAM_ADDR);
-
-    ramCopyTrxAesCtrl_t aesCtrl =
-        {
-            .bit.dir = 0,
-            .bit.mode = AT86RF233_AES_MODE_ECB,
-            .bit.request = 0};
-
-#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(SAMR21_NUM_CPU_WAIT_CYCLES_BETWEEN_SPI_BYTES_FAST_ACCESS);
-#endif
-    samr21TrxSpiTransceiveByteRaw(aesCtrl.reg);
-
-    for (uint8_t i = 0; i < IEEE_15_4_AES_CCM_BLOCK_SIZE; i++)
-    {
-        // Send New Plaintext and Retrive last Ciphertext
-#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-        samr21delaySysTick(SAMR21_NUM_CPU_WAIT_CYCLES_BETWEEN_SPI_BYTES_FAST_ACCESS);
-#endif
-        if (outDataBlock_1D)
-        {
-            if (i != 0)
-            {
-                outDataBlock_1D[i - 1] = samr21TrxSpiTransceiveByteRaw(inDataBlock_1D == NULL ? 0x00 : inDataBlock_1D[i]);
-            }
-            else
-            {
-                samr21TrxSpiTransceiveByteRaw(inDataBlock_1D == NULL ? 0x00 : inDataBlock_1D[i]);
-            }
-        }
-        else
-        {
-            samr21TrxSpiTransceiveByteRaw(inDataBlock_1D == NULL ? 0x00 : inDataBlock_1D[i]);
-        }
-    }
-
-    aesCtrl.bit.request = 1;
-
-    if (outDataBlock_1D)
-    {
-        outDataBlock_1D[IEEE_15_4_AES_CCM_BLOCK_SIZE - 1] = samr21TrxSpiTransceiveByteRaw(aesCtrl.reg);
-    }
-    else
-    {
-        samr21TrxSpiTransceiveByteRaw(aesCtrl.reg);
-    }
-
-    samr21TrxSpiCloseAccess();
-    PORT->Group[0].OUTCLR.reg = PORT_PA07;
-}
-
-static void samr21TrxAesCbcEncrypt(uint8_t *inDataBlock_1D, uint8_t *outDataBlock_1D)
-{
-    PORT->Group[0].OUTSET.reg = PORT_PA07;
-    samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, AES_CTRL_SRAM_ADDR);
-
-    // Send ECB encription Command
-    ramCopyTrxAesCtrl_t aesCtrl = {
-        .bit.dir = 0,
-        .bit.mode = AT86RF233_AES_MODE_CBC,
-        .bit.request = 0};
-
-#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
-#endif
-    samr21TrxSpiTransceiveByteRaw(aesCtrl.reg);
-
-    for (uint8_t i = 0; i < IEEE_15_4_AES_CCM_BLOCK_SIZE; i++)
-    {
-        // Send New Plaintext and Retrive last Ciphertext
-#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-        samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES_FAST_ACCESS);
-#endif
-        if (outDataBlock_1D)
-        {
-            if (i != 0)
-            {
-                outDataBlock_1D[i - 1] = samr21TrxSpiTransceiveByteRaw(inDataBlock_1D == NULL ? 0x00 : inDataBlock_1D[i]);
-            }
-            else
-            {
-                samr21TrxSpiTransceiveByteRaw(inDataBlock_1D == NULL ? 0x00 : inDataBlock_1D[i]);
-            }
-        }
-        else
-        {
-            samr21TrxSpiSendByteRawIgnoreResponse(inDataBlock_1D == NULL ? 0x00 : inDataBlock_1D[i]);
-        }
-    }
-
-    aesCtrl.bit.request = 1;
-
-#ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
-#endif
-    if (outDataBlock_1D)
-    {
-        outDataBlock_1D[IEEE_15_4_AES_CCM_BLOCK_SIZE - 1] = samr21TrxSpiTransceiveByteRaw(aesCtrl.reg);
-    }
-    else
-    {
-        samr21TrxSpiTransceiveByteRaw(aesCtrl.reg);
-    }
-
-    samr21TrxSpiCloseAccess();
-    PORT->Group[0].OUTCLR.reg = PORT_PA07;
-}
 
 /****************FRAMEBUFFER READ ACCESS************************/
 bool samr21TrxLiveFramebufferDownload(uint8_t *a_data_1D, uint8_t a_len)
@@ -1061,11 +928,9 @@ void samr21TrxUploadToFramebuffer(uint8_t *a_data_1D, uint8_t a_len, uint8_t a_p
     assert(a_data_1D);
 #endif
 
-    PORT->Group[0].OUTSET.reg = PORT_PA06;
     samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, a_pos);
     samr21TrxSpiTransceiveBytesRaw(a_data_1D, NULL, a_len); // phyLen not in psduLen
     samr21TrxSpiCloseAccess();
-    PORT->Group[0].OUTCLR.reg = PORT_PA06;
 }
 
 
@@ -1086,7 +951,6 @@ void DMAC_Handler()
     s_trxVars.txDmacDescriptor.BTCTRL.bit.VALID = 0;
 
     s_trxVars.dmaActive = false;
-    PORT->Group[0].OUTCLR.reg = PORT_PA06;
 }
 
 
@@ -1110,7 +974,6 @@ void samr21TrxStartJustInTimeUploadToFramebuffer(uint8_t *a_data_1D, uint8_t a_l
     s_trxVars.txDmacDescriptor.BTCTRL.bit.VALID = 1;
     
 
-    PORT->Group[0].OUTSET.reg = PORT_PA06;
     DMAC->CHID.reg = 0x00;
     DMAC->CHCTRLA.bit.ENABLE = 1;
     s_trxVars.dmaActive = true;
@@ -1121,330 +984,6 @@ void samr21TrxStartJustInTimeUploadToFramebuffer(uint8_t *a_data_1D, uint8_t a_l
     int temp;
 }
 
-/*********FRAMEBUFFER WRITE ACCESS (with Security)**************/
-static struct trxSecurity_s
-{
-    uint8_t securityLevel;
-
-    uint8_t numBytesUploaded;
-
-    uint8_t numEncryptionBlocksDone;
-    uint8_t numAuthenticationPayloadBlocksDone;
-
-    union
-    {
-        uint8_t numAuthenticationPayloadBlocksNeeded;
-        uint8_t numEncryptionBlocksNeeded;
-    };
-
-    uint8_t numAuthenticationHeaderBlocksDone;
-    uint8_t numAuthenticationHeaderBlocksNeeded;
-
-    uint8_t currentSizeCbcBlock;
-
-    uint8_t *header_p;
-    uint8_t headerLen;
-    uint8_t *payload_p;
-    uint8_t payloadLen;
-    uint8_t *footer_p;
-    uint8_t micSize; // Footer also includes the FCS but this is automatically calculated by TRX (samr21 datasheet 37.3.3 Automatic FCS Generation)
-
-    union
-    {
-        uint8_t aesCbcBlock_1D[IEEE_15_4_AES_CCM_BLOCK_SIZE];
-        uint8_t aesCtrBlock_1D[IEEE_15_4_AES_CCM_BLOCK_SIZE];
-        uint8_t micBlock_1D[IEEE_15_4_AES_CCM_BLOCK_SIZE];
-    };
-
-    uint8_t encryptionMask_1D[IEEE_15_4_AES_CCM_BLOCK_SIZE];
-
-} s_trxSecurity;
-
-static void samr21TrxUploadEncryptedToFramebuffer(uint8_t *a_data_1D, uint8_t *a_xorMask_1D, uint8_t a_len, uint8_t a_pos)
-{
-
-#ifdef _DEBUG
-    assert(a_len <= IEEE_15_4_AES_CCM_BLOCK_SIZE);
-    assert((a_pos + a_len) <= IEEE_15_4_FRAME_SIZE);
-    assert(a_data_1D);
-    assert(a_xorMask_1D);
-#endif
-
-    PORT->Group[0].OUTSET.reg = PORT_PA06;
-    samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, a_pos);
-
-    for (uint8_t i = 0; i < a_len; i++)
-    {
-        samr21TrxSpiTransceiveByteRaw(a_data_1D[i] ^ a_xorMask_1D[i]);
-    }
-
-    samr21TrxSpiCloseAccess();
-    PORT->Group[0].OUTCLR.reg = PORT_PA06;
-}
-
-static void samr21TrxAuthenticateFinish()
-{
-    // Start a DummyRound to retrieve the result of the last Round
-    // TODO remove Dummy round!
-    samr21TrxAesCbcEncrypt(NULL, s_trxSecurity.micBlock_1D);
-
-    // Last AES Action took place, the engine can be unlocked again
-    s_aesBusy = false;
-
-    if (s_trxSecurity.micSize)
-    {
-        samr21TrxUploadEncryptedToFramebuffer(
-            s_trxSecurity.micBlock_1D,
-            s_trxSecurity.encryptionMask_1D,
-            s_trxSecurity.micSize,
-            s_trxSecurity.numBytesUploaded);
-        s_trxSecurity.numBytesUploaded += s_trxSecurity.micSize;
-    }
-
-    // FCS is done by TRX (samr21 datasheet 37.3.3 Automatic FCS Generation)
-
-#ifdef _DEBUG
-    assert(s_trxSecurity.numBytesUploaded == (s_trxSecurity.headerLen + s_trxSecurity.payloadLen + s_trxSecurity.micSize + 1)) // psduLen not part of headerLength
-#endif
-}
-
-static void samr21TrxAuthenticateLoop()
-{
-
-    // Start the AES Engine
-    if (s_trxSecurity.numAuthenticationHeaderBlocksDone < s_trxSecurity.numAuthenticationHeaderBlocksNeeded)
-    {
-        // start the next CBC-Round for a header Block
-        samr21TrxAesCbcEncrypt(s_trxSecurity.aesCbcBlock_1D, NULL); // only the last round CBC output is relevant
-        // memcpy(AESCBCINPUT[AEStemp++],s_trxSecurity.aesCbcBlock_1D,IEEE_15_4_AES_CCM_BLOCK_SIZE);
-
-        s_trxSecurity.numAuthenticationHeaderBlocksDone++;
-    }
-    else if (s_trxSecurity.numAuthenticationPayloadBlocksDone < s_trxSecurity.numAuthenticationPayloadBlocksNeeded)
-    {
-        // start the next CBC-Round for a Payload
-        samr21TrxAesCbcEncrypt(s_trxSecurity.aesCbcBlock_1D, NULL); // only the last round CBC output is relevant
-        // memcpy(AESCBCINPUT[AEStemp++],s_trxSecurity.aesCbcBlock_1D,IEEE_15_4_AES_CCM_BLOCK_SIZE);
-
-        s_trxSecurity.numAuthenticationPayloadBlocksDone++;
-    }
-
-    if (s_trxSecurity.numAuthenticationPayloadBlocksDone == s_trxSecurity.numAuthenticationPayloadBlocksNeeded && s_trxSecurity.numAuthenticationHeaderBlocksDone == s_trxSecurity.numAuthenticationHeaderBlocksNeeded)
-    {
-        // Start a Timer for when the AES-Engine is done
-        samr21TrxQueueDelayedAction(AT86RF233_ADJUSTED_AES_BUSY_TIME_us, samr21TrxAuthenticateFinish);
-        return;
-    }
-
-    // Start a Timer for when the AES-Engine is done
-    samr21TrxQueueDelayedAction(AT86RF233_ADJUSTED_AES_BUSY_TIME_us, samr21TrxAuthenticateLoop);
-
-    // Prepare Memory for next Action when AES-Engine is done/ready
-    if (s_trxSecurity.numAuthenticationHeaderBlocksDone < s_trxSecurity.numAuthenticationHeaderBlocksNeeded)
-    {
-
-        // Calculate current Header Offset
-        uint8_t headerOffset = (IEEE_15_4_AES_CCM_BLOCK_SIZE * s_trxSecurity.numAuthenticationHeaderBlocksDone) - 2; // 2Bytes HeaderLen in first CBC Round
-
-        // Fill a new Header Block
-        for (uint8_t i = 0; i < IEEE_15_4_AES_CCM_BLOCK_SIZE; i++)
-        {
-            if ((headerOffset + i) < s_trxSecurity.headerLen)
-            {
-                s_trxSecurity.aesCbcBlock_1D[i] = s_trxSecurity.header_p[headerOffset + i];
-                continue;
-            }
-
-            s_trxSecurity.aesCbcBlock_1D[i] = 0x00; // Fill up rest with 0
-        }
-    }
-    else if (s_trxSecurity.numAuthenticationPayloadBlocksDone < s_trxSecurity.numAuthenticationPayloadBlocksNeeded)
-    {
-
-        // Calculate current Payload Offset
-        uint8_t payloadOffset = (IEEE_15_4_AES_CCM_BLOCK_SIZE * s_trxSecurity.numAuthenticationPayloadBlocksDone);
-
-        // Fill a new Header Block
-        for (uint8_t i = 0; i < IEEE_15_4_AES_CCM_BLOCK_SIZE; i++)
-        {
-            if ((payloadOffset + i) < s_trxSecurity.payloadLen)
-            {
-                s_trxSecurity.aesCbcBlock_1D[i] = s_trxSecurity.payload_p[payloadOffset + i];
-                continue;
-            }
-
-            s_trxSecurity.aesCbcBlock_1D[i] = 0x00; // Fill up rest with 0
-        }
-    }
-}
-
-static void samr21TrxAuthenticateStart()
-{
-    // Form init Vector (See IEEE 802.15.4-2015 Appendix B for good examples)
-    // Nonce is already in CBC block because of union within the s_trxSecurity struct
-    s_trxSecurity.aesCbcBlock_1D[0] =
-        (s_trxSecurity.headerLen != 0 ? 0b01000000 : 0x0) | (((s_trxSecurity.micSize - 2) >> 1) << 3) | 1; // L always 2
-    s_trxSecurity.aesCbcBlock_1D[IEEE_15_4_AES_CCM_BLOCK_SIZE - 2] = 0;                                    // always 0 cause maxlenght is 127
-    s_trxSecurity.aesCbcBlock_1D[IEEE_15_4_AES_CCM_BLOCK_SIZE - 1] = s_trxSecurity.payloadLen;
-
-    // start the first CBC-Round with init vector (plain ECB, r21 datasheet 40.1.4.2 Cipher Block Chaining (CBC))
-    // simultaneously retrieve the MIC encryptionBlock from the CTR-Section
-    samr21TrxAesEcbEncrypt(s_trxSecurity.aesCbcBlock_1D, s_trxSecurity.encryptionMask_1D);
-
-    // Fill first CBC Block to be authenticated
-    // First 2 Bytes are U16 representation of Header length
-    s_trxSecurity.aesCbcBlock_1D[0] = s_trxSecurity.headerLen >> 8;
-    s_trxSecurity.aesCbcBlock_1D[1] = s_trxSecurity.headerLen >> 0;
-
-    // Catch the Case of a really small header Size
-    if (s_trxSecurity.headerLen <= (IEEE_15_4_AES_CCM_BLOCK_SIZE - 2))
-    {
-        memcpy(&s_trxSecurity.aesCbcBlock_1D[2], s_trxSecurity.header_p, s_trxSecurity.headerLen);
-        memset(&s_trxSecurity.aesCbcBlock_1D[2], 0, IEEE_15_4_AES_CCM_BLOCK_SIZE - 2 - s_trxSecurity.headerLen);
-    }
-    else
-    {
-        memcpy(&s_trxSecurity.aesCbcBlock_1D[2], s_trxSecurity.header_p, (IEEE_15_4_AES_CCM_BLOCK_SIZE - 2));
-    }
-
-    // Prep rest of the Memory for the next Actions
-    s_trxSecurity.numAuthenticationHeaderBlocksDone = 0;
-    s_trxSecurity.numAuthenticationHeaderBlocksNeeded = (s_trxSecurity.headerLen + 2) / IEEE_15_4_AES_CCM_BLOCK_SIZE; // First Header Block starts with headerLen
-    if ((s_trxSecurity.headerLen + 2) % IEEE_15_4_AES_CCM_BLOCK_SIZE)
-    {
-        s_trxSecurity.numAuthenticationHeaderBlocksNeeded++;
-    }
-
-    s_trxSecurity.currentSizeCbcBlock = IEEE_15_4_AES_CCM_BLOCK_SIZE;
-    s_trxSecurity.numAuthenticationPayloadBlocksDone = 0;
-
-    // numAuthenticationPayloadBlocksNeeded is already calculated because of union with EncryptionBlockNeeded
-
-    // Start a Timer for when the AES-Engine is done
-    samr21TrxQueueDelayedAction(AT86RF233_ADJUSTED_AES_BUSY_TIME_us, samr21TrxAuthenticateLoop);
-}
-
-static void samr21TrxEncryptAndUploadPayload()
-{
-    while (s_trxSecurity.numEncryptionBlocksDone < s_trxSecurity.numEncryptionBlocksNeeded)
-    {
-        if ((s_trxSecurity.numEncryptionBlocksDone + 1) < s_trxSecurity.numEncryptionBlocksNeeded)
-        {
-            // increase Nonce Counter for next AES-CTR-Block
-            s_trxSecurity.aesCtrBlock_1D[(IEEE_15_4_AES_CCM_BLOCK_SIZE - 1)]++;
-            // start uploading next AES-CTR Block, while simultaneously retrieving (SPI SRAM-Fast-Access) the result of the last AES-CTR-Round
-            samr21TrxAesEcbEncrypt(s_trxSecurity.aesCtrBlock_1D, s_trxSecurity.encryptionMask_1D);
-            // Write via SRAM starting from Addr of the current Byte to the Framebuffer
-            samr21TrxUploadEncryptedToFramebuffer(
-                (s_trxSecurity.payload_p + (IEEE_15_4_AES_CCM_BLOCK_SIZE * s_trxSecurity.numEncryptionBlocksDone)),
-                s_trxSecurity.encryptionMask_1D,
-                IEEE_15_4_AES_CCM_BLOCK_SIZE,
-                s_trxSecurity.numBytesUploaded);
-            s_trxSecurity.numBytesUploaded += IEEE_15_4_AES_CCM_BLOCK_SIZE;
-        }
-        else
-        {
-
-            uint8_t lastEncryptedPayloadBlockSize = ((s_trxSecurity.payloadLen % IEEE_15_4_AES_CCM_BLOCK_SIZE) ? (s_trxSecurity.payloadLen % IEEE_15_4_AES_CCM_BLOCK_SIZE) : IEEE_15_4_AES_CCM_BLOCK_SIZE);
-
-            // set Nonce Counter to 0 for later encryption of MIC
-            s_trxSecurity.aesCtrBlock_1D[(IEEE_15_4_AES_CCM_BLOCK_SIZE - 1)] = 0;
-            // start encrypting the AES-CTR Block for MIC encryption, while simultaneously retrieving (SPI SRAM-Fast-Access) the result of the final Payload AES-CTR-Round
-            samr21TrxAesEcbEncrypt(s_trxSecurity.aesCtrBlock_1D, s_trxSecurity.encryptionMask_1D);
-            // Write via SRAM starting from Addr of the current Byte to the Framebuffer
-            samr21TrxUploadEncryptedToFramebuffer(
-                (s_trxSecurity.payload_p + (IEEE_15_4_AES_CCM_BLOCK_SIZE * s_trxSecurity.numEncryptionBlocksDone)),
-                s_trxSecurity.encryptionMask_1D,
-                lastEncryptedPayloadBlockSize,
-                s_trxSecurity.numBytesUploaded);
-
-            s_trxSecurity.numBytesUploaded += lastEncryptedPayloadBlockSize;
-        }
-
-        s_trxSecurity.numEncryptionBlocksDone++;
-    }
-
-    // Delay is needed here cause if the last PayloadBlock is pretty short
-    // There could be a Edge Case where the time it take to upload this last Block
-    // Is shorter then the AES Cycle Time
-    if (s_trxSecurity.micSize)
-    {
-        samr21TrxAuthenticateStart();
-    }
-}
-
-void samr21TrxSendFrameAndApplyMacSecurity(uint8_t *a_header_p, uint8_t *a_payload_p, uint8_t *a_footer_p, uint8_t a_secLevel, uint8_t *a_key_1D, uint8_t *a_nonce_1D)
-{
-
-#ifdef _DEBUG
-    assert(a_secLevel >= 0b100);
-#endif
-
-    // Block AES Engine, so no Key Change takes places while frame is being transmitted
-    s_aesBusy = true;
-
-    // Upload the unecrypted Part of the Message first. This is done o the Framebuffer doesn't get empty, while AES-CCM* is ongoing
-    // Frame Transmission and AES-CCM* is done in Parallel
-    s_trxSecurity.headerLen = (uint8_t)(a_payload_p - a_header_p);
-    samr21TrxUploadToFramebuffer(a_header_p, s_trxSecurity.headerLen, 0);
-
-    // Start Transmission
-    samr21TrxSetSLP_TR(true);
-
-    // Prep CTR Block (input for AES-Engine, Output get XORed with payload)
-    s_trxSecurity.aesCtrBlock_1D[0] = 1; // Always 1 cause L is always 2
-    memcpy(&s_trxSecurity.aesCtrBlock_1D[1], a_nonce_1D, IEEE_15_4_AES_CCM_NONCE_SIZE);
-    s_trxSecurity.aesCtrBlock_1D[IEEE_15_4_AES_CCM_BLOCK_SIZE - 2] = 0; // Always 0 cause ctr-Value never exceeds 0xFF
-    s_trxSecurity.aesCtrBlock_1D[IEEE_15_4_AES_CCM_BLOCK_SIZE - 1] = 1; // Start with ctr = 1, because timing for payload encryption is crucial
-
-    // Start Encryption of first CTR Block
-    samr21TrxAesEcbEncrypt(s_trxSecurity.aesCtrBlock_1D, NULL);
-    // Start Timer for when result AES-Engine is done
-    samr21TrxQueueDelayedAction(AT86RF233_ADJUSTED_AES_BUSY_TIME_us, samr21TrxEncryptAndUploadPayload);
-
-    // Prep part of the Memory for the next Actions
-    s_trxSecurity.numBytesUploaded = s_trxSecurity.headerLen;
-    s_trxSecurity.securityLevel = a_secLevel;
-
-    // Copy Frame inicies pointer
-    s_trxSecurity.payload_p = a_payload_p;
-    s_trxSecurity.footer_p = a_footer_p;
-
-    // Remove psdu-Framelenght octet form header. Only mac-frame content is of intrest for AES
-    s_trxSecurity.headerLen--;
-    s_trxSecurity.header_p = a_header_p + 1;
-
-    s_trxSecurity.payloadLen = (uint8_t)(a_footer_p - a_payload_p);
-
-    s_trxSecurity.numEncryptionBlocksDone = 0;
-    s_trxSecurity.numEncryptionBlocksNeeded = s_trxSecurity.payloadLen / IEEE_15_4_AES_CCM_BLOCK_SIZE;
-    if (s_trxSecurity.payloadLen % IEEE_15_4_AES_CCM_BLOCK_SIZE)
-    {
-        s_trxSecurity.numEncryptionBlocksNeeded++;
-    }
-
-    switch (s_trxSecurity.securityLevel & 0b11)
-    {
-    case 0b00:
-        s_trxSecurity.micSize = 0;
-        break;
-
-    case 0b01:
-        s_trxSecurity.micSize = 4;
-        break;
-
-    case 0b10:
-        s_trxSecurity.micSize = 8;
-        break;
-
-    case 0b11:
-        s_trxSecurity.micSize = 16;
-        break;
-    }
-
-    // Transmission Should have started by now
-    samr21TrxSetSLP_TR(false);
-}
 
 /**********TRX EVENT HANDLER********/
 

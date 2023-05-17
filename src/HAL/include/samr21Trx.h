@@ -238,14 +238,6 @@ uint8_t samr21TrxGetRandomNibble();
  */
 uint8_t samr21TrxGetRandomByte();
 
-/**
- *
- * Updates the Key inside the AES Engine of teh AT86RF233
- *
- * @param[in]   key   New 16-Byte AES Key
- *
- */
-void samr21TrxAesKeySetup(uint8_t *key);
 
 /**
  *
@@ -297,21 +289,6 @@ void samr21TrxUploadToFramebuffer(uint8_t *data, uint8_t len, uint8_t pos);
  *
  */
 void samr21TrxStartJustInTimeUploadToFramebuffer(uint8_t *data, uint8_t len, uint8_t pos);
-
-
-/**
- *
- * Uploads a 802.15.4 Frame and applies MAC-AES-CCM* Security
- *
- * @param[in]  header  pointer to buffer of the Frame to be uploaded (including psduLength)
- * @param[in]  payload pointer inside the buffer to where the payload starts
- * @param[in]  footer  pointer inside the buffer to where the footer (MIC) starts
- * @param[in]  secLevel the security Level that will be applied to the Frame
- * @param[in]  key      pointer to AES-Key to be used
- * @param[in]  nonce      pointer to Nonce to be used
- *
- */
-void samr21TrxSendFrameAndApplyMacSecurity(uint8_t *header, uint8_t *payload, uint8_t *footer, uint8_t secLevel, uint8_t *key, uint8_t *nonce);
 
 /**
  *

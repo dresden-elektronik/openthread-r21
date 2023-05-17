@@ -14,123 +14,16 @@
 #include "samr21Usb.h"
 #include "samr21Uart.h"
 
-#define _DEBUG 1
 
-#ifdef _DEBUG
-static void samr21DebugPortsInit()
-{
-
-    PORT->Group[0].DIRSET.reg = PORT_PA06;
-
-    // Setup Mux Settings
-    PORT->Group[0].WRCONFIG.reg =
-        // PORT_WRCONFIG_HWSEL
-        PORT_WRCONFIG_WRPINCFG
-        //|PORT_WRCONFIG_WRPMUX
-        //|PORT_WRCONFIG_PMUX(MUX_PC16F_GCLK_IO1)
-        // PORT_WRCONFIG_PULLEN
-        //|PORT_WRCONFIG_INEN
-        //|PORT_WRCONFIG_PMUXEN
-        | PORT_WRCONFIG_PINMASK(PORT_PA06) // lower Halfword
-        ;
-
-    PORT->Group[0].DIRSET.reg = PORT_PA07;
-
-    // Setup Mux Settings
-    PORT->Group[0].WRCONFIG.reg =
-        // PORT_WRCONFIG_HWSEL
-        PORT_WRCONFIG_WRPINCFG
-        //|PORT_WRCONFIG_WRPMUX
-        //|PORT_WRCONFIG_PMUX(MUX_PC16F_GCLK_IO1)
-        // PORT_WRCONFIG_PULLEN
-        //|PORT_WRCONFIG_INEN
-        //|PORT_WRCONFIG_PMUXEN
-        | PORT_WRCONFIG_PINMASK(PORT_PA07) // lower Halfword
-        ;
-
-    PORT->Group[0].DIRSET.reg = PORT_PA08;
-
-    // Setup Mux Settings
-    PORT->Group[0].WRCONFIG.reg =
-        // PORT_WRCONFIG_HWSEL
-        PORT_WRCONFIG_WRPINCFG
-        //|PORT_WRCONFIG_WRPMUX
-        //|PORT_WRCONFIG_PMUX(MUX_PC16F_GCLK_IO1)
-        // PORT_WRCONFIG_PULLEN
-        //|PORT_WRCONFIG_INEN
-        //|PORT_WRCONFIG_PMUXEN
-        | PORT_WRCONFIG_PINMASK(PORT_PA08) // lower Halfword
-        ;
-
-    PORT->Group[0].DIRSET.reg = PORT_PA09;
-
-    // Setup Mux Settings
-    PORT->Group[0].WRCONFIG.reg =
-        // PORT_WRCONFIG_HWSEL
-        PORT_WRCONFIG_WRPINCFG
-        //|PORT_WRCONFIG_WRPMUX
-        //|PORT_WRCONFIG_PMUX(MUX_PC16F_GCLK_IO1)
-        // PORT_WRCONFIG_PULLEN
-        //|PORT_WRCONFIG_INEN
-        //|PORT_WRCONFIG_PMUXEN
-        | PORT_WRCONFIG_PINMASK(PORT_PA09) // lower Halfword
-        ;
-
-}
-#endif
-
-void samr21TickleWatchdog()
+static void samr21TickleWatchdog()
 {
 #ifdef _GCF_RELEASE_
     WDT->CLEAR.reg = WDT_CLEAR_CLEAR_KEY_Val;
 #endif
 }
 
-
-
-void otSysInit(int argc, char *argv[])
+static void samr21InitIrqPriority()
 {
-
-#ifdef _DEBUG
-    samr21DebugPortsInit();
-#endif
-
-    samr21NvmInit();
-
-    samr21TickleWatchdog();
-    samr21ClockTrxSrcInit();
-
-    samr21TickleWatchdog();
-    samr21TrxInterfaceInit();
-    
-    samr21TickleWatchdog();
-    samr21TrxSetupMClk(0x5); //MCLK 1MHz -> 16 Mhz
-    
-    samr21TickleWatchdog();
-    samr21ClockInitAfterTrxSetup();
-    
-    samr21TickleWatchdog();
-    samr21RtcInit();
-
-    samr21TickleWatchdog();
-    samr21UsbInit();
-
-#ifdef _GCF_RELEASE_
-    samr21TickleWatchdog();
-    samr21FeCtrlInit();
-
-    //Confirm the App Started to Bootloader
-    uint8_t confirmedBtlFlag = 0x77;
-    samr21NvmWriteWithinRow(0x4FFF, &confirmedBtlFlag, sizeof(uint8_t));
-#endif
-
-    samr21TickleWatchdog();
-    samr21LogInit();
-
-    samr21TickleWatchdog();
-    samr21OtPlatAlarmInit();
-
-
     //192 Lowest, 0 Highest
     NVIC_SetPriority(TCC0_IRQn, 192); //Unused 
     NVIC_SetPriority(TCC1_IRQn, 5); //Used by OT Micro Alarm
@@ -142,7 +35,51 @@ void otSysInit(int argc, char *argv[])
     NVIC_SetPriority(EIC_IRQn, 2); //IRQs from AT86RF233
     NVIC_SetPriority(USB_IRQn, 5); //For Communication with USB-Host
     NVIC_SetPriority(RTC_IRQn, 4); //For timed Transmission
+}
 
+
+void otSysInit(int argc, char *argv[])
+{
+    samr21InitIrqPriority();
+    samr21TickleWatchdog();
+
+    samr21NvmInit();
+    samr21TickleWatchdog();
+
+    samr21ClockInit();
+    samr21TickleWatchdog();
+
+    samr21TickleWatchdog();
+    samr21TrxInterfaceInit();
+    
+    samr21TickleWatchdog();
+    samr21RtcInit();
+
+    //Give Some Slack (~0.2sec) before new USB enumeration
+    __disable_irq();
+    for (uint32_t i = 0; i < 1000; i++)
+    {
+        samr21delaySysTick(10000);
+        samr21TickleWatchdog();
+    }
+    __enable_irq();
+    
+    samr21UsbInit();
+
+#ifdef _GCF_RELEASE_
+    samr21TickleWatchdog();
+    samr21FeCtrlInit();
+
+    //Confirm the App Started to Bootloader
+    uint8_t confirmedBtlFlag = 0x77;
+    samr21NvmWriteWithinRow(0x4FFF, &confirmedBtlFlag, sizeof(uint8_t));
+#endif
+
+    //samr21TickleWatchdog();
+    //samr21LogInit();
+
+    samr21TickleWatchdog();
+    samr21OtPlatAlarmInit();
 }
 
 bool otSysPseudoResetWasRequested(void)
@@ -191,15 +128,5 @@ otPlatResetReason otPlatGetResetReason(otInstance *aInstance){
 }
 
 void otPlatReset(otInstance *aInstance){
-    
-    //Deinit all modules feed by MCLK from AT86RF233
-    samr21RtcDeinit();
-    samr21TimerDeinitAll();
-    samr21UsbDeinit();
-    samr21TrxInterruptDeinit();
-
-    //Deinit all Clock-Domains derived from MCLK AT86RF233
-    samr21ClockRemoveExternalSource();
-
     NVIC_SystemReset();
 }

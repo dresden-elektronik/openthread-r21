@@ -24,8 +24,6 @@ void samr21UsbInit(){
     //Enable in Power Manger 
     PM->APBBMASK.bit.USB_ = 1;
     
-
-
     //Setup Ports for USB
 
     //Setup PIN PA24 as USB D- 
@@ -62,6 +60,7 @@ void samr21UsbInit(){
     ;
     PORT->Group[0].OUTCLR.reg= PORT_PA25;
 
+    __NVIC_EnableIRQ(USB_IRQn);
     tusb_init();
 }
 
@@ -70,30 +69,23 @@ void samr21UsbDeinit(){
     // Disable IRQ in NVIC
     __NVIC_DisableIRQ(USB_IRQn);
 
-    if (USB->DEVICE.CTRLA.bit.ENABLE)
-    {
-        USB->DEVICE.CTRLA.bit.ENABLE = 0;
-        while (USB->DEVICE.CTRLA.bit.ENABLE);
+    USB->DEVICE.CTRLA.bit.ENABLE = 0;
+    while (USB->DEVICE.CTRLA.bit.ENABLE);
 
-        USB->DEVICE.CTRLA.bit.SWRST = 1;
-        while (USB->DEVICE.SYNCBUSY.bit.SWRST);
+    USB->DEVICE.CTRLA.bit.SWRST = 1;
+    while (USB->DEVICE.SYNCBUSY.bit.SWRST);
 
-
-        //Disable GCLKGEN0 for USB
-        GCLK->CLKCTRL.reg =
-            //GCLK_CLKCTRL_WRTLOCK
-            //GCLK_CLKCTRL_CLKEN
-            GCLK_CLKCTRL_GEN(0) // GCLKGEN0
-            |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_USB_Val)
-        ;
-        //Wait for synchronization 
-        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
-    }
+    //Disable GCLKGEN0 for USB
+    GCLK->CLKCTRL.reg =
+        //GCLK_CLKCTRL_WRTLOCK
+        //GCLK_CLKCTRL_CLKEN
+        GCLK_CLKCTRL_GEN(0) // GCLKGEN0
+        |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_USB_Val)
+    ;
+    //Wait for synchronization 
+    while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
     
-    if(PM->APBBMASK.bit.USB_){
-        //Disable in Power Manger 
-        PM->APBBMASK.bit.USB_ = 0;
-    }
+    PM->APBBMASK.bit.USB_ = 0;
 }
 
 

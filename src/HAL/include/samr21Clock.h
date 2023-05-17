@@ -26,32 +26,19 @@ void samr21ClockRemoveExternalSource();
 
 /**
  * Inits the Clocking System of the SAMR21
- * Activates a Clock Source GCLKIN derived from the Crystal on the AT86rf233 (MCLK)
+ * Activates a Clock Source GCLKIN derived from the Crystal on the AT86rf233 (MCLK 1MHz)
  * 
- * This function should be called BEFORE the mClk on the AT86RF233 ist changed to output 16MHz 
  * 
- * Sets up CLKGEN0 (CPU Clock) to use the internal OSC8M while clocks are being setup
+ * Sets up CLKGEN0 (CPU Clock) to use the 48MHz DFLL
  * 
- * Sets up CLKGEN1 to sourced from GCLKIN  (1Mhz or 16 MHz after Trx Setup)
- * Sets up CLKGEN2 to be mClk devided by 16 (for a stable 1us Clock after the AT86r233 is setup to output 16MHz)
+ * Sets up CLKGEN1 to sourced from GCLKIN  (1Mhz MCLK stepped down to 32.250 kHz)
+ * Sets up CLKGEN2 to 8MHz stepped down from the 48MHz DFLL (For SPI-Communication dit AT86RF233)
+ * Sets up CLKGEN3 to 1MHz stepped down from the 48MHz DFLL (For Timer and RTC)
  * 
  * CLKGEN0 (temp. 8Mhz) is temporally used to provide a CPU-Clk
  * CLKGEN1 (1 or 16Mhz) is used by SERCOM4 for Synchronous SPI Communication with the at86rf233
  * CLKGEN2 (1/16 or 1Mhz)is used for all Timers including the RTC
  */
-void samr21ClockTrxSrcInit();
-
-/**
- * Inits the Clocks derived from a the 16Mhz mClk of the at86rf233
- * 
- * This function should be called AFTER the mClk on the AT86RF233 was changed to output 16MHz 
- * 
- * Sets up CLKGEN3 to output 31.250kHz derived from the 16MHz MClk
- * Sets up the DFLL to output 48MHz and use CLKGEN3 as a reference  
- * Sets up CLKGEN0 (CPU Clock) to use the DFLL (48MHz)
- * 
- * CLKGEN0 (48MHz) is used for the CPU, USB and EIC-Detect Clock
- */
-void samr21ClockInitAfterTrxSetup();
+void samr21ClockInit(void);
 
 #endif //_SAMR21_CLOCK_H_

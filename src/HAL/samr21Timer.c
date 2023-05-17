@@ -40,10 +40,10 @@ static struct
 
 static void samr21TimerClk01Init()
 {
-    // Use GCLKGEN 2 (1MHz) for TCC0 / TCC1
+    // Use GCLKGEN 3 (1MHz) for TCC0 / TCC1
     GCLK->CLKCTRL.reg =
         // GCLK_CLKCTRL_WRTLOCK
-        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(2) // GCLKGEN2
+        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(3) // GCLKGEN2
         | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TCC0_TCC1_Val);
     // Wait for synchronization
     while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
@@ -54,10 +54,10 @@ static void samr21TimerClk01Init()
 
 static void samr21TimerClk23Init()
 {
-    // Use GCLKGEN 2 (1MHz) for TCC2 TC3
+    // Use GCLKGEN 3 (1MHz) for TCC2 TC3
     GCLK->CLKCTRL.reg =
         // GCLK_CLKCTRL_WRTLOCK
-        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(2) // GCLKGEN2
+        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(3) // GCLKGEN2
         | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TCC2_TC3_Val);
     // Wait for synchronization
     while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
@@ -68,10 +68,10 @@ static void samr21TimerClk23Init()
 
 static void samr21TimerClk45Init()
 {
-    // Use GCLKGEN 2 (1MHz) for TC4 TC5
+    // Use GCLKGEN 3 (1MHz) for TC4 TC5
     GCLK->CLKCTRL.reg =
         // GCLK_CLKCTRL_WRTLOCK
-        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(2) // GCLKGEN2
+        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(3) // GCLKGEN2
         | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TC4_TC5_Val);
     // Wait for synchronization
     while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)

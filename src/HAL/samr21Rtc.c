@@ -14,11 +14,11 @@ extern uint32_t g_currentRtcClkCycle_ns;
 
 void samr21RtcInit(){
 
-    //Use GCLKGEN 2 (1MHz) for RTC 
+    //Use GCLKGEN 3 (1MHz) for RTC 
     GCLK->CLKCTRL.reg =
         //GCLK_CLKCTRL_WRTLOCK
         GCLK_CLKCTRL_CLKEN
-        |GCLK_CLKCTRL_GEN(2) // GCLKGEN2
+        |GCLK_CLKCTRL_GEN(3) 
         |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_RTC_Val)
     ;
     //Wait for synchronization 
@@ -55,24 +55,17 @@ void samr21RtcDeinit(){
     //Disable IRQ
     NVIC_DisableIRQ(RTC_IRQn);
 
-    //Disable permanent Sync with COUT Register
-    RTC->MODE0.READREQ.reg = 0x00;
-    samr21delaySysTick(100);
-    
-    //Disable RTC
-    RTC->MODE0.CTRL.bit.SWRST = 1;
-    samr21delaySysTick(100);
-
-    //Disable RTC In Power Manger
-    PM->APBAMASK.bit.RTC_ = 0;
-
-    //Disable CLKGEN
-    GCLK->CLKCTRL.reg =
-        //GCLK_CLKCTRL_WRTLOCK
-        //GCLK_CLKCTRL_CLKEN
-        GCLK_CLKCTRL_GEN(2) // GCLKGEN2 (1MHz)
-        |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_RTC_Val)
-    ;
+     if (RTC->MODE0.READREQ.bit.RCONT)
+    {
+         //Disable permanent Sync with COUT Register
+        RTC->MODE0.READREQ.bit.RCONT = 0;
+        while (RTC->MODE0.READREQ.bit.RCONT );
+    }
+   
+    if ( RTC->MODE0.CTRL.bit.ENABLE ){
+        RTC->MODE0.CTRL.bit.ENABLE = 0;
+        while(RTC->MODE0.CTRL.bit.ENABLE || RTC->MODE0.STATUS.bit.SYNCBUSY);
+    }
 }
 
 uint32_t samr21RtcGetTimestamp(){

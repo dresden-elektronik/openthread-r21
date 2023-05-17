@@ -10,7 +10,7 @@ readonly OT_SRCDIR
 
 OT_OPTIONS=(
     "-DCMAKE_TOOLCHAIN_FILE=${OT_SRCDIR}/src/arm-none-eabi-gcc.cmake"
-    "-DCMAKE_BUILD_TYPE=relwithdebinfo"
+    "-DCMAKE_BUILD_TYPE=Release"
     "-DOT_PLATFORM=external"
     "-DOT_SLAAC=ON"
     "-DOT_APP_RCP=ON"
