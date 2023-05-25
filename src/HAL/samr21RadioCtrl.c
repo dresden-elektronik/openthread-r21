@@ -515,8 +515,6 @@ static void samr21RadioRxDownloadAndHandleRemaining()
     }
 
 
-    uint8_t LEN = s_rxBuffer[s_activeRxBuffer].otFrame.mLength;
-
 
     bool ackRequested  = otMacFrameIsAckRequested(&(s_rxBuffer[s_activeRxBuffer].otFrame));
 
@@ -530,7 +528,7 @@ static void samr21RadioRxDownloadAndHandleRemaining()
 
     // A Acknowledgment was requested
     // Send after Ack-InterFrame-Spacing delay
-    samr21RadioQueueDelayedAction(IEEE_15_4_AIFS_us, samr21RadioSendAck);
+    samr21RadioQueueDelayedAction(IEEE_15_4_ADJUSTED_AIFS_us, samr21RadioSendAck);
 
 
     s_radioVars.rxState = SAMR21_RADIO_RX_STATE_PREP_ACK;
