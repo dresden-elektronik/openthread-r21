@@ -19,6 +19,8 @@ if command -v apt-get; then
     sudo apt install openocd
 elif command -v rpm; then
     sudo dnf install openocd
+elif command -v pacman; then
+    sudo pacman -S openocd
 else
     echo No Known Package Manager found, Please install OpenOCD manualy
     
