@@ -60,6 +60,7 @@ extern uint32_t __d_nv_mem_end;
  *
  */
 #define OPENTHREAD_CONFIG_PLATFORM_FLASH_API_ENABLE 1
+#define OPENTHREAD_SETTINGS_RAM 1
 
 /**
  * @def OPENTHREAD_CONFIG_MAC_SOFTWARE_TX_SECURITY_ENABLE
@@ -95,7 +96,7 @@ extern uint32_t __d_nv_mem_end;
  *
  */
 #ifndef OPENTHREAD_CONFIG_NCP_HDLC_ENABLE
-#define OPENTHREAD_CONFIG_NCP_HDLC_ENABLE 0
+#define OPENTHREAD_CONFIG_NCP_HDLC_ENABLE 1
 #endif
 
 /**
@@ -108,26 +109,26 @@ extern uint32_t __d_nv_mem_end;
 #define OPENTHREAD_CONFIG_PLATFORM_USEC_TIMER_ENABLE 1
 #endif
 
-/**
- * @def OPENTHREAD_CONFIG_CSL_RECEIVE_TIME_AHEAD
- *
- * Reception scheduling and ramp up time needed for the CSL receiver to be ready, in units of microseconds.
- *
- */
-#ifndef OPENTHREAD_CONFIG_CSL_RECEIVE_TIME_AHEAD
-#define OPENTHREAD_CONFIG_CSL_RECEIVE_TIME_AHEAD 2000
-#endif
+// /**
+//  * @def OPENTHREAD_CONFIG_CSL_RECEIVE_TIME_AHEAD
+//  *
+//  * Reception scheduling and ramp up time needed for the CSL receiver to be ready, in units of microseconds.
+//  *
+//  */
+// #ifndef OPENTHREAD_CONFIG_CSL_RECEIVE_TIME_AHEAD
+// #define OPENTHREAD_CONFIG_CSL_RECEIVE_TIME_AHEAD 2000
+// #endif
 
-/**
- * @def OPENTHREAD_CONFIG_CSL_MIN_RECEIVE_ON
- *
- * The minimum CSL receive window (in microseconds) required to receive an IEEE 802.15.4 frame.
- * - Frame preamble: 6*2 symbols + margin
- *
- */
-#ifndef OPENTHREAD_CONFIG_CSL_MIN_RECEIVE_ON
-#define OPENTHREAD_CONFIG_CSL_MIN_RECEIVE_ON 12 * 16
-#endif
+// /**
+//  * @def OPENTHREAD_CONFIG_CSL_MIN_RECEIVE_ON
+//  *
+//  * The minimum CSL receive window (in microseconds) required to receive an IEEE 802.15.4 frame.
+//  * - Frame preamble: 6*2 symbols + margin
+//  *
+//  */
+// #ifndef OPENTHREAD_CONFIG_CSL_MIN_RECEIVE_ON
+// #define OPENTHREAD_CONFIG_CSL_MIN_RECEIVE_ON 12 * 16
+// #endif
 
 /**
  * @def OPENTHREAD_CONFIG_TCP_ENABLE
@@ -137,10 +138,6 @@ extern uint32_t __d_nv_mem_end;
  */
 #ifndef OPENTHREAD_CONFIG_TCP_ENABLE
 #define OPENTHREAD_CONFIG_TCP_ENABLE 0
-#endif
-
-#ifndef OPENTHREAD_RADIO
-    #define OPENTHREAD_CONFIG_COAP_API_ENABLE 1
 #endif
 
 /**
