@@ -59,7 +59,7 @@ void samr21TrxInterfaceInit()
     // Use GCLKGEN1 as core Clock for SPI At86rf233 (SERCOM4, Synchronous)
     GCLK->CLKCTRL.reg =
         // GCLK_CLKCTRL_WRTLOCK
-        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(2) // GCLKGEN1 (Sourced from At86rf233 mClk)
+        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(4) // 8MHz or 1MHz
         | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_SERCOM4_CORE_Val);
 
     // Wait for synchronization
@@ -68,7 +68,7 @@ void samr21TrxInterfaceInit()
 
     GCLK->CLKCTRL.reg =
         // GCLK_CLKCTRL_WRTLOCK
-        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(2) // GCLKGEN1
+        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(4) // 8MHz or 1MHz
         | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_SERCOMX_SLOW_Val);
 
     // Wait for synchronization
@@ -207,7 +207,8 @@ void samr21TrxInterfaceInit()
         ;
 
     SERCOM4->SPI.CTRLA.reg =
-        SERCOM_SPI_CTRLA_RUNSTDBY | SERCOM_SPI_CTRLA_MODE(SERCOM_SPI_CTRLA_MODE_SPI_MASTER_Val) | SERCOM_SPI_CTRLA_ENABLE
+        //SERCOM_SPI_CTRLA_RUNSTDBY 
+        SERCOM_SPI_CTRLA_MODE(SERCOM_SPI_CTRLA_MODE_SPI_MASTER_Val) | SERCOM_SPI_CTRLA_ENABLE
         //|SERCOM_SPI_CTRLA_SWRST
         //|SERCOM_SPI_CTRLA_IBON
         | SERCOM_SPI_CTRLA_DOPO(1) // MOSI IS ON PB30 SERCOM4/PAD[2] , SCLK ON PB30 SERCOM4/PAD[3]
@@ -250,7 +251,7 @@ void samr21TrxInterfaceInit()
     while (DMAC->CTRL.bit.SWRST)
         ;
 
-    // Set relevant DMAC DIscriptor Adresses
+    // Set relevant DMAC Discriptor Adresses
     DMAC->BASEADDR.reg = &s_trxVars.txDmacDescriptor;
     DMAC->WRBADDR.reg = &s_trxVars.txDmacDescriptorWB;
 
@@ -294,7 +295,7 @@ void samr21TrxInterruptInit()
     // Use GCLKGEN0 as core Clock for EIC (At86rf233, IRQ_Detect)
     GCLK->CLKCTRL.reg =
         // GCLK_CLKCTRL_WRTLOCK
-        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(0) // GCLKGEN2
+        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(0) // CPU Clock cause we want minimum reaction time
         | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_EIC_Val);
     // Wait for synchronization
     while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
@@ -345,7 +346,8 @@ void samr21TrxInterruptDeinit()
         // Disable GCLKGEN0 for EIC (At86rf233, IRQ_Detect)
         GCLK->CLKCTRL.reg =
             // GCLK_CLKCTRL_WRTLOCK
-            GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(0) // GCLKGEN1
+            // |GCLK_CLKCTRL_CLKEN 
+            GCLK_CLKCTRL_GEN(0) // GCLKGEN1
             | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_EIC_Val);
 
         // Wait for synchronization

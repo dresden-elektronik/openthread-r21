@@ -9,7 +9,6 @@
  */
 #include "samr21Rtc.h"
 
-
 extern uint32_t g_currentRtcClkCycle_ns;
 
 void samr21RtcInit(){

@@ -11,50 +11,203 @@
 
 #include "samr21Clock.h"
 
+static bool s_dfllClockSourceActive = false;
 
-static void samr21ClockInitExternalClock(void)
+static bool s_gclk0DependsOnDfll = false; //CPU Clock
+
+static bool s_gclk1Enabled = false;
+static bool s_gclk1SourcedByTrx = false;
+
+static bool s_gclk2Enabled = false; //Used by WDT, better don't touch this
+static bool s_gclk2DependsOnDfll = false; 
+
+static bool s_gclk3Enabled = false; //Used by RTC and Timer
+static bool s_gclk3DependsOnDfll = false; 
+
+static bool s_gclk4Enabled = false; //Used by TRX-SPI 
+static bool s_gclk4DependsOnDfll = false; 
+
+static bool isDfllShutdownSafe(void)
 {
-    //Setup PIN PC16 as Clock-Input from mClk-Pin from At86rf233
-    //Make Input
-    PORT->Group[2].DIRCLR.reg= PORT_PC16;
+    return ((s_dfllClockSourceActive) && !(s_gclk0DependsOnDfll || s_gclk2DependsOnDfll || s_gclk3DependsOnDfll || s_gclk4DependsOnDfll));
+}
 
-    //Setup Mux Settings
-    PORT->Group[2].WRCONFIG.reg =
-        PORT_WRCONFIG_HWSEL
-        |PORT_WRCONFIG_WRPINCFG
-        |PORT_WRCONFIG_WRPMUX
-        |PORT_WRCONFIG_PMUX(MUX_PC16F_GCLK_IO1)
-        //PORT_WRCONFIG_PULLEN
-        |PORT_WRCONFIG_INEN
-        |PORT_WRCONFIG_PMUXEN
-        |PORT_WRCONFIG_PINMASK(PORT_PC16 >> 16) //upper Halfword
-    ;
+static bool isDfllUsable(void)
+{
+    return s_dfllClockSourceActive && s_gclk1Enabled;
+}
 
-    //Setup GENDIV
+bool samr21Clock_switchGen0Source(bool useDfll)
+{
+    //Setup GENDIV first (should output 8MHz when DFLL is used, ~1 when not)
+    if(useDfll && !isDfllUsable())
+    {
+        return false;
+    }
+
+    //Should use the Clock Src 1:1 (1MHz or 48Mhz)
     GCLK->GENDIV.reg = 
-        GCLK_GENDIV_ID(1)
-        |GCLK_GENDIV_DIV(4) // 1MHz (Default MClk from At86rf233) --> 31.250 Khz (Max DFLL48M Reference clock frequency)
+        GCLK_GENDIV_ID(0)
+        |GCLK_GENDIV_DIV(0)
     ;
-
     //Wait for synchronization 
     while ( GCLK->STATUS.bit.SYNCBUSY );
 
-    //Setup GENCTRL
+
+    //Put GCLK 0 (Main Clk) on the OSC8M or DFLL
     GCLK->GENCTRL.reg = 
-        GCLK_GENCTRL_ID(1) // GCLKGEN1
-        |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_GCLKIN_Val)
-        |GCLK_GENCTRL_RUNSTDBY
-        |GCLK_GENCTRL_DIVSEL
+        GCLK_GENCTRL_ID(0) 
+        |GCLK_GENCTRL_SRC(useDfll ? GCLK_GENCTRL_SRC_DFLL48M_Val : GCLK_GENCTRL_SRC_OSC8M_Val)
+        //|GCLK_GENCTRL_RUNSTDBY
+        //|GCLK_GENCTRL_DIVSEL
+        //|GCLK_GENCTRL_OE
         //|GCLK_GENCTRL_OOV
         |GCLK_GENCTRL_GENEN
     ;
 
     //Wait for synchronization 
-    while ( GCLK->STATUS.bit.SYNCBUSY );
+    while ( GCLK->STATUS.bit.SYNCBUSY || !GCLK->GENCTRL.bit.GENEN);
+
+    s_gclk0DependsOnDfll = useDfll; 
+    return true;
 }
 
-static void samr21ClockDisableDfllClockGen(void)
+bool samr21Clock_enableGen1(bool useTrxSource)
 {
+    if(useTrxSource)
+    {
+        //Setup PIN PC16 as Clock-Input from mClk-Pin from At86rf233
+        //Make Input
+        PORT->Group[2].DIRCLR.reg= PORT_PC16;
+
+        //Setup Mux Settings
+        PORT->Group[2].WRCONFIG.reg =
+            PORT_WRCONFIG_HWSEL
+            |PORT_WRCONFIG_WRPINCFG
+            |PORT_WRCONFIG_WRPMUX
+            |PORT_WRCONFIG_PMUX(MUX_PC16F_GCLK_IO1)
+            //PORT_WRCONFIG_PULLEN
+            |PORT_WRCONFIG_INEN
+            |PORT_WRCONFIG_PMUXEN
+            |PORT_WRCONFIG_PINMASK(PORT_PC16 >> 16) //upper Halfword
+        ;
+    }
+
+    //Setup GENDIV first (should output 31.250 kHz)
+    GCLK->GENDIV.reg = 
+        GCLK_GENDIV_ID(1) 
+        |GCLK_GENDIV_DIV(4) //Uses exp Formate 2^4 (see GCLK_GENCTRL_DIVSEL)
+    ;
+    //Wait for synchronization 
+    while ( GCLK->STATUS.bit.SYNCBUSY );
+
+
+    //Put GCLK 1 (REF for DFLL) on the OSC8M or TRX_CLK_OUT (Both 1 MHz)
+    GCLK->GENCTRL.reg = 
+        GCLK_GENCTRL_ID(1)
+        |GCLK_GENCTRL_SRC(useTrxSource ? GCLK_GENCTRL_SRC_GCLKIN_Val : GCLK_GENCTRL_SRC_OSC8M_Val)
+        //|GCLK_GENCTRL_RUNSTDBY
+        |GCLK_GENCTRL_DIVSEL
+        //|GCLK_GENCTRL_OE
+        //|GCLK_GENCTRL_OOV
+        |GCLK_GENCTRL_GENEN
+    ;
+
+    //Wait for synchronization 
+    while ( GCLK->STATUS.bit.SYNCBUSY || !GCLK->GENCTRL.bit.GENEN);
+
+    s_gclk1Enabled = true;
+    s_gclk1SourcedByTrx = useTrxSource;
+    return true;
+}
+
+bool samr21Clock_enableGen2(void)
+{
+    return true; //We don't mess with GCLK2 
+} 
+
+bool samr21Clock_enableGen3(bool useDfll)
+{
+    if(useDfll && !isDfllUsable())
+    {
+        return false;
+    }
+
+    //Setup GENDIV first (should output ~1MHz)
+    GCLK->GENDIV.reg = 
+        GCLK_GENDIV_ID(3) 
+        |GCLK_GENDIV_DIV(useDfll ? 48 : 0)
+    ;
+    //Wait for synchronization 
+    while ( GCLK->STATUS.bit.SYNCBUSY );
+
+
+    //Put GCLK 3 (Timer and RTC) on the OSC8M or DFLL
+    GCLK->GENCTRL.reg = 
+        GCLK_GENCTRL_ID(3)
+        |GCLK_GENCTRL_SRC(useDfll ? GCLK_GENCTRL_SRC_DFLL48M_Val : GCLK_GENCTRL_SRC_OSC8M_Val)
+        //|GCLK_GENCTRL_RUNSTDBY
+        //|GCLK_GENCTRL_DIVSEL
+        //|GCLK_GENCTRL_OE
+        //|GCLK_GENCTRL_OOV
+        |GCLK_GENCTRL_GENEN
+    ;
+
+    //Wait for synchronization 
+    while ( GCLK->STATUS.bit.SYNCBUSY || !GCLK->GENCTRL.bit.GENEN);
+
+    s_gclk3Enabled = true;
+    s_gclk3DependsOnDfll = useDfll;
+    return true;
+}
+
+bool samr21Clock_enableGen4(bool useDfll)
+{
+    //Setup GENDIV first (should output 8MHz when DFLL is used, ~1Mhz when not)
+    if(useDfll && !isDfllUsable())
+    {
+        return false;
+    }
+
+    GCLK->GENDIV.reg = 
+        GCLK_GENDIV_ID(4) 
+        |GCLK_GENDIV_DIV(useDfll ? 6 : 0)
+    ;
+    //Wait for synchronization 
+    while ( GCLK->STATUS.bit.SYNCBUSY );
+
+
+    //Put GCLK 4 (SERCOM SPI TRX) on the OSC8M or DFLL
+    GCLK->GENCTRL.reg = 
+        GCLK_GENCTRL_ID(4)
+        |GCLK_GENCTRL_SRC(useDfll ? GCLK_GENCTRL_SRC_DFLL48M_Val : GCLK_GENCTRL_SRC_OSC8M_Val)
+        //|GCLK_GENCTRL_RUNSTDBY
+        //|GCLK_GENCTRL_DIVSEL
+        //|GCLK_GENCTRL_OE
+        //|GCLK_GENCTRL_OOV
+        |GCLK_GENCTRL_GENEN
+    ;
+
+    //Wait for synchronization 
+    while ( GCLK->STATUS.bit.SYNCBUSY || !GCLK->GENCTRL.bit.GENEN);
+
+    s_gclk4Enabled = true;
+    s_gclk4DependsOnDfll = useDfll; 
+    return true;
+}
+
+bool samr21Clock_shutdownDfllClockSource(void)
+{
+    if(!s_dfllClockSourceActive)
+    {
+        return true;
+    }
+
+    if(!isDfllShutdownSafe())
+    {
+        return false;
+    }
+
     if(SYSCTRL->DFLLCTRL.bit.ENABLE)
     {
         SYSCTRL->DFLLCTRL.bit.ENABLE = 0;
@@ -66,15 +219,29 @@ static void samr21ClockDisableDfllClockGen(void)
     SYSCTRL->DFLLVAL.bit.COARSE = 0x00;
     SYSCTRL->DFLLVAL.bit.DIFF = 0x00;
 
+    s_dfllClockSourceActive = false;
+
+    return true;
 }
 
-static void samr21ClockInitDfllClockGen(void)
+
+bool samr21Clock_startupDfllClockSource(void)
 {
+    if(!s_gclk1Enabled)
+    {
+        return false;
+    }
+
+    if(isDfllUsable())
+    {
+        return true;
+    }
+
     //WA1 see R21 Datasheet ERRATA 47.1.5
     SYSCTRL->DFLLCTRL.bit.ONDEMAND = 0;
     while (!SYSCTRL->PCLKSR.bit.DFLLRDY);
 
-     //Use GCLKGEN 1 (31.250 kHz) as Ref Freq for DFLL48M
+    //Use GCLKGEN 1 (31.250 kHz) as Ref Freq for DFLL48M
     GCLK->CLKCTRL.reg =
         //GCLK_CLKCTRL_WRTLOCK
         GCLK_CLKCTRL_CLKEN
@@ -105,183 +272,94 @@ static void samr21ClockInitDfllClockGen(void)
         //|SYSCTRL_DFLLCTRL_QLDIS
         //|SYSCTRL_DFLLCTRL_CCDIS
         //|SYSCTRL_DFLLCTRL_ONDEMAND
-        |SYSCTRL_DFLLCTRL_RUNSTDBY
+        //|SYSCTRL_DFLLCTRL_RUNSTDBY
         //|SYSCTRL_DFLLCTRL_USBCRM
-        //|SYSCTRL_DFLLCTRL_LLAW
+        |SYSCTRL_DFLLCTRL_LLAW
         //|SYSCTRL_DFLLCTRL_STABLE
         |SYSCTRL_DFLLCTRL_MODE
         |SYSCTRL_DFLLCTRL_ENABLE
     ;
 
     while (!SYSCTRL->PCLKSR.bit.DFLLRDY || !SYSCTRL->PCLKSR.bit.DFLLLCKC || !SYSCTRL->PCLKSR.bit.DFLLLCKF);
+
+    s_dfllClockSourceActive = true;
+
+    return true;
 }
 
-static void samr21ClockSwitchCpuClockToInternalOscillator(void)
+bool samr21Clock_enableFallbackClockTree(void)
 {
-    //Check that internal Oscillator is running
+    //Switch All used GCLK (exept 2) to the 1MHz internal OSC8M
+
+    //GCLK2 is used for WDT and schould not be touched
+
+    //GCLK3 is done first, cause timers and the rtc need a reliable ~1MHz Clock 
+    //GCLK4 is done after, so a stable Communication at 500kHz is possible with the TRX (via SERCOM4)
+    //GCLK0 is done second to last, so the pheripheral clocks are always lower or equally Clocked as the Main Clock
+    //GCLK1 is done last, cause the DFLL Output needs this as a reference and other clocks could be sourced by the DFLL
+
+    //Ensure that internal Oscillator is running
     if(!SYSCTRL->OSC8M.bit.ENABLE){
         SYSCTRL->OSC8M.bit.ENABLE = 1;
     }
 
+    //Wait for OSC8M to be availible
     while (!SYSCTRL->PCLKSR.bit.OSC8MRDY);
+
+    bool failed = false;
     
+    failed |= !samr21Clock_enableGen3(false);
+    failed |= !samr21Clock_enableGen4(false);
+    failed |= !samr21Clock_switchGen0Source(false);
+    failed |= !samr21Clock_enableGen1(false);
 
-    //Setup GENDIV first
-    GCLK->GENDIV.reg = 
-        GCLK_GENDIV_ID(0) // GCLKGEN0
-        |GCLK_GENDIV_DIV(0x0)
-    ;
 
-    //Wait for synchronization 
-    while ( GCLK->STATUS.bit.SYNCBUSY );
+    failed |= !samr21Clock_shutdownDfllClockSource();
 
-    //Setup GENCTRL after
-    GCLK->GENCTRL.reg = 
-        GCLK_GENCTRL_ID(0) // GCLKGEN0
-        |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_OSC8M_Val)
-        |GCLK_GENCTRL_RUNSTDBY
-        //|GCLK_GENCTRL_DIVSEL
-#ifdef _CLOCK_DEBUG_OUTPUT
-        |GCLK_GENCTRL_OE
-#endif
-        //|GCLK_GENCTRL_OOV
-        |GCLK_GENCTRL_GENEN
-    ;
-
-     //Wait for synchronization 
-    while ( GCLK->STATUS.bit.SYNCBUSY );
+    return !failed;
 }
 
-static void samr21ClockSwitchCpuClockToDfll(void)
+bool samr21Clock_enableOperatingClockTree(bool useTrxClock)
 {
-    //Setup GCLKGEN 0 (CPU Clock)to be sourced from DFLL48M
+    if(!useTrxClock)
+    {
+        //Ensure that internal Oscillator is running
+        if(!SYSCTRL->OSC8M.bit.ENABLE){
+            SYSCTRL->OSC8M.bit.ENABLE = 1;
+        }
 
-    //Setup GENDIV first
-    GCLK->GENDIV.reg = 
-        GCLK_GENDIV_ID(0) // GCLKGEN0
-        |GCLK_GENDIV_DIV(0x0)
-    ;
+        //Wait for OSC8M to be availible
+        while (!SYSCTRL->PCLKSR.bit.OSC8MRDY);
+    }
 
-    //Wait for synchronization 
-    while ( GCLK->STATUS.bit.SYNCBUSY );
+    bool failed = false;
 
-    //Setup GENCTRL after
-    GCLK->GENCTRL.reg = 
-        GCLK_GENCTRL_ID(0) // GCLKGEN0
-        |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_DFLL48M_Val)
-        |GCLK_GENCTRL_RUNSTDBY
-        //|GCLK_GENCTRL_DIVSEL
-#ifdef _CLOCK_DEBUG_OUTPUT
-        |GCLK_GENCTRL_OE
-#endif
-        //|GCLK_GENCTRL_OOV
-        |GCLK_GENCTRL_GENEN
-    ;
+    //Setup DFLL
+    failed |= !samr21Clock_enableGen1(useTrxClock);
+    failed |= !samr21Clock_startupDfllClockSource();
+    
+    //Switch All Dependend Clocks to DFLL
+    failed |= !samr21Clock_switchGen0Source(true); //CPU Clock first
+    failed |= !samr21Clock_enableGen3(true);
+    failed |= !samr21Clock_enableGen4(true);
 
-     //Wait for synchronization 
-    while ( GCLK->STATUS.bit.SYNCBUSY );
-}
+    if(failed)
+    {
+        samr21Clock_enableFallbackClockTree();
+    }
 
-static void samr21ClockInitPeriphialClocks(void){
-
-    //Setup GCLKGEN 2 as a 8MHz Clock for the SPI-Interface to the At86Rf233 (SERCOM4)
-    //Setup GENDIV first
-    GCLK->GENDIV.reg = 
-        GCLK_GENDIV_ID(2) 
-        |GCLK_GENDIV_DIV(6ul) // 48MHz / 6 = 8MHz
-    ;
-
-    //Setup GENCTRL after
-    GCLK->GENCTRL.reg = 
-        GCLK_GENCTRL_ID(2) // GCLKGEN2
-        |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_DFLL48M_Val)
-        |GCLK_GENCTRL_RUNSTDBY
-        //|GCLK_GENCTRL_DIVSEL
-#ifdef _CLOCK_DEBUG_OUTPUT
-        |GCLK_GENCTRL_OE
-#endif
-        //|GCLK_GENCTRL_OOV
-        |GCLK_GENCTRL_GENEN
-    ;
-
-
-    //Setup GCLKGEN 3 as a 1Mhz Clock for Timer and RTC
-    //Setup GENDIV first
-    GCLK->GENDIV.reg = 
-        GCLK_GENDIV_ID(3) // GCLKGEN0
-        |GCLK_GENDIV_DIV(48ul) // 48MHz / 48 = 1MHz
-    ;
-    while(GCLK->STATUS.bit.SYNCBUSY);
-
-    GCLK->GENCTRL.reg = 
-        GCLK_GENCTRL_ID(3) 
-        |GCLK_GENCTRL_SRC(GCLK_GENCTRL_SRC_DFLL48M_Val)
-        |GCLK_GENCTRL_RUNSTDBY
-        //|GCLK_GENCTRL_DIVSEL
-#ifdef _CLOCK_DEBUG_OUTPUT
-        |GCLK_GENCTRL_OE
-#endif
-        //|GCLK_GENCTRL_OOV
-        |GCLK_GENCTRL_GENEN
-    ;
-
-    while(GCLK->STATUS.bit.SYNCBUSY);
+    return !failed;
 }
 
 
-void samr21ClockInit(void)
+
+void samr21Clock_init(void) 
 {
-#ifdef _CLOCK_DEBUG_OUTPUT
+    samr21Clock_enableFallbackClockTree();
 
-    //Make Output
-        PORT->Group[0].DIRSET.reg= PORT_PA17;
-        PORT->Group[0].DIRSET.reg= PORT_PA16;
-        PORT->Group[0].DIRSET.reg= PORT_PA14;
-
-        //Setup Mux Settings
-        PORT->Group[0].WRCONFIG.reg =
-            PORT_WRCONFIG_HWSEL
-            |PORT_WRCONFIG_WRPINCFG
-            |PORT_WRCONFIG_WRPMUX
-            |PORT_WRCONFIG_PMUX(MUX_PA17H_GCLK_IO3)
-            //|PORT_WRCONFIG_INEN
-            //|PORT_WRCONFIG_PULLEN
-            |PORT_WRCONFIG_PMUXEN
-            |PORT_WRCONFIG_PINMASK(PORT_PA17 >> 16) //upper Halfword
-        ;
-
-        PORT->Group[0].WRCONFIG.reg =
-            PORT_WRCONFIG_HWSEL
-            |PORT_WRCONFIG_WRPINCFG
-            |PORT_WRCONFIG_WRPMUX
-            |PORT_WRCONFIG_PMUX(MUX_PA16H_GCLK_IO2)
-            //|PORT_WRCONFIG_INEN
-            //|PORT_WRCONFIG_PULLEN
-            |PORT_WRCONFIG_PMUXEN
-            |PORT_WRCONFIG_PINMASK(PORT_PA16 >> 16) //upper Halfword
-        ;
-
-        PORT->Group[0].WRCONFIG.reg =
-            //PORT_WRCONFIG_HWSEL
-            PORT_WRCONFIG_WRPINCFG
-            |PORT_WRCONFIG_WRPMUX
-            |PORT_WRCONFIG_PMUX(MUX_PA14H_GCLK_IO0)
-            //|PORT_WRCONFIG_INEN
-            //|PORT_WRCONFIG_PULLEN
-            |PORT_WRCONFIG_PMUXEN
-            |PORT_WRCONFIG_PINMASK(PORT_PA14) //upper Halfword
-        ;
-
+#ifndef SAMR21_DONT_USE_TRX_CLOCK
+    samr21Clock_enableOperatingClockTree(true);
+#else
+    samr21Clock_enableOperatingClockTree(false);
 #endif
-
-
-    //samr21ClockReset();
-    samr21ClockSwitchCpuClockToInternalOscillator();
-    samr21ClockDisableDfllClockGen();
-
-    samr21ClockInitExternalClock();
-    samr21ClockInitDfllClockGen();
-    samr21ClockInitPeriphialClocks();
-
-    samr21ClockSwitchCpuClockToDfll();
 }

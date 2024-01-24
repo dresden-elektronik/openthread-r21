@@ -46,7 +46,7 @@ void otSysInit(int argc, char *argv[])
     samr21NvmInit();
     samr21TickleWatchdog();
 
-    samr21ClockInit();
+    samr21Clock_init();
     samr21TickleWatchdog();
 
     samr21TickleWatchdog();
@@ -56,13 +56,13 @@ void otSysInit(int argc, char *argv[])
     samr21RtcInit();
 
     //Give Some Slack (~0.2sec) before new USB enumeration
-    __disable_irq();
-    for (uint32_t i = 0; i < 1000; i++)
-    {
-        samr21delaySysTick(10000);
-        samr21TickleWatchdog();
-    }
-    __enable_irq();
+    // __disable_irq();
+    // for (uint32_t i = 0; i < 1000; i++)
+    // {
+    //     samr21delaySysTick(10000);
+    //     samr21TickleWatchdog();
+    // }
+    // __enable_irq();
     
     samr21UsbInit();
 

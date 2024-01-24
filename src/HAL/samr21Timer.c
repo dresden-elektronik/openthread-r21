@@ -644,7 +644,7 @@ void samr21TimerDeinitAll()
     GCLK->CLKCTRL.reg =
         // GCLK_CLKCTRL_WRTLOCK
         // GCLK_CLKCTRL_CLKEN
-        GCLK_CLKCTRL_GEN(2) // GCLKGEN2
+        GCLK_CLKCTRL_GEN(3) // GCLKGEN2
         | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TCC0_TCC1_Val);
     // Wait for synchronization
     while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
@@ -655,7 +655,7 @@ void samr21TimerDeinitAll()
     GCLK->CLKCTRL.reg =
         // GCLK_CLKCTRL_WRTLOCK
         // GCLK_CLKCTRL_CLKEN
-        GCLK_CLKCTRL_GEN(2) // GCLKGEN2
+        GCLK_CLKCTRL_GEN(3) // GCLKGEN2
         | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TCC2_TC3_Val);
     // Wait for synchronization
     while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
@@ -666,7 +666,7 @@ void samr21TimerDeinitAll()
     GCLK->CLKCTRL.reg =
         // GCLK_CLKCTRL_WRTLOCK
         // GCLK_CLKCTRL_CLKEN
-        GCLK_CLKCTRL_GEN(2) // GCLKGEN2
+        GCLK_CLKCTRL_GEN(3) // GCLKGEN2
         | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TC4_TC5_Val);
     // Wait for synchronization
     while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
