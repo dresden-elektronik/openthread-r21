@@ -190,7 +190,7 @@ void samr21TrxInterfaceInit()
 
     // Setup SERCOM4
 
-    // F_ref = 8MHz (if At86r233 ist setup correctly) F_baud = F_ref / 2*(BAUD+1) ---> BAUD = 0 F_baud = 4Mhz
+    // F_ref = 8MHz (or 1 MHz on fallback Clocktree) F_baud = F_ref / 2*(BAUD+1) ---> BAUD = 0 F_baud = 4MBauds/s (or 500kBaud/s on fallback Clocktree)
     SERCOM4->SPI.BAUD.reg =
         SERCOM_SPI_BAUD_BAUD(0x0);
 
@@ -265,7 +265,7 @@ void samr21TrxInterfaceInit()
 
     // Setup channel 0 for Transmission of 1 Byte till Sercom is ready for the next byte
     DMAC->CHCTRLB.reg =
-        DMAC_CHCTRLB_CMD_NOACT | DMAC_CHCTRLB_TRIGACT_BEAT | DMAC_CHCTRLB_TRIGSRC(0x18) //  Overflowtriger
+        DMAC_CHCTRLB_CMD_NOACT | DMAC_CHCTRLB_TRIGACT_BEAT | DMAC_CHCTRLB_TRIGSRC(0x18) //  TC3 Overflowtrigger (Table 18-8. Peripheral Trigger Source SAMR21-Datasheet)
         | DMAC_CHCTRLB_LVL_LVL0                                                         // Set Prio-Level 0  (Not really needed cause there is only one DMA-Action going on at a time)
         //| DMAC_CHCTRLB_EVOE                   //Event Generation is disabled
         //| DMAC_CHCTRLB_EVIE                     //Event Input is disabled
@@ -295,7 +295,7 @@ void samr21TrxInterruptInit()
     // Use GCLKGEN0 as core Clock for EIC (At86rf233, IRQ_Detect)
     GCLK->CLKCTRL.reg =
         // GCLK_CLKCTRL_WRTLOCK
-        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(0) // CPU Clock cause we want minimum reaction time
+        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(0) // 48 MHz (CPU Clock) we want minimum reaction time
         | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_EIC_Val);
     // Wait for synchronization
     while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
@@ -357,7 +357,7 @@ void samr21TrxInterruptDeinit()
 
     // Disable EIC in Power Manager
     if (PM->APBAMASK.bit.EIC_)
-    {
+    {000000
         PM->APBAMASK.bit.EIC_ = 0;
     }
 }
@@ -365,13 +365,13 @@ void samr21TrxInterruptDeinit()
 void samr21TrxSetupMClk(uint8_t a_clk)
 {
 
-    // Write desired Value into the CLKM Register (0x05 -> 16Mhz)
+    // Write desired Value into the CLKM Register ( e.g.: 0x05 -> 16Mhz)
     s_ramCopyTrxRegister.trxCtrl0.bit.clkmCtrl = a_clk;
 
     samr21TrxWriteRegister(TRX_CTRL_0_REG_ADDR, s_ramCopyTrxRegister.trxCtrl0.reg);
 
     // Wait a bit for the  the Freq.-change to take place
-    samr21delaySysTick(50);
+    samr21delaySysTick(50000);
 }
 
 uint8_t samr21TrxReadRegister(uint8_t a_addr)
@@ -422,6 +422,7 @@ void samr21TrxSpiStartAccess(uint8_t a_command, uint8_t a_addr)
     // Register Read/Write
     if (a_command & AT86RF233_CMD_REG_READ_MASK)
     {
+        //There is always the trxStatus in the first byte of a SPI transaction (See 35.4 Radio Transceiver Status Information SAMR21 - Datasheet)
         s_ramCopyTrxRegister.trxStatus.reg = samr21TrxSpiTransceiveByteRaw((a_addr & 0x3F) | a_command);
         return;
     }
@@ -429,11 +430,13 @@ void samr21TrxSpiStartAccess(uint8_t a_command, uint8_t a_addr)
     // Framebuffer Access
     if (a_command & AT86RF233_CMD_FRAMEBUFFER_READ)
     {
+        //There is always the trxStatus in the first byte of a SPI transaction (See 35.4 Radio Transceiver Status Information SAMR21 - Datasheet)
         s_ramCopyTrxRegister.trxStatus.reg = samr21TrxSpiTransceiveByteRaw(a_command);
         return;
     }
 
     // SRAM Access
+        //There is always the trxStatus in the first byte of a SPI transaction (See 35.4 Radio Transceiver Status Information SAMR21 - Datasheet)
     s_ramCopyTrxRegister.trxStatus.reg = samr21TrxSpiTransceiveByteRaw(a_command);
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
@@ -464,6 +467,7 @@ void samr21TrxUpdateStatusRegister()
     PORT->Group[1].OUTCLR.reg = 1 << 31; // SSel Low Active
     s_trxVars.spiActive = true;
 
+    //There is always the trxStatus in the first byte of a SPI transaction (See 35.4 Radio Transceiver Status Information SAMR21 - Datasheet)
     s_ramCopyTrxRegister.trxStatus.reg = samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
 
     samr21TrxSpiCloseAccess();
