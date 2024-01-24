@@ -107,11 +107,11 @@ volatile bool tempLock = false;
 
 int main(int argc, char const *argv[])
 {
-    samr21NvmInit();
+    samr21Nvm_init();
     samr21ClockTrxSrcInit();
-    samr21TrxInterfaceInit();
+    samr21Trx_initInterface();
 
-    samr21TrxSetupMClk(0x5); //MCLK 1MHz -> 16 Mhz
+    samr21Trx_setupMClk(0x5); //MCLK 1MHz -> 16 Mhz
     samr21ClockInitAfterTrxSetup();
 
     samr21TimerInit();
@@ -119,9 +119,9 @@ int main(int argc, char const *argv[])
     samr21DebugPortsInit();
     samr21RadioInit();  
 
-    samr21UsbInit();
+    samr21Usb_init();
 
-    uint64_t ieeeAddr = samr21NvmGetIeeeAddr();
+    uint64_t ieeeAddr = samr21Nvm_getIeeeAddr();
     uint16_t shortAddr = 0xA8A9;
     uint16_t panId = 0xCAFE;
     samr21RadioSetIeeeAddr(&ieeeAddr);
@@ -156,7 +156,7 @@ int main(int argc, char const *argv[])
 
     while (true)
     {  
-        samr21Timer0Set(1500);
+        samr21Timer0_set(1500);
         tempLock=true;
         while (tempLock);
 
@@ -167,7 +167,7 @@ int main(int argc, char const *argv[])
         samr21AesEcbEncryptBlocking(inout);
         PORT->Group[0].OUTCLR.reg = PORT_PA06;  
         
-        samr21Timer1Oneshot(500);
+        samr21Timer1_startOneshot(500);
         tempLock=true;
         while (tempLock);
     }

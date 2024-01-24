@@ -29,14 +29,14 @@
  * Inits the NVM-Controller. Enables Manual Write and sets appropiate Wait States
  * See SAMR21 datasheet 20. NVMCTRL – Non-Volatile Memory Controller
  */
-void samr21NvmInit();
+void samr21Nvm_init();
 
 /**
  * Reads out the Unique IEEE 64Bit Extended Address from NVMEM to a given buffer
  * 
  * @param[out] ieeeAddr     pointer to Buffer where the address is written to
  */
-void samr21NvmGetIeeeAddr(uint8_t * ieeeAddr);
+void samr21Nvm_getIeeeAddr(uint8_t * ieeeAddr);
 
 
 /**
@@ -48,7 +48,7 @@ void samr21NvmGetIeeeAddr(uint8_t * ieeeAddr);
  * 
  * 
  */
-void samr21NvmRead(uint32_t addr, uint8_t* buffer_p, uint32_t len);
+void samr21Nvm_readAt(uint32_t addr, uint8_t* buffer_p, uint32_t len);
 
 
 /**
@@ -60,7 +60,7 @@ void samr21NvmRead(uint32_t addr, uint8_t* buffer_p, uint32_t len);
  * 
  * 
  */
-void samr21NvmWriteWithinRow(uint32_t addr, uint8_t* data_p, uint32_t len);
+void samr21Nvm_writeWithinRow(uint32_t addr, uint8_t* data_p, uint32_t len);
 
 /**
  * Erases the row a given location is part of

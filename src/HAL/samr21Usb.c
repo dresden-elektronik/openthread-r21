@@ -9,7 +9,7 @@
  */
 #include "samr21Usb.h"
 
-void samr21UsbInit(){
+void samr21Usb_init(){
 
     //Use GCLKGEN0 (48Mhz if mClk on AT86RF233 outputs 16MHz) as Ref Freq for USB
     GCLK->CLKCTRL.reg =
@@ -61,10 +61,9 @@ void samr21UsbInit(){
     PORT->Group[0].OUTCLR.reg= PORT_PA25;
 
     __NVIC_EnableIRQ(USB_IRQn);
-    tusb_init();
 }
 
-void samr21UsbDeinit(){
+void samr21Usb_deinit(){
 
     // Disable IRQ in NVIC
     __NVIC_DisableIRQ(USB_IRQn);

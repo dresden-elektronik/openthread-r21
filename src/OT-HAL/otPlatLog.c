@@ -9,7 +9,7 @@ char sLogString[LOG_PARSE_BUFFER_SIZE + 1];
 
 void samr21LogInit(void)
 {
-    samr21UartInit();
+    samr21Uart_init();
 }
 
 static void logOutput(otLogLevel aLogLevel, otLogRegion aLogRegion, const char *aFormat, va_list ap)
@@ -30,7 +30,7 @@ exit:
     sLogString[len++] = '\n';
 
     for(int i = 0; i<len; i++ ){
-        samr21UartSend(sLogString[i]);
+        samr21Uart_send(sLogString[i]);
     }
 }
 

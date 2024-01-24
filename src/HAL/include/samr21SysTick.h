@@ -18,6 +18,6 @@
  * 
  * @param[in] delayCycles    amount of CPU Cycles the function should block operation
  */
-void samr21delaySysTick(uint32_t delayCycles);
+void samr21SysTick_delayTicks(uint32_t delayCycles);
 
 #endif // _SAMR21_NOP_DELAY_H_

@@ -5,10 +5,10 @@
 
 
 //Handler that checks for new USB/UART Packages
-void samr21OtPlatCommTask();
+void samr21OtPlat_uartCommTask();
 
 //Handler that notifies upper layer about received Frames and the status of ongoing transmissions
-void samr21OtPlatRadioTask();
+void samr21OtPlat_RadioTick();
 
 //Inits Timer for OT Orchestration
 void samr21OtPlatAlarmInit();

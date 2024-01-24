@@ -7,7 +7,7 @@ otError otPlatEntropyGet(uint8_t *aOutput, uint16_t aOutputLength)
 {
     for (uint16_t i = 0; i < aOutputLength; i++)
     {
-        aOutput[i] = samr21TrxGetRandomByte();
+        aOutput[i] = samr21Trx_getRandomByte();
     }
     return OT_ERROR_NONE;
 }

@@ -1,6 +1,7 @@
 #include "otUtilities_uart.h"
-#include "samr21Usb.h"
 
+#include "tusb.h"
+#include "tusb_config.h"
 volatile static bool s_dtr = false;
 
 #define SIZE_WAIT_FOR_HOST_BUFFER 1024
@@ -45,7 +46,7 @@ static uint8_t s_gcfResetCommandMatchLen = 0;
 
 #endif
 
-static void samr21OtPlatCommReceiveTask()
+static void uart_receiveTask()
 {
     // Check for Available RX-Data
     if (tud_cdc_available())
@@ -75,7 +76,7 @@ static void samr21OtPlatCommReceiveTask()
     }
 }
 
-static void samr21OtPlatCommTransmitTask()
+static void uart_transmitTask()
 {
     if(s_otPlatUartUsbVars.current_dataTerminalReady && ( s_otPlatUartUsbVars.pendingTxBuffer != NULL ) ){
 
@@ -107,12 +108,12 @@ static void samr21OtPlatCommTransmitTask()
     }
 }
 
-void samr21OtPlatCommTask(){
+void samr21OtPlat_uartCommTask(){
     tud_task();
 
     s_otPlatUartUsbVars.current_dataTerminalReady = tud_cdc_connected();
-    samr21OtPlatCommReceiveTask();
-    samr21OtPlatCommTransmitTask();
+    uart_receiveTask();
+    uart_transmitTask();
 
 
     s_otPlatUartUsbVars.last_dataTerminalReady = s_otPlatUartUsbVars.current_dataTerminalReady;

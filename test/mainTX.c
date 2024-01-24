@@ -90,11 +90,11 @@ extern AT86RF233_REG_IRQ_STATUS_t     g_trxLastIrq;               //from samr21t
 
 int main(int argc, char const *argv[])
 {
-    samr21NvmInit();
+    samr21Nvm_init();
     samr21ClockTrxSrcInit();
-    samr21TrxInterfaceInit();
+    samr21Trx_interfaceInit();
 
-    samr21TrxSetupMClk(0x5); //MCLK 1MHz -> 16 Mhz
+    samr21Trx_setupMClk(0x5); //MCLK 1MHz -> 16 Mhz
     samr21ClockInitAfterTrxSetup();
 
     samr21TimerInit();
@@ -102,7 +102,7 @@ int main(int argc, char const *argv[])
     samr21DebugPortsInit();
     samr21RadioInit();  
 
-    samr21UsbInit();
+    samr21Usb_init();
     
 
     uint64_t ieeeAddr = 0xA0A1A2A3A4A5A6A7;

@@ -12,7 +12,7 @@
 #define _SAMR21_TRX_H_
 
 #include "samr21.h"
-#include "samr21NopDelay.h"
+#include "samr21SysTick.h"
 #include "samr21Timer.h"
 #include "samr21At86rf233.h"
 
@@ -42,36 +42,36 @@ enum
     TRX_IRQ_BAT_LOW = 0x7
 };
 /**
- * Inits SPI and Pin Interface to At86rf233
+ * Inits SPI, DMA and GPIO Interface to At86rf233
  * Involves Changes to CLK-Domain
  */
-void samr21TrxInterfaceInit();
+void samr21Trx_initInterface();
 
 /**
  * Setups External IRQ Controller for Interrupts From Trx
  *
  */
-void samr21TrxInterruptInit();
+void samr21Trx_initInterrupts();
 
 /**
  * Deinit the IRQ Controller for Interrupts From Trx
  *
  */
-void samr21TrxInterruptDeinit();
+void samr21Trx_deinitInterrupts();
 
 /**
  * Changes the CLKm Output of AT86RF233 (SAMR21 Datasheet 38.6.4 Master Clock Signal Output)
  *
  * @param[in]  clk  mClk Output Setting Value
  */
-void samr21TrxSetupMClk(uint8_t clk);
+void samr21Trx_setupMClk(uint8_t clk);
 
 /**
  * 
  * Updates Local Copy of TRX STATE Register
  *
  */
-void samr21TrxUpdateStatusRegister();
+void samr21Trx_updateStatusRegister();
 
 /**
  * Gets a Register Value of the AT86rf233
@@ -80,7 +80,7 @@ void samr21TrxUpdateStatusRegister();
  *
  * @returns     Value of Register in question
  */
-uint8_t samr21TrxReadRegister(uint8_t addr);
+uint8_t samr21Trx_readRegister(uint8_t addr);
 
 /**
  * Sets a Register Value to the AT86rf233
@@ -90,7 +90,7 @@ uint8_t samr21TrxReadRegister(uint8_t addr);
  * @param[in]  data  Value the Register will be set to
  *
  */
-void samr21TrxWriteRegister(uint8_t addr, uint8_t data);
+void samr21Trx_writeRegister(uint8_t addr, uint8_t data);
 
 /**
  * Opens a SPI-Transaction with the AT86RF233
@@ -108,7 +108,7 @@ void samr21TrxSpiStartAccess(uint8_t command, uint8_t addr);
  * Closes (and Ends) a SPI-Transaction
  *
  */
-void samr21TrxSpiCloseAccess();
+void samr21Trx_spiCloseAccess();
 
 /**
  * Sets The Output of the "Reset" Pin to the AT86RF233
@@ -116,7 +116,7 @@ void samr21TrxSpiCloseAccess();
  *
  * @param[in]  enable  True = Active, False = Inactive
  */
-void samr21TrxSetRSTN(bool enable);
+void samr21Trx_setResetPin(bool enable);
 
 /**
  * Sets The Output of the "Sleep" / "Start Transmission" Pin to the AT86RF233
@@ -124,7 +124,7 @@ void samr21TrxSetRSTN(bool enable);
  *
  * @param[in]  enable  True = Active, False = Inactive
  */
-void samr21TrxSetSLP_TR(bool enable);
+void samr21Trx_setSleepTransmitPin(bool enable);
 
 /**
  * Sends and simultaneously retrieves a raw Byte via the SPI-BUS
@@ -133,7 +133,7 @@ void samr21TrxSetSLP_TR(bool enable);
  *
  * @returns     retrieved Byte
  */
-uint8_t samr21TrxSpiTransceiveByteRaw(uint8_t data);
+uint8_t samr21Trx_spiTransceiveByteRaw(uint8_t data);
 
 /**
  * Sends and simultaneously retrieves a raw Bytes via the SPI-BUS
@@ -144,63 +144,63 @@ uint8_t samr21TrxSpiTransceiveByteRaw(uint8_t data);
  *
  * @param[in]   len length of data to be transmitted
  */
-void samr21TrxSpiTransceiveBytesRaw(uint8_t *inData, uint8_t *outData, uint8_t len);
+void samr21Trx_spiTransceiveBytesRaw(uint8_t *inData, uint8_t *outData, uint8_t len);
 
 /**
  * Sends a DummyByte to the SPI-Bus an retrieves a Byte from the Bus
  *
  * @returns     retrieved Byte
  */
-uint8_t samr21TrxSpiReadByteRaw();
+uint8_t samr21Trx_spiReadByteRaw();
 
 /**
  * Queues a State Change to RX on the AT86RF233. Takes Place when current action is completed
  *
  * @param[in]  blocking  if true the function only returns when State change took place
  */
-void samr21TrxQueueMoveToRx(bool blocking);
+void samr21Trx_queueMoveToRx(bool blocking);
 
 /**
  * Queues a State Change to TX on the AT86RF233. Takes Place when current action is completed
  *
  * @param[in]  blocking  if true the function only returns when State change took place
  */
-void samr21TrxQueueMoveToTx(bool blocking);
+void samr21Trx_queueMoveToTx(bool blocking);
 
 /**
  * Forces a State Change to TX on the AT86RF233
  *
  * @param[in]  blocking  if true the function only returns when State change took place
  */
-void samr21TrxForceMoveToTx(bool blocking);
+void samr21Trx_forceMoveToTx(bool blocking);
 
 /**
  * Queues a State Change to TRX_OFF on the AT86RF233
  *
  * @param[in]  blocking  if true the function only returns when State change took place
  */
-void samr21TrxQueueMoveToIdle(bool blocking);
+void samr21Trx_queueMoveToIdle(bool blocking);
 
 /**
  * Forces a State Change to TRX_OFF on the AT86RF233
  *
  * @param[in]  blocking  if true the function only returns when State change took place
  */
-void samr21TrxForceMoveToIdle(bool blocking);
+void samr21Trx_forceMoveToIdle(bool blocking);
 
 /**
  * Sets operational Channel for the AT86rf233 Receive- and Transmit-Actions
  *
  * @param[in]  channel  desired channel ID (11 <= channel <= 26)
  */
-void samr21TrxSetChannel(uint8_t channel);
+void samr21Trx_setActiveChannel(uint8_t channel);
 
 /**
  * Gets the Channel the AT86rf233 is currently operating on
  *
  * @returns  current Channel ID
  */
-uint8_t samr21TrxGetChannel();
+uint8_t samr21Trx_getAktiveChannel();
 
 /**
  * Sets the transmit Power of the AT86rf233
@@ -208,35 +208,35 @@ uint8_t samr21TrxGetChannel();
  * @param[in]  power  desired Tx Power in dBm (See samr21 datasheet 38.2.4 TX Power Ramping)
  * 
  */
-void samr21TrxSetTxPower(int8_t power);
+void samr21Trx_setTxPower(int8_t power);
 
 /**
  * Sets the transmit Power of the AT86rf233
  *
  * @returns  current Tx Power in dBm (See samr21 datasheet 38.2.4 TX Power Ramping)
  */
-int8_t samr21TrxGetTxPower();
+int8_t samr21Trx_getTxPower();
 
 /**
  * True Random engine of the AT86rf233
  *
  * @returns  uint8 with the 2 lowest Bits containing a random Value
  */
-uint8_t samr21TrxGetRandomCrumb();
+uint8_t samr21Trx_getRandomCrumb();
 
 /**
  * True Random engine of the AT86rf233
  *
  * @returns  uint8 with the 4 lowest Bits containing a random Value
  */
-uint8_t samr21TrxGetRandomNibble();
+uint8_t samr21Trx_getRandomNibble();
 
 /**
  * True Random engine of the AT86rf233
  *
  * @returns  uint8 containing a random Value
  */
-uint8_t samr21TrxGetRandomByte();
+uint8_t samr21Trx_getRandomByte();
 
 
 /**
@@ -249,7 +249,7 @@ uint8_t samr21TrxGetRandomByte();
  *
  * @returns  true if the framebuffer was downloaded to the specified length, false if the action ran into a timeout
  */
-bool samr21TrxLiveFramebufferDownload(uint8_t *data, uint8_t len);
+bool samr21Trx_realtimeFramebufferDownload(uint8_t *data, uint8_t len);
 
 /**
  *
@@ -264,7 +264,7 @@ bool samr21TrxLiveFramebufferDownload(uint8_t *data, uint8_t len);
  *
  * @returns  true if the downloaded content of Framebuffer is valid, false if the content is invalid or a timeout triggered
  */
-bool samr21TrxDownloadFramebuffer(uint8_t *psduLen, uint8_t *psdu, uint8_t *LQI, int8_t *RSSI, bool live);
+bool samr21Trx_downloadReceivedFramebuffer(uint8_t *psduLen, uint8_t *psdu, uint8_t *LQI, int8_t *RSSI, bool live);
 
 /**
  *
@@ -288,7 +288,7 @@ void samr21TrxUploadToFramebuffer(uint8_t *data, uint8_t len, uint8_t pos);
  * @param[in]   pos   offset inside the Framebuffer where the data is uploaded to
  *
  */
-void samr21TrxStartJustInTimeUploadToFramebuffer(uint8_t *data, uint8_t len, uint8_t pos);
+void samr21Trx_startJustInTimeUploadToFramebuffer(uint8_t *data, uint8_t len, uint8_t pos);
 
 /**
  *
@@ -297,14 +297,14 @@ void samr21TrxStartJustInTimeUploadToFramebuffer(uint8_t *data, uint8_t len, uin
  * @param[in]  irqType IRQ-Type for the new handler (see samr21 datasheet 35.7 Interrupt Logic)
  * @param[in]  handler pointer to new associated ISR (or NULL to remove a handler)
  */
-void samr21TrxSetIrqHandler(uint8_t irqType, void (*handler)(void));
+void samr21Trx_setInterruptHandler(uint8_t irqType, void (*handler)(void));
 
 /**
  *
  * Removes All IRQ-Handler, but does not disable the Interrupt itself
  *
  */
-void samr21TrxRemoveAllHandler();
+void samr21Trx_removeAllInterruptHandler();
 
 /**
  *
@@ -312,7 +312,7 @@ void samr21TrxRemoveAllHandler();
  *
  * @param[in]  irqType IRQ-Type to be enabled
  */
-void samr21TrxEnableIrq(uint8_t irqType);
+void samr21Trx_enableInterrupt(uint8_t irqType);
 
 /**
  *
@@ -320,7 +320,7 @@ void samr21TrxEnableIrq(uint8_t irqType);
  *
  * @param[in]  irqType IRQ-Type to be disabled
  */
-void samr21TrxDisableIrq(uint8_t irqType);
+void samr21Trx_disableIrq(uint8_t irqType);
 
 /**
  *
@@ -328,14 +328,14 @@ void samr21TrxDisableIrq(uint8_t irqType);
  * TRX must be in a RX State
  *
  */
-void samr21TrxStartCca();
+void samr21Trx_startCca();
 
 /**
  *
  * Starts a Energy Detection on the at86rf233
  * TRX must be in a RX State
  */
-void samr21TrxStartEd();
+void samr21Trx_startEd();
 
 /**
  *
@@ -343,7 +343,7 @@ void samr21TrxStartEd();
  * @returns the current RSSI in dBm
  * 
  */
-int8_t samr21TrxGetLastRssiValue();
+int8_t samr21Trx_getLastRssiValue();
 
 /**
  *
@@ -352,7 +352,7 @@ int8_t samr21TrxGetLastRssiValue();
  *
  * @param[in]  newCcaMode nmode
  */
-void samr21RadioCtrlSetCCAMode(uint8_t newCcaMode);
+void samr21Trx_setCcaMode(uint8_t newCcaMode);
 
 /**
  *
@@ -361,7 +361,7 @@ void samr21RadioCtrlSetCCAMode(uint8_t newCcaMode);
  *
  * @param[in]  threshold    desired threshold in dBm
  */
-void samr21RadioCtrlSetCcaThreshold(int8_t a_threshold);
+void samr21Trx_setCcaThreshold(int8_t a_threshold);
 
 /**
  *
@@ -369,6 +369,6 @@ void samr21RadioCtrlSetCcaThreshold(int8_t a_threshold);
  *
  * @returns  current CCA threshold in dBm
  */
-int8_t samr21RadioCtrlGetCcaThreshold(); 
+int8_t samr21Trx_getCcaThreshold(); 
 
 #endif // _SAMR21_TRX_H_

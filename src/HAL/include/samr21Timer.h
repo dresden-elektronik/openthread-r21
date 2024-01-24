@@ -15,7 +15,7 @@
 #include <stdbool.h>
 
 #include "samr21.h"
-#include "samr21NopDelay.h"
+#include "samr21SysTick.h"
 
 /**
  * Inits Timer TCC0 as a oneshot or periodic Timer with a 1MHz Clk
@@ -25,18 +25,18 @@
  * @param[in] interrupt if true the TCC0_Handler() gets called once the timer fires
  * 
  */
-void samr21Timer0Init(uint8_t divider, bool oneshot, bool interrupt);
+void samr21Timer0_init(uint8_t divider, bool oneshot, bool interrupt);
 /**
  * Sets a oneshot timer on TCC0 (24 Bit)
  * 
  * @param[in] timerTicks amount of TimerTicks until it the Timer fires
  */
-void samr21Timer0Set(uint32_t timerTicks);
+void samr21Timer0_set(uint32_t timerTicks);
 /**
  * Aborts the currently running Oneshot Timer on TCC0
  * 
  */
-void samr21Timer0Stop();
+void samr21Timer0_stop();
 
 
 /**
@@ -46,18 +46,18 @@ void samr21Timer0Stop();
  * @param[in] oneshot if true the timer stops after it triggers once, otherwise it will wrap around
  * @param[in] interrupt if true the TCC1_Handler() gets called once the timer fires
  */
-void samr21Timer1Init(uint8_t divider, bool oneshot, bool interrupt);
+void samr21Timer1_init(uint8_t divider, bool oneshot, bool interrupt);
 /**
  * Sets a oneshot timer on TCC1 (24 Bit)
  * 
  * @param[in] timerTicks amount of TimerTicks until it the Timer fires
  */
-void samr21Timer1Oneshot(uint32_t timerTicks);
+void samr21Timer1_startOneshot(uint32_t timerTicks);
 /**
  * Aborts the currently running Oneshot Timer on TCC1
  * 
  */
-void samr21Timer1Stop();
+void samr21Timer1_stop();
 
 
 /**
@@ -67,18 +67,18 @@ void samr21Timer1Stop();
  * @param[in] oneshot if true the timer stops after it triggers once, otherwise it will wrap around
  * @param[in] interrupt if true the TCC2_Handler() gets called once the timer fires
  */
-void samr21Timer2Init(uint8_t divider, bool oneshot, bool interrupt);
+void samr21Timer2_init(uint8_t divider, bool oneshot, bool interrupt);
 /**
  * Sets a oneshot timer on TCC2 (16 Bit)
  * 
  * @param[in] timerTicks amount of TimerTicks until it the Timer fires
  */
-void samr21Timer2Oneshot(uint16_t timerTicks);
+void samr21Timer2_startOneshot(uint16_t timerTicks);
 /**
  * Aborts the currently running Oneshot Timer on TCC2
  * 
  */
-void samr21Timer2Stop();
+void samr21Timer2_stop();
 
 
 /**
@@ -88,27 +88,27 @@ void samr21Timer2Stop();
  * @param[in] oneshot if true the timer stops after it triggers once, otherwise it will wrap around
  * @param[in] interrupt if true the TC3_Handler() gets called once the timer fires
  */
-void samr21Timer3Init(uint8_t divider, bool oneshot, bool interrupt);
+void samr21Timer3_init(uint8_t divider, bool oneshot, bool interrupt);
 
 /**
  * Sets a periodic timer on TC3 (16 Bit)
  * 
  * @param[in] timerTicks amount of TimerTicks until it the Timer fires
  */
-void samr21Timer3SetContinuousPeriod(uint16_t timerTicks);
+void samr21Timer3_setContinuousPeriod(uint16_t timerTicks);
 
 /**
  * Sets a oneshot timer on TC3 (16 Bit)
  * 
  * @param[in] timerTicks amount of TimerTicks until it the Timer fires
  */
-void samr21Timer3Oneshot(uint16_t timerTicks);
+void samr21Timer3_startOneshot(uint16_t timerTicks);
 
 /**
  * Aborts the currently running Oneshot Timer on TC3
  * 
  */
-void samr21Timer3Stop();
+void samr21Timer3_Stop();
 
 
 /**
@@ -118,18 +118,18 @@ void samr21Timer3Stop();
  * @param[in] oneshot if true the timer stops after it triggers once, otherwise it will wrap around
  * @param[in] interrupt if true the TC4_Handler() gets called once the timer fires
  */
-void samr21Timer4Init(uint8_t divider, bool oneshot, bool interrupt);
+void samr21Timer4_init(uint8_t divider, bool oneshot, bool interrupt);
 /**
  * Sets a oneshot timer on TC4 (16 Bit)
  * 
  * @param[in] timerTicks amount of TimerTicks until it the Timer fires
  */
-void samr21Timer4Oneshot(uint16_t timerTicks);
+void samr21Timer4_startOneshot(uint16_t timerTicks);
 /**
  * Aborts the currently running Oneshot Timer on TC4
  * 
  */
-void samr21Timer4Stop();
+void samr21Timer4_stop();
 
 /**
  * Inits Timer TC5 as a oneshot or periodic Timer with a 1MHz Clk
@@ -138,18 +138,18 @@ void samr21Timer4Stop();
  * @param[in] oneshot if true the timer stops after it triggers once, otherwise it will wrap around
  * @param[in] interrupt if true the TC5_Handler() gets called once the timer fires
  */
-void samr21Timer5Init(uint8_t divider, bool oneshot, bool interrupt);
+void samr21Timer5_init(uint8_t divider, bool oneshot, bool interrupt);
 /**
  * Sets a oneshot timer on TC5 (16 Bit)
  * 
  * @param[in] timerTicks amount of TimerTicks until it the Timer fires
  */
-void samr21Timer5Oneshot(uint16_t timerTicks);
+void samr21Timer5_startOneshot(uint16_t timerTicks);
 /**
  * Aborts the currently running Oneshot Timer on TC5
  * 
  */
-void samr21Timer5Stop();
+void samr21Timer5_stop();
 
 
 /**
@@ -157,5 +157,5 @@ void samr21Timer5Stop();
  * Used for SoftReset
  * 
  */
-void samr21TimerDeinitAll();
+void samr21Timer_deinitAll();
 #endif //_SAMR21_TIMER_H_

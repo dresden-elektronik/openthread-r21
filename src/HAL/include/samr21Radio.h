@@ -48,7 +48,7 @@ typedef enum transmissionStatus_e
 
 
 
-typedef enum samr21RxState_e
+typedef enum samr21Radio_RxBufferState_e
 {
     SAMR21_RADIO_RX_STATE_IDLE,
     SAMR21_RADIO_RX_STATE_PARSE_FCF,
@@ -62,7 +62,7 @@ typedef enum samr21RxState_e
     SAMR21_RADIO_RX_STATE_WAIT_ACK_END
 } samr21RxState;
 
-typedef enum samr21TxState_e
+typedef enum samr21Radio_TxBufferState_e
 {
     SAMR21_RADIO_TX_STATE_IDLE,
     SAMR21_RADIO_TX_STATE_WAIT_FOR_TX_TIMING,
@@ -85,50 +85,50 @@ typedef enum samr21TxState_e
  * 
  * Enable the Transceiver IRQs Handler
  */
-void samr21RadioCtrlEnable();
+void samr21Radio_enable();
 
 /**
  * Disables all Transceiver IRQs 
  */
-void samr21RadioCtrlDisable();
+void samr21Radio_disable();
 
 /**
  * Disables all Transceiver IRQs 
  */
-void samr21RadioCtrlDisable();
+void samr21Radio_disable();
 
 /**
  * Puts Transceiver To sleep
  */
-void samr21RadioCtrlSleep();
+void samr21Radio_sleep();
 
 /**
  * Returns the OpenThread equivalent State of the Radio
  * 
  * @returns OpenThread equivalent State of the Radio
  */
-otRadioState samr21RadioGetOtState();
+otRadioState samr21Radio_getOtState();
 
 /**
  * Changes Promiscuous Mode
  *
  * @param[in]  enable       true = enable, false = disable
  */
-void samr21RadioCtrlSetPromiscuousMode(bool enable);
+void samr21Radio_setPromiscuousMode(bool enable);
 
 /**
  * Enables or Disables Soft Source Addr Match table
  *
  * @param[in]  enable       true = enable, false = disable
  */
-void samr21RadioCtrlSetFramePendingSrcMatch(bool enable);
+void samr21Radio_setFramePendingSrcMatch(bool enable);
 
 /**
  * Gets current Promiscuous State
  *
  * @returns true = enabled, false = disabled
  */
-bool samr21RadioCtrlGetPromiscuousMode();
+bool samr21Radio_getPromiscuousMode();
 
 /**
  * Updates the current Mac Frame Counter
@@ -136,7 +136,7 @@ bool samr21RadioCtrlGetPromiscuousMode();
  * @param[in]  macFrameCounter  new Value for Mac Frame Counter
  *
  */
-void samr21RadioCtrlSetMacFrameCounter(uint32_t macFrameCounter);
+void samr21Radio_setMacFrameCounter(uint32_t macFrameCounter);
 
 /**
  * Gets the current Mac Frame Counter
@@ -144,7 +144,7 @@ void samr21RadioCtrlSetMacFrameCounter(uint32_t macFrameCounter);
  * @return      current Mac Frame Counter
  *
  */
-uint32_t samr21RadioCtrlGetMacFrameCounter();
+uint32_t samr21Radio_getMacFrameCounter();
 
 #if OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
 
@@ -184,7 +184,7 @@ uint16_t samr21RadioCtrlCslGetPhase();
  * @param[in]  nextKey  pointer to 16 Byte Array of the next AES-Key
  *
  */
-void samr21RadioCtrlSetMacKeys(uint8_t keyId, const otMacKeyMaterial*previousKey, const otMacKeyMaterial *currentKey, const otMacKeyMaterial *nextKey);
+void samr21Radio_setMacKeys(uint8_t keyId, const otMacKeyMaterial*previousKey, const otMacKeyMaterial *currentKey, const otMacKeyMaterial *nextKey);
 
 /**
  * Sets a new Pan ID
@@ -192,7 +192,7 @@ void samr21RadioCtrlSetMacKeys(uint8_t keyId, const otMacKeyMaterial*previousKey
  * @param[in]  panId  new Pan ID 
  *
  */
-void samr21RadioCtrlSetPanId(otPanId panId);
+void samr21Radio_setPanId(otPanId panId);
 
 /**
  * Sets a new Short Address
@@ -200,7 +200,7 @@ void samr21RadioCtrlSetPanId(otPanId panId);
  * @param[in]  shortAddress  new Short Address
  *
  */
-void samr21RadioCtrlSetShortAddress(otShortAddress shortAddress);
+void samr21Radio_setShortAddress(otShortAddress shortAddress);
 
 /**
  * Sets a new extended Address
@@ -208,7 +208,7 @@ void samr21RadioCtrlSetShortAddress(otShortAddress shortAddress);
  * @param[in]  extendedAddress  pointer to new Extended Address
  *
  */
-void samr21RadioCtrlSetExtendedAddress(otExtAddress* extendedAddress);
+void samr21Radio_setExtendedAddress(const otExtAddress* extendedAddress);
 
 /**
  * Returns the current Pan ID
@@ -216,7 +216,7 @@ void samr21RadioCtrlSetExtendedAddress(otExtAddress* extendedAddress);
  * @return     current Pan ID
  *
  */
-uint16_t samr21RadioCtrlGetPanId();
+uint16_t samr21Radio_getPanId();
 
 /**
  * Returns the current Short Address
@@ -224,7 +224,7 @@ uint16_t samr21RadioCtrlGetPanId();
  * @return     current Short Address
  *
  */
-uint16_t samr21RadioCtrlGetShortAddr();
+uint16_t samr21Radio_getShortAddr();
 
 /**
  * Returns pointer to rhe current Extended Address
@@ -232,7 +232,7 @@ uint16_t samr21RadioCtrlGetShortAddr();
  * @return     Pointer to current Extended Address
  *
  */
-uint8_t* samr21RadioCtrlGetExtendedAddress();
+uint8_t* samr21Radio_getExtendedAddress();
 
 /**
  * Puts Radio into Receive State on given channel
@@ -240,7 +240,7 @@ uint8_t* samr21RadioCtrlGetExtendedAddress();
  * @param[in]  channel  channel to receive on ( 0 means stay on current channel )
  *
  */
-void samr21RadioReceive(uint8_t channel);
+void samr21Radio_startReceiving(uint8_t channel);
 
 /**
  * Queues a Receive-Slot for a specified duration, channel and starttime
@@ -252,7 +252,7 @@ void samr21RadioReceive(uint8_t channel);
  * @returns true if Slot was successfully Queued, false if the Slot couldn't be queued
  *
  */
-bool samr21RadioQueueReceiveSlot(uint32_t startPointTimestamp, uint8_t channel, uint32_t duration);
+bool samr21Radio_queueReceiveSlot(uint32_t startPointTimestamp, uint8_t channel, uint32_t duration);
 
 /**
  * Returns a pending received Frame from the RX-Ringbuffer
@@ -260,7 +260,7 @@ bool samr21RadioQueueReceiveSlot(uint32_t startPointTimestamp, uint8_t channel, 
 * @returns   pointer to the otFrame struct of a received Frame or NULL if none is available
  *
  */
-otRadioFrame* samr21RadioGetReceivedFrame();
+otRadioFrame* samr21Radio_getReceivedOtFrame();
 
 
 
@@ -270,7 +270,7 @@ otRadioFrame* samr21RadioGetReceivedFrame();
  * @param[in]  otFrame  Pointer to OpenThread FrameBuffer about to Transmitted
  *
  */
-void samr21RadioTransmit(otRadioFrame *otFrame);
+void samr21radio_transmit(otRadioFrame *otFrame);
 
 /**
  * Get the Transmission Buffer
@@ -298,7 +298,7 @@ otRadioFrame* samr21RadioGetLastReceivedAckFrame();
  * @returns True if EnergyScan started, False if a EnergyScan is already ongoing 
  *
  */
-bool samr21RadioStartEnergyDetection(uint8_t channel, uint32_t duration);
+bool samr21Radio_startEnergyDetection(uint8_t channel, uint32_t duration);
 
 /**
  * Returns the Maximum RSSI Value of the Last Energy Detection Scan 
@@ -306,16 +306,16 @@ bool samr21RadioStartEnergyDetection(uint8_t channel, uint32_t duration);
  * @returns result of last Energy Detection Measurement 
  *
  */
-int8_t samr21RadioGetLastEdResult();
+int8_t samr21Radio_getLastEdResult();
 
 
 //CALLBACKS
-void cb_samr21RadioEnergyDetectionDone(int8_t a_rssi);
-void cb_samr21RadioReceptionDone();
+void samr21Radio_energyDetectionDone_cb(int8_t a_rssi);
+void samr21Radio_receptionDone_cb();
 
-void cb_samr21RadioNoMessagesDuringSlot();
+void samr21Radio_noMessagesDuringSlot_cb();
 
-void cb_samr21RadioTransmissionDone(transmissionStatus status, otRadioFrame* a_frame_p);
-void cb_samr21RadioTransmissionStarted(otRadioFrame* a_frame_p);
+void samr21Radio_transmissionDone_cb(transmissionStatus status, otRadioFrame* a_frame_p);
+void samr21Radio_transmissionStarted_cb(otRadioFrame* a_frame_p);
 
 #endif

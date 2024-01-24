@@ -1,14 +1,14 @@
 add_library(openthread-r21
     HAL/samr21Clock.c
-    HAL/samr21NopDelay.c
+    HAL/samr21SysTick.c
     HAL/samr21Nvm.c
     HAL/samr21Rtc.c
     HAL/samr21Timer.c
     HAL/samr21Usb.c
     HAL/samr21Uart.c
-    HAL/samr21RadioCtrl.c
+    HAL/samr21Radio.c
     HAL/samr21Trx.c
-    HAL/samr21RadioFeCtrl.c
+    HAL/samr21FeCtrl.c
     OT-Utils/otUtilities_linkMetrics.cpp
     OT-Utils/otUtilities_macFrame.cpp
     OT-Utils/otUtilities_sourceMatch.c

@@ -20,19 +20,19 @@
  * Sets up the RTC as a microsecond timer
  * and forces a synchronous read-access to the rtc Value Register
  */
-void samr21RtcInit();
+void samr21Rtc_init();
 
 /**
  * Disables the RTC and the synchronous read-access to the rtc Value Register
  */
-void samr21RtcDeinit();
+void samr21Rtc_deinit();
 
 /**
  * Gets a microseconds timestamp since the last initiation of the RTC-Module
  *
  * @returns a uint32 microseconds Timestamp since the initiation of the rtc
  */
-uint32_t samr21RtcGetTimestamp();
+uint32_t samr21Rtc_getTimestamp();
 
 /**
  * Sets a microseconds timestamp for an Alarm
@@ -40,7 +40,7 @@ uint32_t samr21RtcGetTimestamp();
  *
  * @param[in] alarmTimestamp    an absolute timestamp for when the RTC Alarm is supposed to be triggered
  */
-void samr21RtcSetAbsoluteAlarm(uint32_t alarmTimestamp);
+void samr21Rtc_setAbsoluteAlarm(uint32_t alarmTimestamp);
 
 /**
  * Sets a Alarm on the RTC that triggers after the specified Time
@@ -48,11 +48,11 @@ void samr21RtcSetAbsoluteAlarm(uint32_t alarmTimestamp);
  *
  * @param[in] duration    the duration after which the Alarm triggers
  */
-void samr21RtcSetRelativeAlarm(uint32_t duration);
+void samr21Rtc_setRelativeAlarm(uint32_t duration);
 
 /**
  * Stops the currently armed RTC Alarm
  */
-void samr21RtcStopAlarm();
+void samr21Rtc_disableAlarm();
 
 #endif //_SAMR21_RTC_H_

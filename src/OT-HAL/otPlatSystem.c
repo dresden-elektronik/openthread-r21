@@ -5,24 +5,27 @@
 #include "samr21.h"
 #include "samr21Clock.h"
 #include "samr21Trx.h"
-#include "samr21RadioCtrl.h"
-#include "samr21RadioFeCtrl.h"
+#include "samr21Radio.h"
+#include "samr21FeCtrl.h"
 #include "samr21Rtc.h"
 #include "samr21Nvm.h"
-#include "samr21NopDelay.h"
+#include "samr21SysTick.h"
 #include "samr21Timer.h"
 #include "samr21Usb.h"
 #include "samr21Uart.h"
 
+#include "tusb.h"
+#include "tusb_config.h"
 
-static void samr21TickleWatchdog()
+
+static void samr21_tickleWatchdog()
 {
 #ifdef _GCF_RELEASE_
     WDT->CLEAR.reg = WDT_CLEAR_CLEAR_KEY_Val;
 #endif
 }
 
-static void samr21InitIrqPriority()
+static void samr21_initIrqPriority()
 {
     //192 Lowest, 0 Highest
     NVIC_SetPriority(TCC0_IRQn, 192); //Unused 
@@ -40,45 +43,46 @@ static void samr21InitIrqPriority()
 
 void otSysInit(int argc, char *argv[])
 {
-    samr21InitIrqPriority();
-    samr21TickleWatchdog();
+    samr21_initIrqPriority();
+    samr21_tickleWatchdog();
 
-    samr21NvmInit();
-    samr21TickleWatchdog();
+    samr21Nvm_init();
+    samr21_tickleWatchdog();
 
     samr21Clock_init();
-    samr21TickleWatchdog();
+    samr21_tickleWatchdog();
 
-    samr21TickleWatchdog();
-    samr21TrxInterfaceInit();
+    samr21_tickleWatchdog();
+    samr21Trx_initInterface();
     
-    samr21TickleWatchdog();
-    samr21RtcInit();
+    samr21_tickleWatchdog();
+    samr21Rtc_init();
 
     //Give Some Slack (~0.2sec) before new USB enumeration
     // __disable_irq();
     // for (uint32_t i = 0; i < 1000; i++)
     // {
-    //     samr21delaySysTick(10000);
-    //     samr21TickleWatchdog();
+    //     samr21SysTick_delayTicks(10000);
+    //     samr21_tickleWatchdog();
     // }
     // __enable_irq();
     
-    samr21UsbInit();
+    samr21Usb_init();
+    tusb_init();
 
 #ifdef _GCF_RELEASE_
-    samr21TickleWatchdog();
-    samr21FeCtrlInit();
+    samr21_tickleWatchdog();
+    samr21FeCtrl_enable();
 
     //Confirm the App Started to Bootloader
     uint8_t confirmedBtlFlag = 0x77;
-    samr21NvmWriteWithinRow(0x4FFF, &confirmedBtlFlag, sizeof(uint8_t));
+    samr21Nvm_writeWithinRow(0x4FFF, &confirmedBtlFlag, sizeof(uint8_t));
 #endif
 
-    //samr21TickleWatchdog();
+    //samr21_tickleWatchdog();
     //samr21LogInit();
 
-    samr21TickleWatchdog();
+    samr21_tickleWatchdog();
     samr21OtPlatAlarmInit();
 }
 
@@ -94,11 +98,11 @@ void otSysDeinit(void)
 
 void otSysProcessDrivers(otInstance *aInstance)
 {
-    samr21OtPlatCommTask();
-    samr21OtPlatRadioTask();
+    samr21OtPlat_uartCommTask();
+    samr21OtPlat_RadioTick();
     samr21OtPlatAlarmTask();
 
-    samr21TickleWatchdog();
+    samr21_tickleWatchdog();
 }
 
 otPlatResetReason otPlatGetResetReason(otInstance *aInstance){

@@ -14,7 +14,7 @@
 #include <assert.h>
 #endif
 
-void samr21NvmInit()
+void samr21Nvm_init()
 {
     PM->APBBMASK.bit.NVMCTRL_ =1;
     PM->AHBMASK.bit.NVMCTRL_ = 1;
@@ -27,7 +27,7 @@ void samr21NvmInit()
         ;
 }
 
-void samr21NvmCtrlExecCommand(uint8_t a_cmd)
+void samr21Nvm_execCtrlCommand(uint8_t a_cmd)
 {
 
     NVMCTRL->CTRLA.reg =
@@ -44,12 +44,12 @@ void samr21NvmCtrlExecCommand(uint8_t a_cmd)
     }
 }
 
-void samr21NvmGetIeeeAddr(uint8_t * a_ieeeAddr_1D)
+void samr21Nvm_getIeeeAddr(uint8_t * a_ieeeAddr)
 {
-    samr21NvmRead(SAMR21_NVM_USER_ROW_IEEE_ADDR, a_ieeeAddr_1D, IEEE_15_4_EXTENDED_ADDR_SIZE);
+    samr21Nvm_readAt(SAMR21_NVM_USER_ROW_IEEE_ADDR, a_ieeeAddr, IEEE_15_4_EXTENDED_ADDR_SIZE);
 }
 
-void samr21NvmRead(uint32_t a_addr, uint8_t *a_buffer_p, uint32_t a_len)
+void samr21Nvm_readAt(uint32_t a_addr, uint8_t *a_buffer_p, uint32_t a_len)
 {
     for (uint32_t i = 0; i < a_len; i++)
     {
@@ -57,7 +57,7 @@ void samr21NvmRead(uint32_t a_addr, uint8_t *a_buffer_p, uint32_t a_len)
     }
 }
 
-void samr21NvmWriteWithinRow(uint32_t a_addr, uint8_t *a_data_p, uint32_t a_len)
+void samr21Nvm_writeWithinRow(uint32_t a_addr, uint8_t *a_data_p, uint32_t a_len)
 {
 
     uint32_t rowOffset = a_addr % (SAMR21_NVM_SIZE_PAGE * SAMR21_NVM_PAGES_PER_ROW);
@@ -70,43 +70,43 @@ void samr21NvmWriteWithinRow(uint32_t a_addr, uint8_t *a_data_p, uint32_t a_len)
 
     // Copy the Row which contains the addr to be written to
     // The whole row has to be erased in order to write to it
-    uint32_t tempRowMemory_1D[SAMR21_NVM_PAGES_PER_ROW * (SAMR21_NVM_SIZE_PAGE / sizeof(uint32_t))];
+    uint32_t copyOfRow[SAMR21_NVM_PAGES_PER_ROW * (SAMR21_NVM_SIZE_PAGE / sizeof(uint32_t))];
 
     for (uint16_t i = 0; i < ( SAMR21_NVM_PAGES_PER_ROW * (SAMR21_NVM_SIZE_PAGE / sizeof(uint32_t ) ) ); i++)
     {
-            tempRowMemory_1D[i] = *( ( uint32_t * )( rowBaseAddr + ( i * sizeof(uint32_t) ) ) );
+            copyOfRow[i] = *( ( uint32_t * )( rowBaseAddr + ( i * sizeof(uint32_t) ) ) );
     }
 
     // Erase the row containing the data to be written
     NVMCTRL->ADDR.reg = rowBaseAddr >> 1;
-    samr21NvmCtrlExecCommand(NVMCTRL_CTRLA_CMD_ER_Val);
+    samr21Nvm_execCtrlCommand(NVMCTRL_CTRLA_CMD_ER_Val);
 
     // Modify the data in Question
-    memcpy( ( ( uint8_t * )( tempRowMemory_1D ) + rowOffset ), a_data_p, a_len );
+    memcpy( ( ( uint8_t * )( copyOfRow ) + rowOffset ), a_data_p, a_len );
 
     // Write back the modified row page by page
     for (uint16_t i = 0; i < SAMR21_NVM_PAGES_PER_ROW; i++)
     {
 
         // Clear Page Cache
-        samr21NvmCtrlExecCommand(NVMCTRL_CTRLA_CMD_PBC_Val);
+        samr21Nvm_execCtrlCommand(NVMCTRL_CTRLA_CMD_PBC_Val);
 
         // Write changes to Page Cache (Addr is the normal memory mapped NVM-Addr)
         for ( uint16_t j = 0; j < ( SAMR21_NVM_SIZE_PAGE / sizeof(uint32_t ) ); j++ )
         {
             uint32_t *tempPtr = (uint32_t *)(rowBaseAddr + (i * SAMR21_NVM_SIZE_PAGE) + j * sizeof(uint32_t));
-            uint32_t tempVal = tempRowMemory_1D[ ( i * ( SAMR21_NVM_SIZE_PAGE / sizeof(uint32_t) ) ) + j ];
+            uint32_t tempVal = copyOfRow[ ( i * ( SAMR21_NVM_SIZE_PAGE / sizeof(uint32_t) ) ) + j ];
         
             *tempPtr = tempVal;
         }
         // Write to Page Cache to Flash
-        samr21NvmCtrlExecCommand(NVMCTRL_CTRLA_CMD_WP_Val);
+        samr21Nvm_execCtrlCommand(NVMCTRL_CTRLA_CMD_WP_Val);
     }
 }
 
-void samr21NvmEraseRow(uint32_t a_addr){
-
+void samr21Nvm_eraseRowAt(uint32_t a_addr)
+{
     // Erase the row containing the addr given
     NVMCTRL->ADDR.reg = a_addr >> 1;
-    samr21NvmCtrlExecCommand(NVMCTRL_CTRLA_CMD_ER_Val);
+    samr21Nvm_execCtrlCommand(NVMCTRL_CTRLA_CMD_ER_Val);
 }

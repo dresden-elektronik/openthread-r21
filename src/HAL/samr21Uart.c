@@ -1,7 +1,7 @@
 #include "samr21Uart.h"
 
 
-void samr21UartInit(){
+void samr21Uart_init(){
 //Setup Clocks for TRX-SPI
         //Use GCLKGEN0 as core Clock for the debug UART
         GCLK->CLKCTRL.reg =
@@ -94,7 +94,7 @@ void samr21UartInit(){
         while (SERCOM2->USART.SYNCBUSY.reg);
 }
 
-void samr21UartDeinit(){
+void samr21Uart_deinit(){
     //Disable
     SERCOM2->USART.CTRLA.bit.ENABLE = 0;
     while ( SERCOM2->USART.CTRLA.bit.ENABLE || SERCOM2->USART.SYNCBUSY.bit.ENABLE );
@@ -111,7 +111,7 @@ void samr21UartDeinit(){
     ;
 }
 
-void samr21UartSend(uint8_t a_data){
+void samr21Uart_send(uint8_t a_data){
     while (!SERCOM2->USART.INTFLAG.bit.DRE);
     //Put data into the tranmitt buffer to start transmission
     SERCOM2->USART.DATA.bit.DATA = a_data;

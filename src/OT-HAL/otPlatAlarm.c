@@ -27,30 +27,30 @@ void otPlatAlarmMilliStartAt(otInstance *a_instance, uint32_t a_t0_ms, uint32_t 
 {
     s_otPlatAlarmVars.instance = a_instance;
 
-    uint32_t now_ms = samr21RtcGetTimestamp()  /  MICRO_SECS_PER_MILLI_SEC;
+    uint32_t now_ms = samr21Rtc_getTimestamp()  /  MICRO_SECS_PER_MILLI_SEC;
 
     uint32_t offset_ms = now_ms  - a_t0_ms;
 
     s_otPlatAlarmVars.millisAlarmArmed = true;
-    samr21Timer2Oneshot( a_dT_ms  -  offset_ms);
+    samr21Timer2_startOneshot( a_dT_ms  -  offset_ms);
 }
 
 void otPlatAlarmMicroStartAt(otInstance *a_Instance, uint32_t a_t0_ms, uint32_t a_dT_ms)
 {
     s_otPlatAlarmVars.instance = a_Instance;
 
-    uint32_t now_ms = samr21RtcGetTimestamp();
+    uint32_t now_ms = samr21Rtc_getTimestamp();
 
     uint32_t offset_ms = now_ms  - a_t0_ms;
 
     s_otPlatAlarmVars.microsAlarmArmed = true;
-    samr21Timer1Oneshot( a_dT_ms - ( samr21RtcGetTimestamp() - a_t0_ms ) );
+    samr21Timer1_startOneshot( a_dT_ms - ( samr21Rtc_getTimestamp() - a_t0_ms ) );
 }
 
 void otPlatAlarmMilliStop(otInstance *a_Instance)
 {
     s_otPlatAlarmVars.instance = a_Instance;
-    samr21Timer2Stop();
+    samr21Timer2_stop();
 
     s_otPlatAlarmVars.millisAlarmArmed = false;
 }
@@ -58,19 +58,19 @@ void otPlatAlarmMilliStop(otInstance *a_Instance)
 void otPlatAlarmMicroStop(otInstance *a_Instance)
 {
     s_otPlatAlarmVars.instance = a_Instance;
-    samr21Timer1Stop();
+    samr21Timer1_stop();
 
     s_otPlatAlarmVars.microsAlarmArmed = false;
 }
 
 uint32_t otPlatAlarmMilliGetNow(void)
 {
-    return samr21RtcGetTimestamp() / MICRO_SECS_PER_MILLI_SEC;
+    return samr21Rtc_getTimestamp() / MICRO_SECS_PER_MILLI_SEC;
 }
 
 uint32_t otPlatAlarmMicroGetNow(void)
 {
-    return samr21RtcGetTimestamp();
+    return samr21Rtc_getTimestamp();
 }
 
 // void TCC1_Handler(){
@@ -92,9 +92,9 @@ uint32_t otPlatAlarmMicroGetNow(void)
 void samr21OtPlatAlarmInit(void)
 {
     //TCC1 Used by OT Micros Alarm
-    samr21Timer1Init(0,true,false); // 1MHz / (2^0) -> 1us resolution
+    samr21Timer1_init(0,true,false); // 1MHz / (2^0) -> 1us resolution
     //TCC2 Used by OT Millis Alarm
-    samr21Timer2Init(7, true,false); // 1MHz / (2^7) -> ~1ms resolution
+    samr21Timer2_init(7, true,false); // 1MHz / (2^7) -> ~1ms resolution
 }
 
 void samr21OtPlatAlarmTask(void)

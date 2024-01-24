@@ -7,13 +7,13 @@
  * the LICENSE.txt file.
  *
  */
-#include "samr21NopDelay.h"
+#include "samr21SysTick.h"
 
 extern uint32_t g_currentCpuClkCycle_ns;
 
 
 
-void samr21delaySysTick(uint32_t a_delayCycles){
+void samr21SysTick_delayTicks(uint32_t a_delayCycles){
     //Sets the trigger value
     SysTick->LOAD = a_delayCycles;
     //Clear current value register

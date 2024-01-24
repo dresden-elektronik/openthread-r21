@@ -38,7 +38,7 @@ static struct
 }s_timerVars;
 
 
-static void samr21TimerClk01Init()
+static void clk01Init()
 {
     // Use GCLKGEN 3 (1MHz) for TCC0 / TCC1
     GCLK->CLKCTRL.reg =
@@ -52,7 +52,7 @@ static void samr21TimerClk01Init()
     s_timerVars.timer0ClkActive = true;
 }
 
-static void samr21TimerClk23Init()
+static void clk23Init()
 {
     // Use GCLKGEN 3 (1MHz) for TCC2 TC3
     GCLK->CLKCTRL.reg =
@@ -66,11 +66,11 @@ static void samr21TimerClk23Init()
     s_timerVars.timer2ClkActive = true;
 }
 
-static void samr21TimerClk45Init()
+static void clk45Init()
 {
     // Use GCLKGEN 3 (1MHz) for TC4 TC5
     GCLK->CLKCTRL.reg =
-        // GCLK_CLKCTRL_WRTLOCK
+        // GCLK_CLKCTRL_WRTLOCK>
         GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(3) // GCLKGEN2
         | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TC4_TC5_Val);
     // Wait for synchronization
@@ -81,14 +81,14 @@ static void samr21TimerClk45Init()
 }
 
 //TCC0
-void samr21Timer0Init(uint8_t a_divider, bool a_oneshot, bool a_interrupt)
+void samr21Timer0_init(uint8_t a_divider, bool a_oneshot, bool a_interrupt)
 {
     if(s_timerVars.timer0Active){
         return;
     }
 
     if(!s_timerVars.timer0ClkActive){
-        samr21TimerClk01Init();
+        clk01Init();
     }
 
     // Enable In Power Manger
@@ -148,7 +148,7 @@ void samr21Timer0Init(uint8_t a_divider, bool a_oneshot, bool a_interrupt)
     s_timerVars.timer0Active = true;
 }
 
-void samr21Timer0Set(uint32_t a_timerTicks)
+void samr21Timer0_set(uint32_t a_timerTicks)
 {
     while (TCC0->SYNCBUSY.reg)
         ;
@@ -158,7 +158,7 @@ void samr21Timer0Set(uint32_t a_timerTicks)
         TCC_CTRLBSET_CMD_RETRIGGER;
 }
 
-void samr21Timer0Stop()
+void samr21Timer0_stop()
 {
     while (TCC0->SYNCBUSY.reg)
         ;
@@ -168,14 +168,14 @@ void samr21Timer0Stop()
 }
 
 //TCC1 Used by OT Micros Alarm
-void samr21Timer1Init(uint8_t a_divider, bool a_oneshot, bool a_interrupt)
+void samr21Timer1_init(uint8_t a_divider, bool a_oneshot, bool a_interrupt)
 {
     if(s_timerVars.timer1Active){
         return;
     }
 
     if(!s_timerVars.timer1ClkActive){
-        samr21TimerClk01Init();
+        clk01Init();
     }
 
     // Enable In Power Manger
@@ -234,7 +234,7 @@ void samr21Timer1Init(uint8_t a_divider, bool a_oneshot, bool a_interrupt)
     s_timerVars.timer1Active = true;
 }
 
-void samr21Timer1Oneshot(uint32_t a_timerTicks)
+void samr21Timer1_startOneshot(uint32_t a_timerTicks)
 {
     while (TCC1->SYNCBUSY.reg)
         ;
@@ -244,7 +244,7 @@ void samr21Timer1Oneshot(uint32_t a_timerTicks)
         TCC_CTRLBSET_CMD_RETRIGGER;
 }
 
-void samr21Timer1Stop()
+void samr21Timer1_stop()
 {
     while (TCC1->SYNCBUSY.reg)
         ;
@@ -254,14 +254,14 @@ void samr21Timer1Stop()
 }
 
 //TCC2 Used by OT Millis Alarm
-void samr21Timer2Init(uint8_t a_divider , bool a_oneshot, bool a_interrupt)
+void samr21Timer2_init(uint8_t a_divider , bool a_oneshot, bool a_interrupt)
 {
     if(s_timerVars.timer2Active){
         return;
     }
 
     if(!s_timerVars.timer2ClkActive){
-        samr21TimerClk23Init();
+        clk23Init();
     }
 
     // Enable In Power Manger
@@ -318,7 +318,7 @@ void samr21Timer2Init(uint8_t a_divider , bool a_oneshot, bool a_interrupt)
     s_timerVars.timer2Active = true;
 }
 
-void samr21Timer2Oneshot(uint16_t a_timerTicks)
+void samr21Timer2_startOneshot(uint16_t a_timerTicks)
 {
     while (TCC0->SYNCBUSY.reg)
         ;
@@ -329,7 +329,7 @@ void samr21Timer2Oneshot(uint16_t a_timerTicks)
         TCC_CTRLBSET_CMD_RETRIGGER;
 }
 
-void samr21Timer2Stop()
+void samr21Timer2_stop()
 {
     while (TCC2->SYNCBUSY.reg)
         ;
@@ -339,14 +339,14 @@ void samr21Timer2Stop()
 }
 
 //TC3
-void samr21Timer3Init(uint8_t a_divider , bool a_oneshot, bool a_interrupt)
+void samr21Timer3_init(uint8_t a_divider , bool a_oneshot, bool a_interrupt)
 {
     if(s_timerVars.timer3Active){
         return;
     }
 
     if(!s_timerVars.timer3ClkActive){
-        samr21TimerClk23Init();
+        clk23Init();
     }
 
     // Enable In Power Manger
@@ -395,7 +395,7 @@ void samr21Timer3Init(uint8_t a_divider , bool a_oneshot, bool a_interrupt)
     s_timerVars.timer3Active = true;
 }
 
-void samr21Timer3Oneshot(uint16_t a_timerTicks)
+void samr21Timer3_startOneshot(uint16_t a_timerTicks)
 {
     while (TC3->COUNT16.STATUS.bit.SYNCBUSY)
         ;
@@ -406,7 +406,7 @@ void samr21Timer3Oneshot(uint16_t a_timerTicks)
         TC_CTRLBSET_CMD_RETRIGGER;
 }
 
-void samr21Timer3SetContinuousPeriod(uint16_t a_timerTicks)
+void samr21Timer3_setContinuousPeriod(uint16_t a_timerTicks)
 {
     while (TC3->COUNT16.STATUS.bit.SYNCBUSY) ;
 
@@ -418,7 +418,7 @@ void samr21Timer3SetContinuousPeriod(uint16_t a_timerTicks)
 
 }
 
-void samr21Timer3Stop()
+void samr21Timer3_Stop()
 {
     while (TC3->COUNT16.STATUS.bit.SYNCBUSY)
         ;
@@ -428,14 +428,14 @@ void samr21Timer3Stop()
 }
 
 //TC4 Used by Soft-Radio Driver
-void samr21Timer4Init(uint8_t a_divider , bool a_oneshot, bool a_interrupt)
+void samr21Timer4_init(uint8_t a_divider , bool a_oneshot, bool a_interrupt)
 {
     if(s_timerVars.timer4Active){
         return;
     }
 
     if(!s_timerVars.timer4ClkActive){
-        samr21TimerClk45Init();
+        clk45Init();
     }
 
     // Enable In Power Manger
@@ -485,7 +485,7 @@ void samr21Timer4Init(uint8_t a_divider , bool a_oneshot, bool a_interrupt)
     s_timerVars.timer4Active = true;
 }
 
-void samr21Timer4Oneshot(uint16_t a_timerTicks)
+void samr21Timer4_startOneshot(uint16_t a_timerTicks)
 {
     while (TC4->COUNT16.STATUS.bit.SYNCBUSY)
         ;
@@ -496,7 +496,7 @@ void samr21Timer4Oneshot(uint16_t a_timerTicks)
         TC_CTRLBSET_CMD_RETRIGGER;
 }
 
-void samr21Timer4Stop()
+void samr21Timer4_stop()
 {
     while (TC4->COUNT16.STATUS.bit.SYNCBUSY)
         ;
@@ -506,13 +506,13 @@ void samr21Timer4Stop()
 }
 
 //TC5 Used by TRX Driver
-void samr21Timer5Init(uint8_t a_divider, bool a_oneshot, bool a_interrupt){
+void samr21Timer5_init(uint8_t a_divider, bool a_oneshot, bool a_interrupt){
     if(s_timerVars.timer5Active){
         return;
     }
 
     if(!s_timerVars.timer5ClkActive){
-        samr21TimerClk45Init();
+        clk45Init();
     }
 
     // Enable In Power Manger
@@ -560,7 +560,7 @@ void samr21Timer5Init(uint8_t a_divider, bool a_oneshot, bool a_interrupt){
     s_timerVars.timer5Active = true;
 }
 
-void samr21Timer5Oneshot(uint16_t a_timerTicks)
+void samr21Timer5_startOneshot(uint16_t a_timerTicks)
 {
     while (TC5->COUNT16.STATUS.bit.SYNCBUSY)
         ;
@@ -571,7 +571,7 @@ void samr21Timer5Oneshot(uint16_t a_timerTicks)
         TC_CTRLBSET_CMD_RETRIGGER;
 }
 
-void samr21Timer5Stop()
+void samr21Timer5_stop()
 {
     while (TC5->COUNT16.STATUS.bit.SYNCBUSY)
         ;
@@ -581,18 +581,17 @@ void samr21Timer5Stop()
 }
 
 
-
 //Deinit Timer for Soft Reset
-void samr21TimerDeinitAll()
+void samr21Timer_deinitAll()
 {
 
     // Stop All running timers
-    samr21Timer0Stop();
-    samr21Timer1Stop();
-    samr21Timer2Stop();
-    samr21Timer3Stop();
-    samr21Timer4Stop();
-    samr21Timer5Stop();
+    samr21Timer0_stop();
+    samr21Timer1_stop();
+    samr21Timer2_stop();
+    samr21Timer3_Stop();
+    samr21Timer4_stop();
+    samr21Timer5_stop();
 
     // Disable the Interrupts
     NVIC_DisableIRQ(TCC0_IRQn);

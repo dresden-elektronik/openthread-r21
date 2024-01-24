@@ -79,7 +79,13 @@
         "expected": "cpp",
         "compare": "c",
         "cstdint": "c",
-        "format": "c"
+        "format": "c",
+        "cstdio": "c",
+        "*.def": "c",
+        "*.ipp": "c",
+        "otutilities_codeutils.h": "c",
+        "otutilities_uart.h": "c",
+        "samr21systick.h": "c"
     },
     "cmake.configureOnOpen": false,
     "cortex-debug.variableUseNaturalFormat": true,

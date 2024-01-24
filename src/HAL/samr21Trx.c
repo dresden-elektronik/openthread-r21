@@ -34,7 +34,7 @@ static struct trxVars_s
         .txDmacDescriptor.DESCADDR.bit.DESCADDR = 0x00000000
     };
 
-static ramCopyTrxRegister_t s_ramCopyTrxRegister =
+static ramCopyTrxRegister_t s_localTrxRegisterCopy =
     {
         // Default Config
         .trxCtrl1.bit.irqPolarity = 0,
@@ -53,7 +53,7 @@ static ramCopyTrxRegister_t s_ramCopyTrxRegister =
 #endif
 };
 
-void samr21TrxInterfaceInit()
+void samr21Trx_initInterface()
 {
     // Setup Clocks for TRX-SPI Sercom
     // Use GCLKGEN1 as core Clock for SPI At86rf233 (SERCOM4, Synchronous)
@@ -223,14 +223,14 @@ void samr21TrxInterfaceInit()
         ;
 
     // Write predefined Operating-Values to Config Registers of the AT86rf233
-    samr21TrxWriteRegister(TRX_CTRL_1_REG_ADDR, s_ramCopyTrxRegister.trxCtrl1.reg);
-    samr21TrxWriteRegister(PHY_TX_PWR_REG_ADDR, s_ramCopyTrxRegister.phyTxPwr.reg);
+    samr21Trx_writeRegister(TRX_CTRL_1_REG_ADDR, s_localTrxRegisterCopy.trxCtrl1.reg);
+    samr21Trx_writeRegister(PHY_TX_PWR_REG_ADDR, s_localTrxRegisterCopy.phyTxPwr.reg);
 
     // Enable Timer 5 for Trx Orchestration
-    samr21Timer5Init(0, true, true); // 1MHz / (2^0) -> 1us resolution
+    samr21Timer5_init(0, true, true); // 1MHz / (2^0) -> 1us resolution
 
     // Enable Timer 3 for DMA Paceing
-    samr21Timer3Init(0, false, false); // 1MHz / (2^0) -> 1us resolution
+    samr21Timer3_init(0, false, false); // 1MHz / (2^0) -> 1us resolution
 
     // Enable DMA in Power Manager for Framebuffer Upload purposes
     PM->APBBMASK.bit.DMAC_ = 1;
@@ -282,11 +282,11 @@ void samr21TrxInterfaceInit()
     NVIC_EnableIRQ(DMAC_IRQn);
 }
 
-void samr21TrxInterruptInit()
+void samr21Trx_initInterrupts()
 {
 
     // Get TRX into IDLE (STATUS_TRX_OFF) State
-    samr21TrxForceMoveToIdle(true);
+    samr21Trx_forceMoveToIdle(true);
 
     // Enable EIC in Power Manager
     PM->APBAMASK.bit.EIC_ = 1;
@@ -320,13 +320,13 @@ void samr21TrxInterruptInit()
         ;
 
     // Read Once to clear all pending Interrupts
-    samr21TrxReadRegister(IRQ_STATUS_REG_ADDR);
+    samr21Trx_readRegister(IRQ_STATUS_REG_ADDR);
 
     // Clear Irqflag once before returning
     EIC->INTFLAG.bit.EXTINT0 = 1;
 }
 
-void samr21TrxInterruptDeinit()
+void samr21Trx_deinitInterrupts()
 {
 
     if (EIC->CTRL.bit.ENABLE)
@@ -357,51 +357,51 @@ void samr21TrxInterruptDeinit()
 
     // Disable EIC in Power Manager
     if (PM->APBAMASK.bit.EIC_)
-    {000000
+    {
         PM->APBAMASK.bit.EIC_ = 0;
     }
 }
 
-void samr21TrxSetupMClk(uint8_t a_clk)
+void samr21Trx_setupMClk(uint8_t a_clk)
 {
 
     // Write desired Value into the CLKM Register ( e.g.: 0x05 -> 16Mhz)
-    s_ramCopyTrxRegister.trxCtrl0.bit.clkmCtrl = a_clk;
+    s_localTrxRegisterCopy.trxCtrl0.bit.clkmCtrl = a_clk;
 
-    samr21TrxWriteRegister(TRX_CTRL_0_REG_ADDR, s_ramCopyTrxRegister.trxCtrl0.reg);
+    samr21Trx_writeRegister(TRX_CTRL_0_REG_ADDR, s_localTrxRegisterCopy.trxCtrl0.reg);
 
     // Wait a bit for the  the Freq.-change to take place
-    samr21delaySysTick(50000);
+    samr21SysTick_delayTicks(50000);
 }
 
-uint8_t samr21TrxReadRegister(uint8_t a_addr)
+uint8_t samr21Trx_readRegister(uint8_t a_addr)
 {
 
     samr21TrxSpiStartAccess(AT86RF233_CMD_REG_READ_MASK, a_addr);
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
+    samr21SysTick_delayTicks(CPU_WAIT_CYCLES_BETWEEN_BYTES);
 #endif
 
-    uint8_t rVal = samr21TrxSpiReadByteRaw();
+    uint8_t rVal = samr21Trx_spiReadByteRaw();
 
-    samr21TrxSpiCloseAccess();
+    samr21Trx_spiCloseAccess();
 
     return rVal;
 }
 
-void samr21TrxWriteRegister(uint8_t a_addr, uint8_t a_data)
+void samr21Trx_writeRegister(uint8_t a_addr, uint8_t a_data)
 {
 
     samr21TrxSpiStartAccess(AT86RF233_CMD_REG_WRITE_MASK, a_addr);
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
+    samr21SysTick_delayTicks(CPU_WAIT_CYCLES_BETWEEN_BYTES);
 #endif
 
-    samr21TrxSpiTransceiveByteRaw(a_data);
+    samr21Trx_spiTransceiveByteRaw(a_data);
 
-    samr21TrxSpiCloseAccess();
+    samr21Trx_spiCloseAccess();
 }
 
 void samr21TrxSpiStartAccess(uint8_t a_command, uint8_t a_addr)
@@ -416,14 +416,14 @@ void samr21TrxSpiStartAccess(uint8_t a_command, uint8_t a_addr)
     PORT->Group[1].OUTCLR.reg = 1 << 31; // SSel Low Active
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLES_AFTER_SSEL_LOW);
+    samr21SysTick_delayTicks(CPU_WAIT_CYCLES_AFTER_SSEL_LOW);
 #endif
 
     // Register Read/Write
     if (a_command & AT86RF233_CMD_REG_READ_MASK)
     {
         //There is always the trxStatus in the first byte of a SPI transaction (See 35.4 Radio Transceiver Status Information SAMR21 - Datasheet)
-        s_ramCopyTrxRegister.trxStatus.reg = samr21TrxSpiTransceiveByteRaw((a_addr & 0x3F) | a_command);
+        s_localTrxRegisterCopy.trxStatus.reg = samr21Trx_spiTransceiveByteRaw((a_addr & 0x3F) | a_command);
         return;
     }
 
@@ -431,26 +431,26 @@ void samr21TrxSpiStartAccess(uint8_t a_command, uint8_t a_addr)
     if (a_command & AT86RF233_CMD_FRAMEBUFFER_READ)
     {
         //There is always the trxStatus in the first byte of a SPI transaction (See 35.4 Radio Transceiver Status Information SAMR21 - Datasheet)
-        s_ramCopyTrxRegister.trxStatus.reg = samr21TrxSpiTransceiveByteRaw(a_command);
+        s_localTrxRegisterCopy.trxStatus.reg = samr21Trx_spiTransceiveByteRaw(a_command);
         return;
     }
 
     // SRAM Access
         //There is always the trxStatus in the first byte of a SPI transaction (See 35.4 Radio Transceiver Status Information SAMR21 - Datasheet)
-    s_ramCopyTrxRegister.trxStatus.reg = samr21TrxSpiTransceiveByteRaw(a_command);
+    s_localTrxRegisterCopy.trxStatus.reg = samr21Trx_spiTransceiveByteRaw(a_command);
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLES_BETWEEN_BYTES);
+    samr21SysTick_delayTicks(CPU_WAIT_CYCLES_BETWEEN_BYTES);
 #endif
-    samr21TrxSpiTransceiveByteRaw(a_addr);
+    samr21Trx_spiTransceiveByteRaw(a_addr);
 }
 
-void samr21TrxSpiCloseAccess()
+void samr21Trx_spiCloseAccess()
 {
     PORT->Group[1].OUTSET.reg = 1 << 31; // SSel Low Active
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-    samr21delaySysTick(CPU_WAIT_CYCLES_AFTER_SSEL_LOW);
+    samr21SysTick_delayTicks(CPU_WAIT_CYCLES_AFTER_SSEL_LOW);
 #endif
     s_trxVars.spiActive = false;
 
@@ -458,22 +458,23 @@ void samr21TrxSpiCloseAccess()
     // NVIC_EnableIRQ(TC4_IRQn);
 }
 
-void samr21TrxUpdateStatusRegister()
+void samr21Trx_updateStatusRegister()
 {
 
+    //Manual samr21Trx_spiStartAccess
     while (s_trxVars.spiActive)
         ;
-    __disable_irq();
+    NVIC_DisableIRQ(EIC_IRQn);
     PORT->Group[1].OUTCLR.reg = 1 << 31; // SSel Low Active
     s_trxVars.spiActive = true;
 
     //There is always the trxStatus in the first byte of a SPI transaction (See 35.4 Radio Transceiver Status Information SAMR21 - Datasheet)
-    s_ramCopyTrxRegister.trxStatus.reg = samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
+    s_localTrxRegisterCopy.trxStatus.reg = samr21Trx_spiTransceiveByteRaw(SPI_DUMMY_BYTE);
 
-    samr21TrxSpiCloseAccess();
+    samr21Trx_spiCloseAccess();
 }
 
-void samr21TrxSetRSTN(bool a_enable)
+void samr21Trx_setResetPin(bool a_enable)
 {
     // Pin PB15 == RSTN
     // Active Low
@@ -485,7 +486,7 @@ void samr21TrxSetRSTN(bool a_enable)
     PORT->Group[1].OUTSET.reg = 1 << 15;
 }
 
-void samr21TrxSetSLP_TR(bool a_enable)
+void samr21Trx_setSleepTransmitPin(bool a_enable)
 {
     // Pin PA20 == SLP_TR
     // Active High
@@ -497,7 +498,7 @@ void samr21TrxSetSLP_TR(bool a_enable)
     PORT->Group[0].OUTCLR.reg = 1 << 20;
 }
 
-uint8_t samr21TrxSpiTransceiveByteRaw(uint8_t a_data)
+uint8_t samr21Trx_spiTransceiveByteRaw(uint8_t a_data)
 {
     while (!SERCOM4->SPI.INTFLAG.bit.DRE)
         ;
@@ -513,7 +514,7 @@ uint8_t samr21TrxSpiTransceiveByteRaw(uint8_t a_data)
     return SERCOM4->SPI.DATA.bit.DATA;
 }
 
-void samr21TrxSpiSendByteRawIgnoreResponse(uint8_t a_data)
+void samr21Trx_spiSendByteRawIgnoreResponse(uint8_t a_data)
 {
     // Put data into the tranmitt buffer to start transmission
     SERCOM4->SPI.DATA.bit.DATA = a_data;
@@ -523,28 +524,28 @@ void samr21TrxSpiSendByteRawIgnoreResponse(uint8_t a_data)
         ;
 }
 
-void samr21TrxSpiTransceiveBytesRaw(uint8_t *a_inData_1D, uint8_t *a_outData_1D, uint8_t a_len)
+void samr21Trx_spiTransceiveBytesRaw(uint8_t *a_inData_1D, uint8_t *a_outData_1D, uint8_t a_len)
 {
     for (uint8_t i = 0; i < a_len; i++)
     {
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
-        samr21delaySysTick(SAMR21_NUM_CPU_WAIT_CYCLES_BETWEEN_SPI_BYTES);
+        samr21SysTick_delayTicks(SAMR21_NUM_CPU_WAIT_CYCLES_BETWEEN_SPI_BYTES);
 #endif
 
         if (!a_outData_1D)
         {
-            samr21TrxSpiSendByteRawIgnoreResponse(a_inData_1D[i]);
+            samr21Trx_spiSendByteRawIgnoreResponse(a_inData_1D[i]);
             continue;
         }
 
-        a_outData_1D[i] = samr21TrxSpiTransceiveByteRaw(a_inData_1D != NULL ? a_inData_1D[i] : SPI_DUMMY_BYTE);
+        a_outData_1D[i] = samr21Trx_spiTransceiveByteRaw(a_inData_1D != NULL ? a_inData_1D[i] : SPI_DUMMY_BYTE);
     }
 }
 
-uint8_t samr21TrxSpiReadByteRaw()
+uint8_t samr21Trx_spiReadByteRaw()
 {
-    return samr21TrxSpiTransceiveByteRaw(SPI_DUMMY_BYTE);
+    return samr21Trx_spiTransceiveByteRaw(SPI_DUMMY_BYTE);
 }
 
 /****************STATE CHANGES************************/
@@ -564,13 +565,13 @@ static const uint8_t sc_validIdleTrxStates[] =
         TRX_STATUS_SLEEP,
         TRX_STATUS_P_ON};
 
-static void samr21TrxChangeStateBlocking(uint8_t a_cmd, uint8_t *a_desiredStates, uint8_t a_numDesiredStates)
+static void samr21Trx_blockingStateChange(uint8_t a_cmd, const uint8_t *a_desiredStates, uint8_t a_numDesiredStates)
 {
-    samr21TrxWriteRegister(TRX_STATE_REG_ADDR, a_cmd);
+    samr21Trx_writeRegister(TRX_STATE_REG_ADDR, a_cmd);
 
     while (true)
     {
-        uint8_t currentState = samr21TrxReadRegister(TRX_STATUS_REG_ADDR);
+        uint8_t currentState = samr21Trx_readRegister(TRX_STATUS_REG_ADDR);
 
         for (uint8_t i = 0; i < a_numDesiredStates; i++)
         {
@@ -582,142 +583,142 @@ static void samr21TrxChangeStateBlocking(uint8_t a_cmd, uint8_t *a_desiredStates
     }
 }
 
-void samr21TrxQueueMoveToRx(bool a_blocking)
+void samr21Trx_queueMoveToRx(bool a_blocking)
 {
     if (!a_blocking)
     {
-        samr21TrxWriteRegister(TRX_STATE_REG_ADDR, TRX_CMD_RX_ON);
+        samr21Trx_writeRegister(TRX_STATE_REG_ADDR, TRX_CMD_RX_ON);
         return;
     }
 
-    samr21TrxChangeStateBlocking(TRX_CMD_RX_ON, sc_validRxTrxStates, sizeof(sc_validRxTrxStates));
+    samr21Trx_blockingStateChange(TRX_CMD_RX_ON, sc_validRxTrxStates, sizeof(sc_validRxTrxStates));
 }
 
-void samr21TrxQueueMoveToTx(bool a_blocking)
+void samr21Trx_queueMoveToTx(bool a_blocking)
 {
     if (!a_blocking)
     {
-        samr21TrxWriteRegister(TRX_STATE_REG_ADDR, TRX_CMD_PLL_ON);
+        samr21Trx_writeRegister(TRX_STATE_REG_ADDR, TRX_CMD_PLL_ON);
         return;
     }
 
-    samr21TrxChangeStateBlocking(TRX_CMD_PLL_ON, sc_validTxTrxStates, sizeof(sc_validTxTrxStates));
+    samr21Trx_blockingStateChange(TRX_CMD_PLL_ON, sc_validTxTrxStates, sizeof(sc_validTxTrxStates));
 }
 
-void samr21TrxForceMoveToTx(bool a_blocking)
+void samr21Trx_forceMoveToTx(bool a_blocking)
 {
     if (!a_blocking)
     {
-        samr21TrxWriteRegister(TRX_STATE_REG_ADDR, TRX_CMD_FORCE_PLL_ON);
+        samr21Trx_writeRegister(TRX_STATE_REG_ADDR, TRX_CMD_FORCE_PLL_ON);
         return;
     }
 
-    samr21TrxChangeStateBlocking(TRX_CMD_FORCE_PLL_ON, sc_validTxTrxStates, sizeof(sc_validTxTrxStates));
+    samr21Trx_blockingStateChange(TRX_CMD_FORCE_PLL_ON, sc_validTxTrxStates, sizeof(sc_validTxTrxStates));
 }
 
-void samr21TrxQueueMoveToIdle(bool a_blocking)
+void samr21Trx_queueMoveToIdle(bool a_blocking)
 {
     if (!a_blocking)
     {
-        samr21TrxWriteRegister(TRX_STATE_REG_ADDR, TRX_CMD_TRX_OFF);
+        samr21Trx_writeRegister(TRX_STATE_REG_ADDR, TRX_CMD_TRX_OFF);
         return;
     }
 
-    samr21TrxChangeStateBlocking(TRX_CMD_TRX_OFF, sc_validIdleTrxStates, sizeof(sc_validIdleTrxStates));
+    samr21Trx_blockingStateChange(TRX_CMD_TRX_OFF, sc_validIdleTrxStates, sizeof(sc_validIdleTrxStates));
 }
 
-void samr21TrxForceMoveToIdle(bool a_blocking)
+void samr21Trx_forceMoveToIdle(bool a_blocking)
 {
     if (!a_blocking)
     {
-        samr21TrxWriteRegister(TRX_STATE_REG_ADDR, TRX_CMD_FORCE_TRX_OFF);
+        samr21Trx_writeRegister(TRX_STATE_REG_ADDR, TRX_CMD_FORCE_TRX_OFF);
         return;
     }
 
-    samr21TrxChangeStateBlocking(TRX_CMD_FORCE_TRX_OFF, sc_validIdleTrxStates, sizeof(sc_validIdleTrxStates));
+    samr21Trx_blockingStateChange(TRX_CMD_FORCE_TRX_OFF, sc_validIdleTrxStates, sizeof(sc_validIdleTrxStates));
 }
 
-bool samr21TrxGetCcaResult()
+bool samr21Trx_getCcaResult()
 {
-    return s_ramCopyTrxRegister.trxStatus.bit.ccaStatus;
+    return s_localTrxRegisterCopy.trxStatus.bit.ccaStatus;
 }
 
 /*************************Channel Control*************************************/
-void samr21TrxSetChannel(uint8_t a_channel)
+void samr21Trx_setActiveChannel(uint8_t a_channel)
 {
 #ifdef _DEBUG
     assert(a_channel >= 0x0B && a_channel <= 0x1A);
 #endif
-    if (a_channel == s_ramCopyTrxRegister.phyCcCca.bit.channel)
+    if (a_channel == s_localTrxRegisterCopy.phyCcCca.bit.channel)
     {
         return;
     }
 
-    s_ramCopyTrxRegister.phyCcCca.bit.channel = a_channel;
+    s_localTrxRegisterCopy.phyCcCca.bit.channel = a_channel;
 
-    samr21TrxWriteRegister(PHY_CC_CCA_REG_ADDR, s_ramCopyTrxRegister.phyCcCca.reg);
+    samr21Trx_writeRegister(PHY_CC_CCA_REG_ADDR, s_localTrxRegisterCopy.phyCcCca.reg);
 }
 
-uint8_t samr21TrxGetChannel()
+uint8_t samr21Trx_getAktiveChannel()
 {
-    return s_ramCopyTrxRegister.phyCcCca.bit.channel;
+    return s_localTrxRegisterCopy.phyCcCca.bit.channel;
 }
 
-void samr21TrxStartCca()
+void samr21Trx_startCca()
 {
     // Prepare CCA
-    s_ramCopyTrxRegister.phyCcCca.bit.ccaRequest = 1;
+    s_localTrxRegisterCopy.phyCcCca.bit.ccaRequest = 1;
 
     // Start CCA
-    samr21TrxWriteRegister(PHY_CC_CCA_REG_ADDR, s_ramCopyTrxRegister.phyCcCca.reg);
+    samr21Trx_writeRegister(PHY_CC_CCA_REG_ADDR, s_localTrxRegisterCopy.phyCcCca.reg);
 
     // Reset local copy of ccaRequest Bit
-    s_ramCopyTrxRegister.phyCcCca.bit.ccaRequest = 0;
+    s_localTrxRegisterCopy.phyCcCca.bit.ccaRequest = 0;
 }
 
-void samr21TrxStartEd()
+void samr21Trx_startEd()
 {
     // Start ED by writing any value to PHY_ED_LEVEL_REG_ADDR
     // See samr21 datasheet: 37.5 Energy Detection (ED)
-    samr21TrxWriteRegister(PHY_ED_LEVEL_REG_ADDR, 0xE7);
+    samr21Trx_writeRegister(PHY_ED_LEVEL_REG_ADDR, 0xE7);
 }
 
-int8_t samr21TrxGetLastRssiValue()
+int8_t samr21Trx_getLastRssiValue()
 {
 
     if (
-        s_ramCopyTrxRegister.trxStatus.bit.trxStatus != TRX_STATUS_RX_ON && s_ramCopyTrxRegister.trxStatus.bit.trxStatus != TRX_STATUS_RX_ON)
+        s_localTrxRegisterCopy.trxStatus.bit.trxStatus != TRX_STATUS_RX_ON && s_localTrxRegisterCopy.trxStatus.bit.trxStatus != TRX_STATUS_RX_ON)
     {
         return INT8_MAX;
     }
 
-    return AT86RF233_RSSI_BASE_VAL_dBm + (int8_t)samr21TrxReadRegister(PHY_ED_LEVEL_REG_ADDR);
+    return AT86RF233_RSSI_BASE_VAL_dBm + (int8_t)samr21Trx_readRegister(PHY_ED_LEVEL_REG_ADDR);
 }
 
 /*************************CCA Control*************************************/
 
-void samr21RadioCtrlSetCCAMode(uint8_t a_newCcaMode)
+void samr21Trx_setCcaMode(uint8_t a_newCcaMode)
 {
-    s_ramCopyTrxRegister.phyCcCca.bit.ccaMode = a_newCcaMode;
-    samr21TrxWriteRegister(PHY_CC_CCA_REG_ADDR, s_ramCopyTrxRegister.phyCcCca.reg);
+    s_localTrxRegisterCopy.phyCcCca.bit.ccaMode = a_newCcaMode;
+    samr21Trx_writeRegister(PHY_CC_CCA_REG_ADDR, s_localTrxRegisterCopy.phyCcCca.reg);
 }
 
-uint8_t samr21RadioCtrlGetCCAMode()
+uint8_t samr21Radio_getCCAMode()
 {
-    return s_ramCopyTrxRegister.phyCcCca.bit.ccaMode;
+    return s_localTrxRegisterCopy.phyCcCca.bit.ccaMode;
 }
 
-void samr21RadioCtrlSetCcaThreshold(int8_t a_threshold)
+void samr21Trx_setCcaThreshold(int8_t a_threshold)
 {
     int8_t diff = (AT86RF233_RSSI_BASE_VAL_dBm - a_threshold);
-    s_ramCopyTrxRegister.ccaThres.bit.ccaEdThres = abs(diff) >> 1; // Devide by 2
+    s_localTrxRegisterCopy.ccaThres.bit.ccaEdThres = abs(diff) >> 1; // Devide by 2
 
-    samr21TrxWriteRegister(CCA_THRES_REG_ADDR, s_ramCopyTrxRegister.ccaThres.reg);
+    samr21Trx_writeRegister(CCA_THRES_REG_ADDR, s_localTrxRegisterCopy.ccaThres.reg);
 }
 
-int8_t samr21RadioCtrlGetCcaThreshold()
+int8_t samr21Trx_getCcaThreshold()
 {
-    return (AT86RF233_RSSI_BASE_VAL_dBm + (s_ramCopyTrxRegister.ccaThres.bit.ccaEdThres << 1)); // Multiply by 2
+    return (AT86RF233_RSSI_BASE_VAL_dBm + (s_localTrxRegisterCopy.ccaThres.bit.ccaEdThres << 1)); // Multiply by 2
 }
 
 /*************************Tx Power Control*************************************/
@@ -729,65 +730,33 @@ static const float sc_txPowerTable_dBm_1D[SIZE_AT86RF233_TX_POWER_TABLE] = {11.9
 static const float sc_txPowerTable_dBm_1D[SIZE_AT86RF233_TX_POWER_TABLE] = {4, 3.7, 3.4, 3, 2.5, 2, 1, 0, -1, -2, -3, -4, -6, -8, -12, -17};
 #endif
 
-void samr21TrxSetTxPower(int8_t a_power_dbm)
+void samr21Trx_setTxPower(int8_t a_power_dbm)
 {
     for (uint8_t i = 0; i < SIZE_AT86RF233_TX_POWER_TABLE; i++)
     {
         if (
             (sc_txPowerTable_dBm_1D[i] >= a_power_dbm) && (sc_txPowerTable_dBm_1D[i + 1] <= a_power_dbm))
         {
-            s_ramCopyTrxRegister.phyTxPwr.bit.txPwr = i;
+            s_localTrxRegisterCopy.phyTxPwr.bit.txPwr = i;
             goto exit;
         }
     }
 
     // Default
-    s_ramCopyTrxRegister.phyTxPwr.bit.txPwr = 0x7;
+    s_localTrxRegisterCopy.phyTxPwr.bit.txPwr = 0x7;
 
 exit:
-    samr21TrxWriteRegister(PHY_TX_PWR_REG_ADDR, s_ramCopyTrxRegister.phyTxPwr.reg);
+    samr21Trx_writeRegister(PHY_TX_PWR_REG_ADDR, s_localTrxRegisterCopy.phyTxPwr.reg);
 }
 
-int8_t samr21TrxGetTxPower()
+int8_t samr21Trx_getTxPower()
 {
-    return sc_txPowerTable_dBm_1D[s_ramCopyTrxRegister.phyTxPwr.bit.txPwr];
+    return sc_txPowerTable_dBm_1D[s_localTrxRegisterCopy.phyTxPwr.bit.txPwr];
 }
 
 /***************Timer-Handler for Trx-Operational Timing***************************/
 static volatile bool *s_timeoutFlag = NULL;
-static volatile void (*s_currentTimerHandler_fktPtr)(void) = NULL;
-
-static void samr21TrxTimeoutTriggered()
-{
-    *s_timeoutFlag = true;
-    s_currentTimerHandler_fktPtr = NULL;
-}
-
-static void samr21TrxStartTimeoutTimer(uint16_t a_duration_us, bool *a_triggerFlag)
-{
-    s_timeoutFlag = a_triggerFlag;
-    s_currentTimerHandler_fktPtr = &samr21TrxTimeoutTriggered;
-    samr21Timer5Oneshot(a_duration_us);
-}
-
-static void samr21TrxStopTimeoutTimer()
-{
-    samr21Timer5Stop();
-    s_timeoutFlag = NULL;
-    s_currentTimerHandler_fktPtr = NULL;
-}
-
-static void samr21TrxQueueDelayedAction(uint16_t a_delay_us, void (*a_queuedAction_fktPtr)(void))
-{
-    s_currentTimerHandler_fktPtr = a_queuedAction_fktPtr;
-    samr21Timer5Oneshot(a_delay_us);
-}
-
-static void samr21TrxRemoveQueuedAction()
-{
-    s_currentTimerHandler_fktPtr = NULL;
-    samr21Timer5Stop();
-}
+static void (*s_currentTimerHandler_fktPtr)(void) = NULL;
 
 // NVIC IRQ-Handler Function for Timer5 (TC5). Fkt-Addr is found in NVIC-IRQ-Vector-Table
 void TC5_Handler()
@@ -802,48 +771,81 @@ void TC5_Handler()
     }
 }
 
+static void trx_timeoutHandler()
+{
+    *s_timeoutFlag = true;
+    s_currentTimerHandler_fktPtr = NULL;
+}
+
+static void trx_startTimeoutTimer(uint16_t a_duration_us, volatile bool *a_triggerFlag)
+{
+    s_timeoutFlag = a_triggerFlag;
+    s_currentTimerHandler_fktPtr = &trx_timeoutHandler;
+    samr21Timer5_startOneshot(a_duration_us);
+}
+
+static void trx_stopTimeoutTimer()
+{
+    samr21Timer5_stop();
+    s_timeoutFlag = NULL;
+    s_currentTimerHandler_fktPtr = NULL;
+}
+
+static void trx_queueDelayedAction(uint16_t a_delay_us, void (*a_queuedAction_fktPtr)(void))
+{
+    s_currentTimerHandler_fktPtr = a_queuedAction_fktPtr;
+    samr21Timer5_startOneshot(a_delay_us);
+}
+
+static void trx_removeQueuedAction()
+{
+    s_currentTimerHandler_fktPtr = NULL;
+    samr21Timer5_stop();
+}
+
+
 /***************True Random Engine***************************/
-uint8_t samr21TrxGetRandomCrumb()
+uint8_t samr21Trx_getRandomCrumb()
 {
-    return (samr21TrxReadRegister(PHY_RSSI_REG_ADDR) >> 5) & 0b00000011;
+    return (samr21Trx_readRegister(PHY_RSSI_REG_ADDR) >> 5) & 0b00000011;
 }
-uint8_t samr21TrxGetRandomNibble()
+uint8_t samr21Trx_getRandomNibble()
 {
-    return ((samr21TrxReadRegister(PHY_RSSI_REG_ADDR) >> 5) & 0b00000011) | ((samr21TrxReadRegister(PHY_RSSI_REG_ADDR) >> 3) & 0b00001100);
+    return ((samr21Trx_readRegister(PHY_RSSI_REG_ADDR) >> 5) & 0b00000011) | ((samr21Trx_readRegister(PHY_RSSI_REG_ADDR) >> 3) & 0b00001100);
 }
-uint8_t samr21TrxGetRandomByte()
+uint8_t samr21Trx_getRandomByte()
 {
-    uint8_t rVal = (samr21TrxReadRegister(PHY_RSSI_REG_ADDR) & 0x60) >> 5;
-    rVal |= (samr21TrxReadRegister(PHY_RSSI_REG_ADDR) & 0x60) >> 3;
-    rVal |= (samr21TrxReadRegister(PHY_RSSI_REG_ADDR) & 0x60) >> 1;
-    rVal |= (samr21TrxReadRegister(PHY_RSSI_REG_ADDR) & 0x60) << 1;
+    uint8_t rVal = (samr21Trx_readRegister(PHY_RSSI_REG_ADDR) & 0x60) >> 5;
+    rVal |= (samr21Trx_readRegister(PHY_RSSI_REG_ADDR) & 0x60) >> 3;
+    rVal |= (samr21Trx_readRegister(PHY_RSSI_REG_ADDR) & 0x60) >> 1;
+    rVal |= (samr21Trx_readRegister(PHY_RSSI_REG_ADDR) & 0x60) << 1;
     return rVal;
 }
 
 
 /****************FRAMEBUFFER READ ACCESS************************/
-bool samr21TrxLiveFramebufferDownload(uint8_t *a_data_1D, uint8_t a_len)
+bool samr21Trx_realtimeFramebufferDownload(uint8_t *a_data_p, uint8_t a_len)
 {
 
 #ifdef _DEBUG
     assert(a_len <= IEEE_802_15_4_FRAME_SIZE);
-    assert(a_data_1D);
+    assert(a_data_p);
 #endif
 
     uint8_t numDownloadedBytes = 0;
 
     // Set a Timeout
     volatile bool abortActionFlag = false;
-    samr21TrxStartTimeoutTimer((((uint16_t)(a_len)*2) * IEEE_15_4_24GHZ_TIME_PER_OCTET_us), &abortActionFlag);
+    trx_startTimeoutTimer((((uint16_t)(a_len)*2) * IEEE_15_4_24GHZ_TIME_PER_OCTET_us), &abortActionFlag);
 
-    samr21TrxSpiStartAccess(AT86RF233_CMD_FRAMEBUFFER_READ, NULL);
+    samr21TrxSpiStartAccess(AT86RF233_CMD_FRAMEBUFFER_READ, 0);
 
-    a_data_1D[numDownloadedBytes++] = samr21TrxSpiReadByteRaw();
+    a_data_p[numDownloadedBytes++] = samr21Trx_spiReadByteRaw();
 
     while (numDownloadedBytes < a_len)
     {
         //(see r21 datasheet, 40.7 Frame Buffer Empty Indicator)
-        samr21delaySysTick(SAMR21_NUM_CPU_WAIT_CYCLES_FOR_FRAME_BUFFER_EMPTY_FLAG);
+        samr21SysTick_delayTicks(SAMR21_NUM_CPU_WAIT_CYCLES_FOR_FRAME_BUFFER_EMPTY_FLAG);
         while ((PORT->Group[1].IN.reg & PORT_PB00) && !abortActionFlag)
             ;
 
@@ -853,21 +855,21 @@ bool samr21TrxLiveFramebufferDownload(uint8_t *a_data_1D, uint8_t a_len)
             goto exit;
         }
 
-        a_data_1D[numDownloadedBytes++] = samr21TrxSpiReadByteRaw();
+        a_data_p[numDownloadedBytes++] = samr21Trx_spiReadByteRaw();
     }
-    samr21TrxStopTimeoutTimer();
+    trx_stopTimeoutTimer();
 
 exit:
-    samr21TrxSpiCloseAccess();
+    samr21Trx_spiCloseAccess();
     return !abortActionFlag;
 }
 
-bool samr21TrxDownloadFramebuffer(uint8_t *a_psduLen, uint8_t *a_psdu_1D, uint8_t *a_LQI_p, int8_t *a_RSSI_p, bool a_live)
+bool samr21Trx_downloadReceivedFramebuffer(uint8_t *a_psduLen, uint8_t *a_psdu_p, uint8_t *a_LQI_p, int8_t *a_RSSI_p, bool a_live)
 {
 
 #ifdef _DEBUG
     assert(a_psduLen);
-    assert(a_psdu_1D);
+    assert(a_psdu_p);
     assert(a_LQI);
     assert(a_RSSI);
 #endif
@@ -875,10 +877,10 @@ bool samr21TrxDownloadFramebuffer(uint8_t *a_psduLen, uint8_t *a_psdu_1D, uint8_
     uint8_t numDownloadedBytes = 0;
     bool validFrame = true;
 
-    samr21TrxSpiStartAccess(AT86RF233_CMD_FRAMEBUFFER_READ, NULL);
+    samr21TrxSpiStartAccess(AT86RF233_CMD_FRAMEBUFFER_READ, 0);
 
     // First Byte Downloaded is the psduLen
-    *a_psduLen = samr21TrxSpiReadByteRaw();
+    *a_psduLen = samr21Trx_spiReadByteRaw();
 
     // Check if the Framelenght is within limits outlined by 802.15.4
     if (*a_psduLen > IEEE_15_4_PDSU_SIZE)
@@ -889,12 +891,12 @@ bool samr21TrxDownloadFramebuffer(uint8_t *a_psduLen, uint8_t *a_psdu_1D, uint8_
 
     // Set a Timeout
     volatile bool abortActionFlag = false;
-    samr21TrxStartTimeoutTimer((IEEE_15_4_FRAME_SIZE * IEEE_15_4_24GHZ_TIME_PER_OCTET_us), &abortActionFlag); // Shift for cheap multiply x2
+    trx_startTimeoutTimer((IEEE_15_4_FRAME_SIZE * IEEE_15_4_24GHZ_TIME_PER_OCTET_us), &abortActionFlag); // Shift for cheap multiply x2
 
     while (numDownloadedBytes < *a_psduLen)
     {
         //(see r21 datasheet, 40.7 Frame Buffer Empty Indicator)
-        samr21delaySysTick(SAMR21_NUM_CPU_WAIT_CYCLES_FOR_FRAME_BUFFER_EMPTY_FLAG);
+        samr21SysTick_delayTicks(SAMR21_NUM_CPU_WAIT_CYCLES_FOR_FRAME_BUFFER_EMPTY_FLAG);
 
         if (a_live)
         {
@@ -908,35 +910,35 @@ bool samr21TrxDownloadFramebuffer(uint8_t *a_psduLen, uint8_t *a_psdu_1D, uint8_
             goto exit;
         }
 
-        a_psdu_1D[(numDownloadedBytes++)] = samr21TrxSpiReadByteRaw();
+        a_psdu_p[(numDownloadedBytes++)] = samr21Trx_spiReadByteRaw();
     }
-    samr21TrxStopTimeoutTimer();
+    trx_stopTimeoutTimer();
 
     // Download LQI, RSSI and CRC Check (r21 Datasheet 35.3.2 -  Frame Buffer Access Mode)
-    *a_LQI_p = samr21TrxSpiReadByteRaw();
-    *a_RSSI_p = AT86RF233_RSSI_BASE_VAL_dBm + samr21TrxSpiReadByteRaw();
+    *a_LQI_p = samr21Trx_spiReadByteRaw();
+    *a_RSSI_p = AT86RF233_RSSI_BASE_VAL_dBm + samr21Trx_spiReadByteRaw();
 
     // Check if CRC is correct (samr21 Datasheet 35.3.2 Frame Buffer Access Mode - Structure of RX_STATUS)
-    validFrame &= samr21TrxSpiReadByteRaw() >> 7;
+    validFrame &= samr21Trx_spiReadByteRaw() >> 7;
 
 exit:
-    samr21TrxSpiCloseAccess();
+    samr21Trx_spiCloseAccess();
     return validFrame;
 }
 
 /****************FRAMEBUFFER WRITE ACCESS************************/
-void samr21TrxUploadToFramebuffer(uint8_t *a_data_1D, uint8_t a_len, uint8_t a_pos)
+void samr21TrxUploadToFramebuffer(uint8_t *a_data_p, uint8_t a_len, uint8_t a_pos)
 {
 
 #ifdef _DEBUG
     assert(a_len <= IEEE_802_15_4_FRAME_SIZE);
     assert((a_pos + a_len) <= IEEE_802_15_4_FRAME_SIZE);
-    assert(a_data_1D);
+    assert(a_data_p);
 #endif
 
     samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, a_pos);
-    samr21TrxSpiTransceiveBytesRaw(a_data_1D, NULL, a_len); // phyLen not in psduLen
-    samr21TrxSpiCloseAccess();
+    samr21Trx_spiTransceiveBytesRaw(a_data_p, NULL, a_len); // phyLen not in psduLen
+    samr21Trx_spiCloseAccess();
 }
 
 
@@ -950,8 +952,8 @@ void DMAC_Handler()
         | DMAC_INTPEND_TCMPL
     ;
 
-    samr21Timer3Stop();
-    samr21TrxSpiCloseAccess();
+    samr21Timer3_Stop();
+    samr21Trx_spiCloseAccess();
 
     //Mark DMAC Descriptor as invalid
     s_trxVars.txDmacDescriptor.BTCTRL.bit.VALID = 0;
@@ -960,23 +962,23 @@ void DMAC_Handler()
 }
 
 
-void samr21TrxStartJustInTimeUploadToFramebuffer(uint8_t *a_data_1D, uint8_t a_len, uint8_t a_pos)
+void samr21Trx_startJustInTimeUploadToFramebuffer(uint8_t *a_data_p, uint8_t a_len, uint8_t a_pos)
 {
 #ifdef _DEBUG
     assert(a_len <= IEEE_802_15_4_FRAME_SIZE);
     assert((a_pos + a_len) <= IEEE_802_15_4_FRAME_SIZE);
-    assert(a_data_1D);
+    assert(a_data_p);
 #endif
 
     while (s_trxVars.dmaActive)
         ;
 
     // s_trxVars.txDmacDescriptor.BTCNT.bit.BTCNT = a_len;
-    // s_trxVars.txDmacDescriptor.SRCADDR.bit.SRCADDR = a_data_1D;
+    // s_trxVars.txDmacDescriptor.SRCADDR.bit.SRCADDR = a_data_p;
     // s_trxVars.txDmacDescriptor.BTCTRL.bit.VALID = 1;
 
     s_trxVars.txDmacDescriptor.BTCNT.bit.BTCNT = a_len;
-    s_trxVars.txDmacDescriptor.SRCADDR.bit.SRCADDR = a_data_1D + a_len;
+    s_trxVars.txDmacDescriptor.SRCADDR.bit.SRCADDR = (uint32_t)a_data_p + a_len;
     s_trxVars.txDmacDescriptor.BTCTRL.bit.VALID = 1;
     
 
@@ -985,7 +987,7 @@ void samr21TrxStartJustInTimeUploadToFramebuffer(uint8_t *a_data_1D, uint8_t a_l
     s_trxVars.dmaActive = true;
     samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, a_pos);
 
-    samr21Timer3SetContinuousPeriod(IEEE_15_4_24GHZ_TIME_PER_OCTET_us - 5); //Some adjustment
+    samr21Timer3_setContinuousPeriod(IEEE_15_4_24GHZ_TIME_PER_OCTET_us - 5); //Some adjustment
 
     int temp;
 }
@@ -996,7 +998,7 @@ void samr21TrxStartJustInTimeUploadToFramebuffer(uint8_t *a_data_1D, uint8_t a_l
 // External IRQs form TRX
 static void (*s_currentIsrHandler_fktPtr[NUM_TRX_IRQS])(void) = {NULL};
 
-void samr21TrxSetIrqHandler(uint8_t a_irqType, void (*a_handler_fktPtr)(void))
+void samr21Trx_setInterruptHandler(uint8_t a_irqType, void (*a_handler_fktPtr)(void))
 {
 
 #ifdef _DEBUG
@@ -1006,7 +1008,7 @@ void samr21TrxSetIrqHandler(uint8_t a_irqType, void (*a_handler_fktPtr)(void))
     s_currentIsrHandler_fktPtr[a_irqType] = a_handler_fktPtr;
 }
 
-void samr21TrxRemoveAllHandler()
+void samr21Trx_removeAllInterruptHandler()
 {
     for (uint8_t i = 0; i < NUM_TRX_IRQS; i++)
     {
@@ -1014,14 +1016,14 @@ void samr21TrxRemoveAllHandler()
     }
 }
 
-void samr21TrxDisableAllIrq()
+void samr21Trx_disableAllInterrupts()
 {
-    s_ramCopyTrxRegister.irqMask.reg = 0x00;
+    s_localTrxRegisterCopy.irqMask.reg = 0x00;
 
-    samr21TrxWriteRegister(IRQ_MASK_REG_ADDR, s_ramCopyTrxRegister.irqMask.reg);
+    samr21Trx_writeRegister(IRQ_MASK_REG_ADDR, s_localTrxRegisterCopy.irqMask.reg);
 }
 
-void samr21TrxEnableIrq(uint8_t a_irqType)
+void samr21Trx_enableInterrupt(uint8_t a_irqType)
 {
 
 #ifdef _DEBUG
@@ -1030,18 +1032,18 @@ void samr21TrxEnableIrq(uint8_t a_irqType)
 
     uint8_t shiftedIrqEnableBit = 1 << a_irqType;
 
-    if (shiftedIrqEnableBit & s_ramCopyTrxRegister.irqMask.reg)
+    if (shiftedIrqEnableBit & s_localTrxRegisterCopy.irqMask.reg)
     {
         // Already enabled
         return;
     }
 
-    s_ramCopyTrxRegister.irqMask.reg |= shiftedIrqEnableBit;
+    s_localTrxRegisterCopy.irqMask.reg |= shiftedIrqEnableBit;
 
-    samr21TrxWriteRegister(IRQ_MASK_REG_ADDR, s_ramCopyTrxRegister.irqMask.reg);
+    samr21Trx_writeRegister(IRQ_MASK_REG_ADDR, s_localTrxRegisterCopy.irqMask.reg);
 }
 
-void samr21TrxDisableIrq(uint8_t a_irqType)
+void samr21Trx_disableInterrupt(uint8_t a_irqType)
 {
 
 #ifdef _DEBUG
@@ -1050,15 +1052,15 @@ void samr21TrxDisableIrq(uint8_t a_irqType)
 
     uint8_t shiftedIrqDisableBit = 1 << a_irqType;
 
-    if (shiftedIrqDisableBit & ~s_ramCopyTrxRegister.irqMask.reg)
+    if (shiftedIrqDisableBit & ~s_localTrxRegisterCopy.irqMask.reg)
     {
         // Already disabled
         return;
     }
 
-    s_ramCopyTrxRegister.irqMask.reg &= ~shiftedIrqDisableBit;
+    s_localTrxRegisterCopy.irqMask.reg &= ~shiftedIrqDisableBit;
 
-    samr21TrxWriteRegister(IRQ_MASK_REG_ADDR, s_ramCopyTrxRegister.irqMask.reg);
+    samr21Trx_writeRegister(IRQ_MASK_REG_ADDR, s_localTrxRegisterCopy.irqMask.reg);
 }
 
 void EIC_Handler()
@@ -1066,44 +1068,44 @@ void EIC_Handler()
     // Clear IRQ
     EIC->INTFLAG.bit.EXTINT0 = 1;
 
-    s_ramCopyTrxRegister.irqStatus.reg = samr21TrxReadRegister(IRQ_STATUS_REG_ADDR);
+    s_localTrxRegisterCopy.irqStatus.reg = samr21Trx_readRegister(IRQ_STATUS_REG_ADDR);
 
-    if (s_ramCopyTrxRegister.irqStatus.bit.rxStart && (s_currentIsrHandler_fktPtr[TRX_IRQ_RX_START] != NULL))
+    if (s_localTrxRegisterCopy.irqStatus.bit.rxStart && (s_currentIsrHandler_fktPtr[TRX_IRQ_RX_START] != NULL))
     {
         (*s_currentIsrHandler_fktPtr[TRX_IRQ_RX_START])();
     }
 
-    if (s_ramCopyTrxRegister.irqStatus.bit.trxEnd && (s_currentIsrHandler_fktPtr[TRX_IRQ_TRX_END] != NULL))
+    if (s_localTrxRegisterCopy.irqStatus.bit.trxEnd && (s_currentIsrHandler_fktPtr[TRX_IRQ_TRX_END] != NULL))
     {
         (*s_currentIsrHandler_fktPtr[TRX_IRQ_TRX_END])();
     }
 
-    if (s_ramCopyTrxRegister.irqStatus.bit.pllLock && (s_currentIsrHandler_fktPtr[TRX_IRQ_PLL_LOCK] != NULL))
+    if (s_localTrxRegisterCopy.irqStatus.bit.pllLock && (s_currentIsrHandler_fktPtr[TRX_IRQ_PLL_LOCK] != NULL))
     {
         (*s_currentIsrHandler_fktPtr[TRX_IRQ_TRX_END])();
     }
 
-    if (s_ramCopyTrxRegister.irqStatus.bit.pllUnlock && (s_currentIsrHandler_fktPtr[TRX_IRQ_PLL_UNLOCK] != NULL))
+    if (s_localTrxRegisterCopy.irqStatus.bit.pllUnlock && (s_currentIsrHandler_fktPtr[TRX_IRQ_PLL_UNLOCK] != NULL))
     {
         (*s_currentIsrHandler_fktPtr[TRX_IRQ_PLL_UNLOCK])();
     }
 
-    if (s_ramCopyTrxRegister.irqStatus.bit.ccaEdDone && (s_currentIsrHandler_fktPtr[TRX_IRQ_CCA_ED_DONE] != NULL))
+    if (s_localTrxRegisterCopy.irqStatus.bit.ccaEdDone && (s_currentIsrHandler_fktPtr[TRX_IRQ_CCA_ED_DONE] != NULL))
     {
         (*s_currentIsrHandler_fktPtr[TRX_IRQ_CCA_ED_DONE])();
     }
 
-    if (s_ramCopyTrxRegister.irqStatus.bit.addressMatch && (s_currentIsrHandler_fktPtr[TRX_IRQ_AMI] != NULL))
+    if (s_localTrxRegisterCopy.irqStatus.bit.addressMatch && (s_currentIsrHandler_fktPtr[TRX_IRQ_AMI] != NULL))
     {
         (*s_currentIsrHandler_fktPtr[TRX_IRQ_AMI])();
     }
 
-    if (s_ramCopyTrxRegister.irqStatus.bit.bufferUnderRun && (s_currentIsrHandler_fktPtr[TRX_IRQ_TRX_UR] != NULL))
+    if (s_localTrxRegisterCopy.irqStatus.bit.bufferUnderRun && (s_currentIsrHandler_fktPtr[TRX_IRQ_TRX_UR] != NULL))
     {
         (*s_currentIsrHandler_fktPtr[TRX_IRQ_TRX_UR])();
     }
 
-    if (s_ramCopyTrxRegister.irqStatus.bit.batteryLow && (s_currentIsrHandler_fktPtr[TRX_IRQ_BAT_LOW] != NULL))
+    if (s_localTrxRegisterCopy.irqStatus.bit.batteryLow && (s_currentIsrHandler_fktPtr[TRX_IRQ_BAT_LOW] != NULL))
     {
         (*s_currentIsrHandler_fktPtr[TRX_IRQ_BAT_LOW])();
     }

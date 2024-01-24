@@ -7,9 +7,11 @@
  * the LICENSE.txt file.
  *
  */
-#include "samr21RadioFeCtrl.h"
+#include "samr21FeCtrl.h"
 
-void samr21FeCtrlInit(){
+
+//Conbee II uses an active Frontend
+void samr21FeCtrl_enable(){
     
     PM->APBCMASK.bit.RFCTRL_ = 1;
 

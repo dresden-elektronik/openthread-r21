@@ -11,7 +11,7 @@
 
 extern uint32_t g_currentRtcClkCycle_ns;
 
-void samr21RtcInit(){
+void samr21Rtc_init(){
 
     //Use GCLKGEN 3 (1MHz) for RTC 
     GCLK->CLKCTRL.reg =
@@ -50,7 +50,7 @@ void samr21RtcInit(){
     ;
 }
 
-void samr21RtcDeinit(){
+void samr21Rtc_deinit(){
     //Disable IRQ
     NVIC_DisableIRQ(RTC_IRQn);
 
@@ -67,25 +67,25 @@ void samr21RtcDeinit(){
     }
 }
 
-uint32_t samr21RtcGetTimestamp(){
+uint32_t samr21Rtc_getTimestamp(){
     return RTC->MODE0.COUNT.reg;
 }
 
-void samr21RtcSetAbsoluteAlarm(uint32_t a_alarmTimestamp){
+void samr21Rtc_setAbsoluteAlarm(uint32_t a_alarmTimestamp){
     RTC->MODE0.COMP[0].reg = a_alarmTimestamp;
     RTC->MODE0.INTFLAG.bit.CMP0 = 1;
     RTC->MODE0.INTENSET.bit.CMP0 = 1;
     NVIC_EnableIRQ(RTC_IRQn);
 }
 
-void samr21RtcSetRelativeAlarm(uint32_t a_duration){
-    RTC->MODE0.COMP[0].reg = samr21RtcGetTimestamp() + a_duration;
+void samr21Rtc_setRelativeAlarm(uint32_t a_duration){
+    RTC->MODE0.COMP[0].reg = samr21Rtc_getTimestamp() + a_duration;
     RTC->MODE0.INTFLAG.bit.CMP0 = 1;
     RTC->MODE0.INTENSET.bit.CMP0 = 1;
     NVIC_EnableIRQ(RTC_IRQn);
 }
 
-void samr21RtcStopAlarm(){
+void samr21Rtc_disableAlarm(){
     NVIC_DisableIRQ(RTC_IRQn);
     RTC->MODE0.INTFLAG.bit.CMP0 = 1;
     RTC->MODE0.INTENCLR.bit.CMP0 = 1;

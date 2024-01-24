@@ -48,7 +48,7 @@ void otPlatFlashErase(otInstance *a_instance, uint8_t a_swapIndex){
 
     for (uint8_t i = 0; i < (SAMR21_OT_NVM_ROWS / 2); i++)
     {
-        samr21NvmEraseRow( swapBaseAddress + (SAMR21_NVM_SIZE_ROW * i));
+        samr21Nvm_eraseRowAt( swapBaseAddress + (SAMR21_NVM_SIZE_ROW * i));
     }
 }
 
@@ -65,7 +65,7 @@ void otPlatFlashRead(otInstance *a_instance, uint8_t a_swapIndex, uint32_t a_off
         swapBaseAddress += SAMR21_OT_SWAP_SIZE;
     }
 
-    samr21NvmRead(swapBaseAddress+a_offset, a_data_p, a_size);
+    samr21Nvm_readAt(swapBaseAddress+a_offset, a_data_p, a_size);
 }
 
 void otPlatFlashWrite(otInstance *a_instance, uint8_t a_swapIndex, uint32_t a_offset, const void *a_data_p, uint32_t a_size){
@@ -84,18 +84,18 @@ void otPlatFlashWrite(otInstance *a_instance, uint8_t a_swapIndex, uint32_t a_of
     uint32_t rowOffset = a_offset % (SAMR21_NVM_SIZE_PAGE * SAMR21_NVM_PAGES_PER_ROW);
 
     if( SAMR21_NVM_SIZE_ROW - rowOffset >= a_size){
-        samr21NvmWriteWithinRow(swapBaseAddress + a_offset, a_data_p, a_size);
+        samr21Nvm_writeWithinRow(swapBaseAddress + a_offset, a_data_p, a_size);
         return;
     }
 
-    samr21NvmWriteWithinRow(swapBaseAddress + a_offset, a_data_p, SAMR21_NVM_SIZE_ROW - rowOffset);
+    samr21Nvm_writeWithinRow(swapBaseAddress + a_offset, a_data_p, SAMR21_NVM_SIZE_ROW - rowOffset);
 
     uint32_t bytesWritten = SAMR21_NVM_SIZE_ROW - rowOffset;
 
     while ( bytesWritten < a_size)
     {
         uint16_t sizeNextWriteBlock = (a_size - bytesWritten > SAMR21_NVM_SIZE_ROW ? SAMR21_NVM_SIZE_ROW : a_size - bytesWritten);
-        samr21NvmWriteWithinRow(
+        samr21Nvm_writeWithinRow(
             swapBaseAddress + a_offset + bytesWritten, 
             a_data_p + bytesWritten,
             sizeNextWriteBlock

@@ -18,12 +18,12 @@
 /**
  * Inits the SERCOM2 and corrsponding Pins of the SAMR21 as a UART Debug Output
  */
-void samr21UartInit();
+void samr21Uart_init();
 
 /**
  * Deinits the SERCOM2 of the SAMR21
  */
-void samr21UartDeinit();
+void samr21Uart_deinit();
 
 
 /**
@@ -31,7 +31,7 @@ void samr21UartDeinit();
  * 
  * @param[in] data Character to be vie Debug UART
  */
-void samr21UartSend(uint8_t data);
+void samr21Uart_send(uint8_t data);
 
 
 #endif //_SAMR21_UART_H_

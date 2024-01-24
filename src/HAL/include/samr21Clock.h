@@ -12,7 +12,7 @@
 #define _SAMR21_CLOCK_H_
 
 #include "samr21.h"
-#include "samr21NopDelay.h"
+#include "samr21SysTick.h"
 #include "samr21Rtc.h"
 #include "samr21Timer.h"
 #include "samr21Usb.h"
