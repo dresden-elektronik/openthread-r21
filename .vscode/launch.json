@@ -7,7 +7,7 @@
         {
             "name": "RCP Debug",
             "cwd": "${workspaceFolder}",
-            "executable": "${workspaceFolder}/out/build/bin/ot-rcp",
+            "executable": "${workspaceFolder}/out/rcpDebug/bin/ot-rcp",
             "request": "launch",
             "type": "cortex-debug",
             "servertype": "openocd",
@@ -15,38 +15,12 @@
             "gdbTarget": "localhost:3333",
             "gdbPath" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-gdb",
             "toolchainPrefix" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-",
-            "preLaunchTask": "buid All"
+            "preLaunchTask": "build RCP Debug"
         },
         {
-            "name": "CLI MTD Debug",
+            "name": "RCP Debug Attach",
             "cwd": "${workspaceFolder}",
-            "executable": "${workspaceFolder}/out/build/bin/ot-cli-mtd",
-            "request": "launch",
-            "type": "cortex-debug",
-            "servertype": "openocd",
-            "configFiles": [ "${workspaceFolder}/test/OpenOCD_config/ATMEL-ICE-OpenOCD-samr21e18a.cfg" ],
-            "gdbTarget": "localhost:3333",
-            "gdbPath" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-gdb",
-            "toolchainPrefix" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-",
-            "preLaunchTask": "buid All"
-        },
-        {
-            "name": "CLI FTD Debug",
-            "cwd": "${workspaceFolder}",
-            "executable": "${workspaceFolder}/out/build/bin/ot-cli-ftd",
-            "request": "launch",
-            "type": "cortex-debug",
-            "servertype": "openocd",
-            "configFiles": [ "${workspaceFolder}/test/OpenOCD_config/ATMEL-ICE-OpenOCD-samr21e18a.cfg" ],
-            "gdbTarget": "localhost:3333",
-            "gdbPath" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-gdb",
-            "toolchainPrefix" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-",
-            "preLaunchTask": "buid All"
-        },
-        {
-            "name": "RCP Debug Live",
-            "cwd": "${workspaceFolder}",
-            "executable": "${workspaceFolder}/out/build/bin/ot-rcp",
+            "executable": "${workspaceFolder}/out/rcpDebug/bin/ot-rcp",
             "request": "attach",
             "type": "cortex-debug",
             "servertype": "openocd",
@@ -54,30 +28,8 @@
             "gdbTarget": "localhost:3333",
             "gdbPath" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-gdb",
             "toolchainPrefix" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-",
-        },
-        {
-            "name": "CLI MTD Debug Live",
-            "cwd": "${workspaceFolder}",
-            "executable": "${workspaceFolder}/out/build/bin/ot-cli-mtd",
-            "request": "attach",
-            "type": "cortex-debug",
-            "servertype": "openocd",
-            "configFiles": [ "${workspaceFolder}/test/OpenOCD_config/ATMEL-ICE-OpenOCD-samr21e18a.cfg" ],
-            "gdbTarget": "localhost:3333",
-            "gdbPath" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-gdb",
-            "toolchainPrefix" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-",
-        },
-        {
-            "name": "CLI FTD Debug Live",
-            "cwd": "${workspaceFolder}",
-            "executable": "${workspaceFolder}/out/build/bin/ot-cli-ftd",
-            "request": "attach",
-            "type": "cortex-debug",
-            "servertype": "openocd",
-            "configFiles": [ "${workspaceFolder}/test/OpenOCD_config/ATMEL-ICE-OpenOCD-samr21e18a.cfg" ],
-            "gdbTarget": "localhost:3333",
-            "gdbPath" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-gdb",
-            "toolchainPrefix" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-",
-        },
+            "preLaunchTask": "build RCP Debug"
+        }
+
     ]
 }

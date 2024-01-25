@@ -89,7 +89,7 @@ uint32_t otPlatAlarmMicroGetNow(void)
 //     }
 // }
 
-void samr21OtPlatAlarmInit(void)
+void samr21OtPlat_alarmInit(void)
 {
     //TCC1 Used by OT Micros Alarm
     samr21Timer1_init(0,true,false); // 1MHz / (2^0) -> 1us resolution
@@ -97,7 +97,7 @@ void samr21OtPlatAlarmInit(void)
     samr21Timer2_init(7, true,false); // 1MHz / (2^7) -> ~1ms resolution
 }
 
-void samr21OtPlatAlarmTask(void)
+void samr21OtPlat_alarmTask(void)
 {
     if (TCC1->INTFLAG.bit.OVF)
     {

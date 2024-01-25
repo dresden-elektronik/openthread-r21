@@ -40,7 +40,7 @@ OT_TOOL_WEAK void otPlatLog(otLogLevel aLogLevel, otLogRegion aLogRegion, const 
 
     va_start(ap, aFormat);
 
-    logOutput(aLogLevel, aLogRegion, aFormat, ap);
+    //logOutput(aLogLevel, aLogRegion, aFormat, ap);
 
     va_end(ap);
 

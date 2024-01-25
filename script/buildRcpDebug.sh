@@ -10,7 +10,8 @@ readonly OT_SRCDIR
 
 OT_OPTIONS=(
     "-DCMAKE_TOOLCHAIN_FILE=${OT_SRCDIR}/src/arm-none-eabi-gcc.cmake"
-    "-DCMAKE_BUILD_TYPE=Release"
+    "-DCMAKE_BUILD_TYPE=Debug"
+    "-DOT_LOG_LEVEL=DEBG"
     "-DOT_PLATFORM=external"
     "-DOT_SLAAC=ON"
     "-DOT_APP_RCP=ON"
@@ -19,13 +20,12 @@ OT_OPTIONS=(
     "-DOT_MTD=OFF"
     "-DOT_APP_CLI=OFF"
     "-DOT_APP_NCP=OFF"
-    "-DDDEL_GCF_BUILD=ON"
 )
 readonly OT_OPTIONS
 
 build()
 {
-    local builddir="${OT_CMAKE_BUILD_DIR:-${OT_SRCDIR}/out/build}"
+    local builddir="${OT_CMAKE_BUILD_DIR:-${OT_SRCDIR}/out/rcpDebug}"
 
 
     mkdir -p "${builddir}"
@@ -49,8 +49,6 @@ main()
     options+=("$@")
 
     build "${options[@]}"
-
-    exec ${OT_SRCDIR}/gcc-arm-none-eabi/bin/arm-none-eabi-objcopy -O binary ${OT_SRCDIR}/out/build/bin/ot-rcp ${OT_SRCDIR}/out/ot-rcp-gcf.bin
 }
 
 main "$@"

@@ -12,36 +12,24 @@
 
 static struct trxVars_s
 {
-    DmacDescriptor txDmacDescriptor;
-    DmacDescriptor txDmacDescriptorWB;
-
     volatile bool spiActive;
-    volatile bool dmaActive;
 } s_trxVars =
     {
         .spiActive = false,
-
-        .txDmacDescriptor.BTCTRL.bit.VALID = 0,
-        .txDmacDescriptor.BTCTRL.bit.EVOSEL = DMAC_BTCTRL_EVOSEL_DISABLE_Val,
-        .txDmacDescriptor.BTCTRL.bit.BLOCKACT = DMAC_BTCTRL_BLOCKACT_NOACT_Val,
-        .txDmacDescriptor.BTCTRL.bit.BEATSIZE = DMAC_BTCTRL_BEATSIZE_BYTE_Val,
-        .txDmacDescriptor.BTCTRL.bit.SRCINC = 1,
-        .txDmacDescriptor.BTCTRL.bit.DSTINC = 0,
-        .txDmacDescriptor.BTCTRL.bit.STEPSEL = DMAC_BTCTRL_STEPSEL_SRC_Val, 
-        .txDmacDescriptor.BTCTRL.bit.STEPSIZE = DMAC_BTCTRL_STEPSIZE_X1_Val,
-
-        .txDmacDescriptor.DSTADDR.bit.DSTADDR = &(SERCOM4->SPI.DATA.reg) ,
-        .txDmacDescriptor.DESCADDR.bit.DESCADDR = 0x00000000
     };
 
 static ramCopyTrxRegister_t s_localTrxRegisterCopy =
     {
+        
         // Default Config
+        .trxCtrl0.bit.clkmCtrl = 0x1, // 1MHz ClockOutput 
+        .trxCtrl0.bit.clkmShaSel = 1, // MCLK Changes take immediate effect
+
         .trxCtrl1.bit.irqPolarity = 0,
         .trxCtrl1.bit.irqMaskMode = 0,
         .trxCtrl1.bit.spiCmdMode = 0x1,
-        .trxCtrl1.bit.rxBlCtrl = 1,
-        .trxCtrl1.bit.txAutoCrcOn = 1,
+        .trxCtrl1.bit.rxBlCtrl = 1,     //Needed for Live Download while RX
+        .trxCtrl1.bit.txAutoCrcOn = 1, //Stop uploading when the CRC is due, TRX inserts the correct one
         .trxCtrl1.bit.irq2ExtEn = 0,
 
 #ifdef _GCF_RELEASE_
@@ -53,13 +41,14 @@ static ramCopyTrxRegister_t s_localTrxRegisterCopy =
 #endif
 };
 
+static void trx_dmaDone_cb(void);
+
 void samr21Trx_initInterface()
 {
     // Setup Clocks for TRX-SPI Sercom
-    // Use GCLKGEN1 as core Clock for SPI At86rf233 (SERCOM4, Synchronous)
     GCLK->CLKCTRL.reg =
         // GCLK_CLKCTRL_WRTLOCK
-        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(4) // 8MHz or 1MHz
+        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(4) // 8MHz or 1MHz(Fallback)
         | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_SERCOM4_CORE_Val);
 
     // Wait for synchronization
@@ -68,7 +57,7 @@ void samr21Trx_initInterface()
 
     GCLK->CLKCTRL.reg =
         // GCLK_CLKCTRL_WRTLOCK
-        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(4) // 8MHz or 1MHz
+        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(4) // 8MHz or 1MHz(Fallback)
         | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_SERCOMX_SLOW_Val);
 
     // Wait for synchronization
@@ -223,68 +212,36 @@ void samr21Trx_initInterface()
         ;
 
     // Write predefined Operating-Values to Config Registers of the AT86rf233
-    samr21Trx_writeRegister(TRX_CTRL_1_REG_ADDR, s_localTrxRegisterCopy.trxCtrl1.reg);
-    samr21Trx_writeRegister(PHY_TX_PWR_REG_ADDR, s_localTrxRegisterCopy.phyTxPwr.reg);
 
+    // Note: this should actully be written, but the Trx resets to desired Values anyways
+    //       making changes to this causes wierd clock glitches not worth dealing with
+    //
+    //samr21Trx_writeRegister(TRX_CTRL_0_REG_ADDR, s_localTrxRegisterCopy.trxCtrl0.reg);
+    
+    samr21Trx_writeRegister(TRX_CTRL_1_REG_ADDR, s_localTrxRegisterCopy.trxCtrl1.reg);
+    
+    //
+    samr21Trx_writeRegister(PHY_TX_PWR_REG_ADDR, s_localTrxRegisterCopy.phyTxPwr.reg);
+}
+
+void samr21Trx_initLocalDriver()
+{
     // Enable Timer 5 for Trx Orchestration
     samr21Timer5_init(0, true, true); // 1MHz / (2^0) -> 1us resolution
 
     // Enable Timer 3 for DMA Paceing
     samr21Timer3_init(0, false, false); // 1MHz / (2^0) -> 1us resolution
 
-    // Enable DMA in Power Manager for Framebuffer Upload purposes
-    PM->APBBMASK.bit.DMAC_ = 1;
-    PM->AHBMASK.bit.DMAC_ = 1;
-
-    // Disable DMA (and the adjacent CRC-Module) at first
-    DMAC->CTRL.bit.DMAENABLE = 0;
-    DMAC->CTRL.bit.CRCENABLE = 0;
-
-    // Wait till both are disabled
-    while (DMAC->CTRL.bit.DMAENABLE || DMAC->CTRL.bit.CRCENABLE)
-        ;
-
-    // Reset DMA Module
-    DMAC->CTRL.bit.SWRST = 1;
-
-    // Wait for reset to finish
-    while (DMAC->CTRL.bit.SWRST)
-        ;
-
-    // Set relevant DMAC Discriptor Adresses
-    DMAC->BASEADDR.reg = &s_trxVars.txDmacDescriptor;
-    DMAC->WRBADDR.reg = &s_trxVars.txDmacDescriptorWB;
-
-    // Enable the DMAC Module and Prio-Level 0  (Noy really needed cause there is only one active DMA)
-    DMAC->CTRL.reg =
-        DMAC_CTRL_DMAENABLE
-        |DMAC_CTRL_LVLEN0;
-
-    // Select Channel 0 for configuration
-    DMAC->CHID.bit.ID = 0x0;
-
-    // Setup channel 0 for Transmission of 1 Byte till Sercom is ready for the next byte
-    DMAC->CHCTRLB.reg =
-        DMAC_CHCTRLB_CMD_NOACT | DMAC_CHCTRLB_TRIGACT_BEAT | DMAC_CHCTRLB_TRIGSRC(0x18) //  TC3 Overflowtrigger (Table 18-8. Peripheral Trigger Source SAMR21-Datasheet)
-        | DMAC_CHCTRLB_LVL_LVL0                                                         // Set Prio-Level 0  (Not really needed cause there is only one DMA-Action going on at a time)
-        //| DMAC_CHCTRLB_EVOE                   //Event Generation is disabled
-        //| DMAC_CHCTRLB_EVIE                     //Event Input is disabled
-        | DMAC_CHCTRLB_EVACT_NOACT // Not Action defined for an input Event
-        ;
-
-    DMAC->CHINTENSET.reg =
-       DMAC_CHINTENSET_TCMPL;
-
-    // TODO Remove in Release
-    TC3->COUNT16.DBGCTRL.bit.DBGRUN = 1;
-    DMAC->DBGCTRL.bit.DBGRUN = 1;
-
-    NVIC_EnableIRQ(DMAC_IRQn);
+    samr21Dma_initChannel(
+        0, //Channel 0 cause it has the highest Priority
+        (uint32_t)(&SERCOM4->SPI.DATA.reg), //Data input of SERCOM4 Register
+        0x18, // TC3 Overflow Trigger
+        trx_dmaDone_cb
+    );
 }
 
 void samr21Trx_initInterrupts()
 {
-
     // Get TRX into IDLE (STATUS_TRX_OFF) State
     samr21Trx_forceMoveToIdle(true);
 
@@ -377,7 +334,7 @@ void samr21Trx_setupMClk(uint8_t a_clk)
 uint8_t samr21Trx_readRegister(uint8_t a_addr)
 {
 
-    samr21TrxSpiStartAccess(AT86RF233_CMD_REG_READ_MASK, a_addr);
+    samr21Trx_spiStartAccess(AT86RF233_CMD_REG_READ_MASK, a_addr);
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
     samr21SysTick_delayTicks(CPU_WAIT_CYCLES_BETWEEN_BYTES);
@@ -393,7 +350,7 @@ uint8_t samr21Trx_readRegister(uint8_t a_addr)
 void samr21Trx_writeRegister(uint8_t a_addr, uint8_t a_data)
 {
 
-    samr21TrxSpiStartAccess(AT86RF233_CMD_REG_WRITE_MASK, a_addr);
+    samr21Trx_spiStartAccess(AT86RF233_CMD_REG_WRITE_MASK, a_addr);
 
 #ifdef __CONSERVATIVE_TRX_SPI_TIMING__
     samr21SysTick_delayTicks(CPU_WAIT_CYCLES_BETWEEN_BYTES);
@@ -404,7 +361,7 @@ void samr21Trx_writeRegister(uint8_t a_addr, uint8_t a_data)
     samr21Trx_spiCloseAccess();
 }
 
-void samr21TrxSpiStartAccess(uint8_t a_command, uint8_t a_addr)
+void samr21Trx_spiStartAccess(uint8_t a_command, uint8_t a_addr)
 {
     // Wait for other ongoing SPI Access to End
     while (s_trxVars.spiActive)
@@ -838,7 +795,7 @@ bool samr21Trx_realtimeFramebufferDownload(uint8_t *a_data_p, uint8_t a_len)
     volatile bool abortActionFlag = false;
     trx_startTimeoutTimer((((uint16_t)(a_len)*2) * IEEE_15_4_24GHZ_TIME_PER_OCTET_us), &abortActionFlag);
 
-    samr21TrxSpiStartAccess(AT86RF233_CMD_FRAMEBUFFER_READ, 0);
+    samr21Trx_spiStartAccess(AT86RF233_CMD_FRAMEBUFFER_READ, 0);
 
     a_data_p[numDownloadedBytes++] = samr21Trx_spiReadByteRaw();
 
@@ -877,7 +834,7 @@ bool samr21Trx_downloadReceivedFramebuffer(uint8_t *a_psduLen, uint8_t *a_psdu_p
     uint8_t numDownloadedBytes = 0;
     bool validFrame = true;
 
-    samr21TrxSpiStartAccess(AT86RF233_CMD_FRAMEBUFFER_READ, 0);
+    samr21Trx_spiStartAccess(AT86RF233_CMD_FRAMEBUFFER_READ, 0);
 
     // First Byte Downloaded is the psduLen
     *a_psduLen = samr21Trx_spiReadByteRaw();
@@ -927,7 +884,7 @@ exit:
 }
 
 /****************FRAMEBUFFER WRITE ACCESS************************/
-void samr21TrxUploadToFramebuffer(uint8_t *a_data_p, uint8_t a_len, uint8_t a_pos)
+void samr21Trx_uploadToFramebuffer(uint8_t *a_data_p, uint8_t a_len, uint8_t a_pos)
 {
 
 #ifdef _DEBUG
@@ -936,33 +893,31 @@ void samr21TrxUploadToFramebuffer(uint8_t *a_data_p, uint8_t a_len, uint8_t a_po
     assert(a_data_p);
 #endif
 
-    samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, a_pos);
+    samr21Trx_spiStartAccess(AT86RF233_CMD_SRAM_WRITE, a_pos);
     samr21Trx_spiTransceiveBytesRaw(a_data_p, NULL, a_len); // phyLen not in psduLen
     samr21Trx_spiCloseAccess();
 }
 
 
-// IRQ ISR from DMAC
-void DMAC_Handler()
+
+static DmacDescriptor s_framebufferDmaDescriptor =
 {
+    .BTCTRL.bit.VALID = 1, //Set to True when transfer starts
+    .BTCTRL.bit.EVOSEL = DMAC_BTCTRL_EVOSEL_DISABLE_Val, // Don't use Event System
+    .BTCTRL.bit.BLOCKACT = DMAC_BTCTRL_BLOCKACT_NOACT_Val, // Fulfill all Linked Descriptors without intervention 
+    .BTCTRL.bit.BEATSIZE = DMAC_BTCTRL_BEATSIZE_BYTE_Val, // Always Single Byte
+    .BTCTRL.bit.SRCINC = 1,
+    .BTCTRL.bit.DSTINC = 0,   //SERCOM[X]->Data in all Cases
+    .BTCTRL.bit.STEPSEL = DMAC_BTCTRL_STEPSEL_SRC_Val,
+    .BTCTRL.bit.STEPSIZE = DMAC_BTCTRL_STEPSIZE_X1_Val, //Single Byte jumps in memory
 
-    //Clear IRQ Flag for Channel0
-    DMAC->INTPEND.reg =
-        DMAC_INTPEND_ID(0x00)
-        | DMAC_INTPEND_TCMPL
-    ;
+    .DSTADDR.bit.DSTADDR = (uint32_t)(&SERCOM4->SPI.DATA.reg), //Data input of SERCOM4 Register
+    
+    .DESCADDR.bit.DESCADDR = (uint32_t)NULL //No DMA Linked Jobs this
+};
+static uint8_t s_sramAccessCommand[2] =  {AT86RF233_CMD_SRAM_WRITE, 0x00};
 
-    samr21Timer3_Stop();
-    samr21Trx_spiCloseAccess();
-
-    //Mark DMAC Descriptor as invalid
-    s_trxVars.txDmacDescriptor.BTCTRL.bit.VALID = 0;
-
-    s_trxVars.dmaActive = false;
-}
-
-
-void samr21Trx_startJustInTimeUploadToFramebuffer(uint8_t *a_data_p, uint8_t a_len, uint8_t a_pos)
+void samr21Trx_dmaUploadToFramebuffer(uint8_t *a_data_p, uint8_t a_len, uint8_t a_pos)
 {
 #ifdef _DEBUG
     assert(a_len <= IEEE_802_15_4_FRAME_SIZE);
@@ -970,28 +925,45 @@ void samr21Trx_startJustInTimeUploadToFramebuffer(uint8_t *a_data_p, uint8_t a_l
     assert(a_data_p);
 #endif
 
-    while (s_trxVars.dmaActive)
+    while (s_trxVars.spiActive)
         ;
 
-    // s_trxVars.txDmacDescriptor.BTCNT.bit.BTCNT = a_len;
-    // s_trxVars.txDmacDescriptor.SRCADDR.bit.SRCADDR = a_data_p;
-    // s_trxVars.txDmacDescriptor.BTCTRL.bit.VALID = 1;
+    //Faster SPI Start Access (does ignore the inital status byte)
+    NVIC_DisableIRQ(EIC_IRQn);
+    PORT->Group[1].OUTCLR.reg = 1 << 31; // SSel Low Active
+    s_trxVars.spiActive = true;
 
-    s_trxVars.txDmacDescriptor.BTCNT.bit.BTCNT = a_len;
-    s_trxVars.txDmacDescriptor.SRCADDR.bit.SRCADDR = (uint32_t)a_data_p + a_len;
-    s_trxVars.txDmacDescriptor.BTCTRL.bit.VALID = 1;
+    //Adjust StartAddr of SRAM Write Command
+    s_sramAccessCommand[1] = a_pos;
+
+    //Adjust The Framebuffer DMA Job
+    s_framebufferDmaDescriptor.BTCTRL.bit.VALID = 0;
     
+    s_framebufferDmaDescriptor.BTCNT.bit.BTCNT = a_len;
+    s_framebufferDmaDescriptor.SRCADDR.bit.SRCADDR = (uint32_t)a_data_p + a_len;
 
-    DMAC->CHID.reg = 0x00;
-    DMAC->CHCTRLA.bit.ENABLE = 1;
-    s_trxVars.dmaActive = true;
-    samr21TrxSpiStartAccess(AT86RF233_CMD_SRAM_WRITE, a_pos);
+    s_framebufferDmaDescriptor.BTCTRL.bit.VALID = 1;
+    
+    //Start a DMA Job for the SRAM Acces Command itself and link the actual Framebuffer DMA after that
+    samr21Dma_start(0,s_sramAccessCommand,sizeof(s_sramAccessCommand),&s_framebufferDmaDescriptor);
+    //Jumpstart the DMA
+    samr21Dma_triggerChannelAction(0);
 
-    samr21Timer3_setContinuousPeriod(IEEE_15_4_24GHZ_TIME_PER_OCTET_us - 5); //Some adjustment
-
-    int temp;
+    //Set a Periodic DMA-Trigger Timer
+    samr21Timer3_setContinuousPeriod(IEEE_15_4_24GHZ_TIME_PER_OCTET_us - 5); //Some wiggle Room
 }
 
+static void trx_dmaDone_cb(void)
+{
+    //Invalidate the Framebuffer-DMA-Job
+    s_framebufferDmaDescriptor.BTCTRL.bit.VALID = 0;
+
+    //Stop the Periodic DMA-Trigger Timer
+    samr21Timer3_Stop();
+
+    //Orderly close the SPI-Access 
+    samr21Trx_spiCloseAccess();
+}
 
 /**********TRX EVENT HANDLER********/
 

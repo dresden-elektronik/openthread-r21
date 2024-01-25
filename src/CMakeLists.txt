@@ -6,6 +6,7 @@ add_library(openthread-r21
     HAL/samr21Timer.c
     HAL/samr21Usb.c
     HAL/samr21Uart.c
+    HAL/samr21Dma.c
     HAL/samr21Radio.c
     HAL/samr21Trx.c
     HAL/samr21FeCtrl.c

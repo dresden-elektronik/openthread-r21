@@ -8,13 +8,13 @@
 void samr21OtPlat_uartCommTask();
 
 //Handler that notifies upper layer about received Frames and the status of ongoing transmissions
-void samr21OtPlat_RadioTick();
+void samr21OtPlat_radioTick();
 
 //Inits Timer for OT Orchestration
-void samr21OtPlatAlarmInit();
+void samr21OtPlat_alarmInit();
 
 //Handles Timer for OT Orchestration
-void samr21OtPlatAlarmTask();
+void samr21OtPlat_alarmTask();
 
 
 //Handler that Transmit Frames to the Host device

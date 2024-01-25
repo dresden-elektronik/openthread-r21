@@ -13,6 +13,7 @@
 
 #include "samr21.h"
 #include "samr21SysTick.h"
+#include "samr21Dma.h"
 #include "samr21Timer.h"
 #include "samr21At86rf233.h"
 
@@ -42,10 +43,17 @@ enum
     TRX_IRQ_BAT_LOW = 0x7
 };
 /**
- * Inits SPI, DMA and GPIO Interface to At86rf233
- * Involves Changes to CLK-Domain
+ * Inits SPI, GPIO Interface to At86rf233
+ * Can involve Changes to Main CLK-Source
+ * 
+ * !! Only use when clock-tree is not depending on GCLKIN (also DFLL using GCLKIN as Reference) !!
  */
 void samr21Trx_initInterface();
+
+/**
+ * Inits DMA and Timer used by the radio
+ */
+void samr21Trx_initLocalDriver();
 
 /**
  * Setups External IRQ Controller for Interrupts From Trx
@@ -102,7 +110,7 @@ void samr21Trx_writeRegister(uint8_t addr, uint8_t data);
  * @param[in]  data     Optional Address-Value for for InitCommand
  *
  */
-void samr21TrxSpiStartAccess(uint8_t command, uint8_t addr);
+void samr21Trx_spiStartAccess(uint8_t command, uint8_t addr);
 
 /**
  * Closes (and Ends) a SPI-Transaction
@@ -275,7 +283,7 @@ bool samr21Trx_downloadReceivedFramebuffer(uint8_t *psduLen, uint8_t *psdu, uint
  * @param[in]   pos   offset inside the Framebuffer where the data is uploaded to
  *
  */
-void samr21TrxUploadToFramebuffer(uint8_t *data, uint8_t len, uint8_t pos);
+void samr21Trx_uploadToFramebuffer(uint8_t *data, uint8_t len, uint8_t pos);
 
 /**
  *
@@ -288,7 +296,7 @@ void samr21TrxUploadToFramebuffer(uint8_t *data, uint8_t len, uint8_t pos);
  * @param[in]   pos   offset inside the Framebuffer where the data is uploaded to
  *
  */
-void samr21Trx_startJustInTimeUploadToFramebuffer(uint8_t *data, uint8_t len, uint8_t pos);
+void samr21Trx_dmaUploadToFramebuffer(uint8_t *data, uint8_t len, uint8_t pos);
 
 /**
  *

@@ -7,7 +7,7 @@ void samr21Uart_init(){
         GCLK->CLKCTRL.reg =
             //GCLK_CLKCTRL_WRTLOCK
             GCLK_CLKCTRL_CLKEN
-            |GCLK_CLKCTRL_GEN(0) // GCLKGEN1
+            |GCLK_CLKCTRL_GEN(3) // GCLKGEN1
             |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_SERCOM2_CORE_Val)
         ;
         //Wait for synchronization 

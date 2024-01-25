@@ -12,6 +12,7 @@
 #include "samr21SysTick.h"
 #include "samr21Timer.h"
 #include "samr21Usb.h"
+#include "samr21Dma.h"
 #include "samr21Uart.h"
 
 #include "tusb.h"
@@ -43,30 +44,28 @@ static void samr21_initIrqPriority()
 
 void otSysInit(int argc, char *argv[])
 {
+    samr21_tickleWatchdog();
     samr21_initIrqPriority();
-    samr21_tickleWatchdog();
 
-    samr21Nvm_init();
-    samr21_tickleWatchdog();
-
-    samr21Clock_init();
-    samr21_tickleWatchdog();
+    samr21Clock_enableFallbackClockTree(); //Not depending on MCLK of AT86RF233
 
     samr21_tickleWatchdog();
-    samr21Trx_initInterface();
     
+    samr21Nvm_init();
+    samr21Dma_init();
+
+#ifndef SAMR21_DONT_USE_TRX_CLOCK
+    samr21Clock_enableOperatingClockTree(true); //Depending on correct output freq of AT86RF233 MCLK
+#else
+    samr21Clock_enableOperatingClockTree(false); //Not depending on MCLK of AT86RF233, but very inaccurate (can cause USB issues)
+#endif
+    samr21Trx_initInterface(); //Also inits Clock Output of the AT86RF233, so we can switch to a Crystal based clock Domain
+
+    samr21Trx_initLocalDriver();
+
     samr21_tickleWatchdog();
     samr21Rtc_init();
 
-    //Give Some Slack (~0.2sec) before new USB enumeration
-    // __disable_irq();
-    // for (uint32_t i = 0; i < 1000; i++)
-    // {
-    //     samr21SysTick_delayTicks(10000);
-    //     samr21_tickleWatchdog();
-    // }
-    // __enable_irq();
-    
     samr21Usb_init();
     tusb_init();
 
@@ -83,7 +82,7 @@ void otSysInit(int argc, char *argv[])
     //samr21LogInit();
 
     samr21_tickleWatchdog();
-    samr21OtPlatAlarmInit();
+    samr21OtPlat_alarmInit();
 }
 
 bool otSysPseudoResetWasRequested(void)
@@ -99,8 +98,8 @@ void otSysDeinit(void)
 void otSysProcessDrivers(otInstance *aInstance)
 {
     samr21OtPlat_uartCommTask();
-    samr21OtPlat_RadioTick();
-    samr21OtPlatAlarmTask();
+    samr21OtPlat_radioTick();
+    samr21OtPlat_alarmTask();
 
     samr21_tickleWatchdog();
 }

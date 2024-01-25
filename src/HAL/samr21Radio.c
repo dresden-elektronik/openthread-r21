@@ -392,18 +392,19 @@ static void rx_sendAck()
     // Set a handler for when the Ack is successfully transmitted
     samr21Trx_setInterruptHandler(TRX_IRQ_TRX_END, rx_finishReception);
 
-     //Start Transmission
-    samr21Trx_setSleepTransmitPin(true);
-    samr21Trx_startJustInTimeUploadToFramebuffer(s_rxAckFrameBuffer, s_rxAckFrameBuffer[0] + IEEE_15_4_PHR_SIZE , 0);
+    samr21Trx_dmaUploadToFramebuffer(s_rxAckFrameBuffer, s_rxAckFrameBuffer[0] + IEEE_15_4_PHR_SIZE , 0);
 
-     //Transmission Should have started by now
-    samr21Trx_setSleepTransmitPin(false);
 
     if (s_rxAckSecurityLevel)
     {
         otMacFrameProcessTransmitAesCcm(&s_rxOtAckFrame, &s_radioVars.extendedAddress);
         s_rxOtAckFrame.mInfo.mTxInfo.mIsSecurityProcessed = true;
     }
+    
+    //Start Transmission
+    samr21Trx_setSleepTransmitPin(true);
+    samr21SysTick_delayTicks(10);
+    samr21Trx_setSleepTransmitPin(false);
 
     s_radioVars.rxState = SAMR21_RADIO_RX_STATE_WAIT_ACK_END;
 
@@ -821,7 +822,7 @@ static void tx_abort();
 static void tx_evaluateAck();
 static void tx_prepareForAckReception();
 static void tx_retry();
-static void tx_start();
+static void tx_startTransmit();
 static void tx_evalCca();
 static void tx_startCca();
 
@@ -949,22 +950,15 @@ static void tx_retry(){
 
 
 
-static void tx_start(){
+static void tx_startTransmit(){
 
     s_radioVars.txState = SAMR21_RADIO_TX_STATE_SENDING;
 
-    samr21Trx_forceMoveToTx(true);
-
-    //Start Transmission
+    //Queue Move to Tx
+    samr21Trx_forceMoveToTx(false);
 
     //Enter Time Critical Section
     __disable_irq();
-
-    samr21Trx_setSleepTransmitPin(true);
-    samr21Trx_startJustInTimeUploadToFramebuffer(s_txFrameBuffer, s_txFrameBuffer[0] + IEEE_15_4_PHR_SIZE , 0);
-
-     //Transmission Should have started by now
-    samr21Trx_setSleepTransmitPin(false);
 
     if (!s_txOtFrame.mInfo.mTxInfo.mIsHeaderUpdated)
     {
@@ -1008,6 +1002,13 @@ static void tx_start(){
         s_radioVars.txState = SAMR21_RADIO_TX_STATE_SENDING_RAW;
     }
 
+    samr21Trx_dmaUploadToFramebuffer(s_txFrameBuffer, s_txFrameBuffer[0] + IEEE_15_4_PHR_SIZE , 0);
+
+    //Start Transmission
+    samr21Trx_setSleepTransmitPin(true);
+    samr21SysTick_delayTicks(10);
+    samr21Trx_setSleepTransmitPin(false);
+
     //Leaving Time Critical Section
     __enable_irq();
 
@@ -1044,7 +1045,7 @@ static void tx_evalCca(){
     if (samr21Trx_getCcaResult())
     {
         //Channel is free
-        tx_start();
+        tx_startTransmit();
         return;
     }
     
@@ -1133,7 +1134,7 @@ void samr21radio_transmit(otRadioFrame *a_otFrame)
 
         queueDelayedEventAbsolute(
             s_txOtFrame.mInfo.mTxInfo.mTxDelayBaseTime + s_txOtFrame.mInfo.mTxInfo.mTxDelay,
-            s_txOtFrame.mInfo.mTxInfo.mCsmaCaEnabled ? tx_startCca : tx_start
+            s_txOtFrame.mInfo.mTxInfo.mCsmaCaEnabled ? tx_startCca : tx_startTransmit
         );
         return;
     }
@@ -1145,7 +1146,7 @@ void samr21radio_transmit(otRadioFrame *a_otFrame)
         return;
     }
 
-    tx_start();
+    tx_startTransmit();
 }
 
 otRadioFrame* samr21RadioGetOtTxBuffer(){

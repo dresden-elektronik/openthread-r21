@@ -42,6 +42,9 @@
 extern uint32_t __d_nv_mem_start;
 extern uint32_t __d_nv_mem_end;
 
+#ifndef OPENTHREAD_CONFIG_THREAD_VERSION
+#define OPENTHREAD_CONFIG_THREAD_VERSION OT_THREAD_VERSION_1_3
+#endif
 
 /**
  * @def OPENTHREAD_CONFIG_PLATFORM_INFO
@@ -60,7 +63,6 @@ extern uint32_t __d_nv_mem_end;
  *
  */
 #define OPENTHREAD_CONFIG_PLATFORM_FLASH_API_ENABLE 1
-#define OPENTHREAD_SETTINGS_RAM 1
 
 /**
  * @def OPENTHREAD_CONFIG_MAC_SOFTWARE_TX_SECURITY_ENABLE
@@ -88,47 +90,39 @@ extern uint32_t __d_nv_mem_end;
  */
 #define OPENTHREAD_CONFIG_DEFAULT_TRANSMIT_POWER 5
 
-
-/**
- * @def OPENTHREAD_CONFIG_NCP_HDLC_ENABLE
- *
- * Define to 1 to enable NCP HDLC support.
- *
- */
-#ifndef OPENTHREAD_CONFIG_NCP_HDLC_ENABLE
-#define OPENTHREAD_CONFIG_NCP_HDLC_ENABLE 1
-#endif
-
+#define OPENTHREAD_CONFIG_DUA_ENABLE                1
 /**
  * @def OPENTHREAD_CONFIG_PLATFORM_USEC_TIMER_ENABLE
  *
  * Define to 1 if you want to support microsecond timer in platform.
  *
  */
-#ifndef OPENTHREAD_CONFIG_PLATFORM_USEC_TIMER_ENABLE
 #define OPENTHREAD_CONFIG_PLATFORM_USEC_TIMER_ENABLE 1
+
+// <q> CSL Auto Synchronization using data polling
+#define OPENTHREAD_CONFIG_MAC_CSL_AUTO_SYNC_ENABLE  0
+
+// <q>  CSL (Coordinated Sampled Listening) Debug
+#define OPENTHREAD_CONFIG_MAC_CSL_DEBUG_ENABLE      0
+
+// <q>  CSL (Coordinated Sampled Listening) Receiver
+#define OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE   0
+
+#define OPENTHREAD_CONFIG_DNS_CLIENT_ENABLE         1
+
+#define OPENTHREAD_CONFIG_MLR_ENABLE                0
+
+#define OPENTHREAD_CONFIG_MLE_LINK_METRICS_INITIATOR_ENABLE 0
+
+#define OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE 0
+
+#ifndef OPENTHREAD_CONFIG_PING_SENDER_ENABLE
+#define OPENTHREAD_CONFIG_PING_SENDER_ENABLE        1
 #endif
 
-// /**
-//  * @def OPENTHREAD_CONFIG_CSL_RECEIVE_TIME_AHEAD
-//  *
-//  * Reception scheduling and ramp up time needed for the CSL receiver to be ready, in units of microseconds.
-//  *
-//  */
-// #ifndef OPENTHREAD_CONFIG_CSL_RECEIVE_TIME_AHEAD
-// #define OPENTHREAD_CONFIG_CSL_RECEIVE_TIME_AHEAD 2000
-// #endif
+// <q>  Service Registration Protocol (SRP) Client (Thread 1.3)
+#define OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE         1
 
-// /**
-//  * @def OPENTHREAD_CONFIG_CSL_MIN_RECEIVE_ON
-//  *
-//  * The minimum CSL receive window (in microseconds) required to receive an IEEE 802.15.4 frame.
-//  * - Frame preamble: 6*2 symbols + margin
-//  *
-//  */
-// #ifndef OPENTHREAD_CONFIG_CSL_MIN_RECEIVE_ON
-// #define OPENTHREAD_CONFIG_CSL_MIN_RECEIVE_ON 12 * 16
-// #endif
 
 /**
  * @def OPENTHREAD_CONFIG_TCP_ENABLE
@@ -136,9 +130,7 @@ extern uint32_t __d_nv_mem_end;
  * Define as 1 to enable TCP.
  *
  */
-#ifndef OPENTHREAD_CONFIG_TCP_ENABLE
 #define OPENTHREAD_CONFIG_TCP_ENABLE 0
-#endif
 
 /**
  * @def OPENTHREAD_CONFIG_STACK_VENDOR_OUI

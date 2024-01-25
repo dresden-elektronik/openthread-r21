@@ -516,7 +516,7 @@ static void transmitTask()
     }
 }
 
-void samr21OtPlat_RadioTick()
+void samr21OtPlat_radioTick()
 {
     receiveTask();
     transmitTask();

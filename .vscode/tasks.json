@@ -4,9 +4,22 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "buid All",
+            "label": "build RCP Debug",
             "type": "shell",
-            "command": "${workspaceFolder}/script/buildAll.sh",
+            "command": "${workspaceFolder}/script/buildRcpDebug.sh",
+            "presentation": {
+                "reveal": "silent",
+                "revealProblems": "onProblem",
+                "close": true
+            },
+            "dependsOn": [
+                "clean all"
+            ]
+        },
+        {
+            "label": "build RCP Release",
+            "type": "shell",
+            "command": "${workspaceFolder}/script/buildRcpRelease.sh",
             "presentation": {
                 "reveal": "silent",
                 "revealProblems": "onProblem",
@@ -14,7 +27,17 @@
             }
         },
         {
-            "label": "remove RCP build",
+            "label": "build RCP ConBee2",
+            "type": "shell",
+            "command": "${workspaceFolder}/script/buildRcpConbee.sh",
+            "presentation": {
+                "reveal": "silent",
+                "revealProblems": "onProblem",
+                "close": true
+            }
+        },
+        {
+            "label": "clean all",
             "type": "shell",
             "command": "rm ${workspaceFolder}/out -rf",
             "presentation": {
