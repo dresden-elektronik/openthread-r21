@@ -1,14 +1,32 @@
 #include "samr21Uart.h"
+#include "samr21Dma.h"
 
+//Template Include
+#define FIFO_BUFFER_ENTRY_DATA_TYPE uartBuffer_t
+#include "utils/fifoBuffer_t.h"
+
+static uartBuffer_t s_uartBuffer[NUM_UART_BUFFER];
+
+static fifoBuffer_t s_uartDmaFifoBuffer =
+{
+    .buffer = s_uartBuffer,
+    .bufferSize = sizeof(s_uartBuffer) / sizeof(s_uartBuffer[0]),
+    .readHeadPos = 0,
+    .writeHeadPos = 0
+};
+
+static bool s_dmaBusy = false;
+
+void dma_callback(void);
 
 void samr21Uart_init(){
 //Setup Clocks for TRX-SPI
-        //Use GCLKGEN0 as core Clock for the debug UART
+        //Use GCLKGEN4 (8Mhz or 1MHz) as core Clock for the debug UART 
         GCLK->CLKCTRL.reg =
             //GCLK_CLKCTRL_WRTLOCK
             GCLK_CLKCTRL_CLKEN
-            |GCLK_CLKCTRL_GEN(3) // GCLKGEN1
-            |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_SERCOM2_CORE_Val)
+            |GCLK_CLKCTRL_GEN(4) // GCLKGEN3
+            |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_SERCOM4_CORE_Val)
         ;
         //Wait for synchronization 
         while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
@@ -51,7 +69,7 @@ void samr21Uart_init(){
 
 
 
-    //Reset SERCOM4
+    //Reset SERCOM2
         SERCOM2->USART.CTRLA.bit.SWRST = 1;
 
     // Wait for SERCOM2 reset to finish
@@ -59,11 +77,12 @@ void samr21Uart_init(){
     
     //Setup SERCOM2
         
-        //F_ref = 16MHz (if At86r233 ist setup correctly) F_baud = F_ref / 2*(BAUD+1) ---> BAUD = 7 F_baud = 3MBAUD
+        //F_ref = 1MHz (F_baud = F_ref / 2*(BAUD+1)  = 500 kBAUD)
         SERCOM2->USART.BAUD.reg=
             SERCOM_SPI_BAUD_BAUD(0) 
         ;
 
+        //Only enable Output
         SERCOM2->USART.CTRLB.reg=
             SERCOM_USART_CTRLB_TXEN
             //|SERCOM_USART_CTRLB_RXEN
@@ -74,7 +93,7 @@ void samr21Uart_init(){
             |SERCOM_USART_CTRLB_CHSIZE(0x0)
         ;
         // Wait for SERCOM2 Sync
-        while ( SERCOM4->SPI.SYNCBUSY.bit.CTRLB );
+        while (SERCOM2->USART.SYNCBUSY.reg);
 
 
         SERCOM2->USART.CTRLA.reg=
@@ -92,6 +111,18 @@ void samr21Uart_init(){
         ;
         // Wait for SERCOM2 to setup
         while (SERCOM2->USART.SYNCBUSY.reg);
+
+
+    //Reset the dma Fifo Buffer
+    fifo_reset(&s_uartDmaFifoBuffer);
+
+    //Init DMA for tx
+    samr21Dma_initChannel(
+        1,
+        (uint32_t)(&SERCOM2->USART.DATA.reg),
+        0x06, //SERCOM2 TX Trigger
+        dma_callback
+    );
 }
 
 void samr21Uart_deinit(){
@@ -109,10 +140,97 @@ void samr21Uart_deinit(){
         GCLK_CLKCTRL_GEN(0) // GCLKGEN2
         |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_SERCOM2_CORE_Val)
     ;
+
+    //Reset the dma Fifo Buffer
+    fifo_reset(&s_uartDmaFifoBuffer);
 }
 
-void samr21Uart_send(uint8_t a_data){
+void samr21Uart_sendByte(uint8_t a_data){
     while (!SERCOM2->USART.INTFLAG.bit.DRE);
     //Put data into the tranmitt buffer to start transmission
     SERCOM2->USART.DATA.bit.DATA = a_data;
+}
+
+
+void samr21Uart_checkForPendingTransmit(void)
+{
+    if (!s_dmaBusy)
+    {
+        uartBuffer_t * pendingBuffer_p = fifo_peak(&s_uartDmaFifoBuffer);
+
+        if(( pendingBuffer_p != NULL) && (pendingBuffer_p->length > 0)) //Dont't start while the Buffer is in setup (marked by length == -1)
+        {
+            //Transmit the next Buffer
+            samr21Dma_start(1, pendingBuffer_p->data, pendingBuffer_p->length, NULL);
+
+            //Jumpstart DMA
+            samr21Dma_triggerChannelAction(0);
+        }
+    }
+}
+
+uartBuffer_t * samr21Uart_allocTransmitBuffer(void)
+{
+    uartBuffer_t * buffer = fifo_alloc(&s_uartDmaFifoBuffer);
+    
+    if (buffer)
+    {
+        buffer->length = 0;
+    }
+
+    return buffer;
+}
+
+uint16_t samr21Uart_write(uint8_t * data, uint16_t length)
+{
+    uint16_t bytesSend = 0;
+
+    while (bytesSend < length)
+    {
+        uartBuffer_t * newBuffer = fifo_alloc(&s_uartDmaFifoBuffer);
+
+        if(!newBuffer)
+        {
+            //No Buffer Available
+            goto exit;
+        }
+
+        newBuffer->length = -1; //prevent DMA callback from staring this preemptively
+
+        uint16_t bufferFillLength = (length > UART_BUFFER_SIZE ? UART_BUFFER_SIZE : length); 
+
+        memcpy(newBuffer->data, &data[bytesSend],  bufferFillLength);
+
+        newBuffer->length = bufferFillLength; 
+
+        bytesSend += bufferFillLength;
+    }
+
+exit:
+    
+    samr21Uart_checkForPendingTransmit();
+    return bytesSend;
+}
+
+void dma_callback(void)
+{
+    //discard completed Transmission;
+    fifo_discard(&s_uartDmaFifoBuffer);
+
+    //Check if there is more data
+    uartBuffer_t * pendingBuffer_p = fifo_peak(&s_uartDmaFifoBuffer);
+
+    if((pendingBuffer_p != NULL) && (pendingBuffer_p->length > 0)) //Dont't start while the Buffer is in setup (marked by length == -1)
+    {
+        //Transmit the next Buffer
+        samr21Dma_start(1, pendingBuffer_p->data, pendingBuffer_p->length, NULL);
+
+        //Jumpstart DMA
+        // Note: not necessary cause last Tx Byte should still be in transmit 
+        //samr21Dma_triggerChannelAction(0);
+    }
+    else
+    {
+        s_dmaBusy = false;
+    }
 }

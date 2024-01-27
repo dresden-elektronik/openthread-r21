@@ -81,6 +81,7 @@ void otSysInit(int argc, char *argv[])
     //samr21_tickleWatchdog();
     //samr21LogInit();
 
+    samr21Uart_init();
     samr21_tickleWatchdog();
     samr21OtPlat_alarmInit();
 }

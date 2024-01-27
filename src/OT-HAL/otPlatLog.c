@@ -7,31 +7,20 @@
 #define LOG_PARSE_BUFFER_SIZE 128
 char sLogString[LOG_PARSE_BUFFER_SIZE + 1];
 
-void samr21LogInit(void)
-{
-    samr21Uart_init();
-}
-
 static void logOutput(otLogLevel aLogLevel, otLogRegion aLogRegion, const char *aFormat, va_list ap)
 {
-    int len = 0;
+    uartBuffer_t * buffer = samr21Uart_allocTransmitBuffer();
 
-    len = vsnprintf(sLogString, LOG_PARSE_BUFFER_SIZE, aFormat, ap);
-
-    otEXPECT(len >= 0);
-
-exit:
-
-    if (len >= LOG_PARSE_BUFFER_SIZE)
+    if (!buffer)
     {
-        len = LOG_PARSE_BUFFER_SIZE - 1;
+        //No Output Buffer Available
+        return;
     }
+    
+    buffer->length = vsnprintf(buffer->data, UART_BUFFER_SIZE-1, aFormat, ap);
 
-    sLogString[len++] = '\n';
 
-    for(int i = 0; i<len; i++ ){
-        samr21Uart_send(sLogString[i]);
-    }
+    samr21Uart_checkForPendingTransmit();
 }
 
 OT_TOOL_WEAK void otPlatLog(otLogLevel aLogLevel, otLogRegion aLogRegion, const char *aFormat, ...)
@@ -40,7 +29,7 @@ OT_TOOL_WEAK void otPlatLog(otLogLevel aLogLevel, otLogRegion aLogRegion, const 
 
     va_start(ap, aFormat);
 
-    //logOutput(aLogLevel, aLogRegion, aFormat, ap);
+    logOutput(aLogLevel, aLogRegion, aFormat, ap);
 
     va_end(ap);
 
