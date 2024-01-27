@@ -74,6 +74,12 @@ bool samr21Clock_switchGen0Source(bool useDfll)
 
 bool samr21Clock_enableGen1(bool useTrxSource)
 {
+    if(s_dfllClockSourceActive)
+    {
+        //Dfll Uses this clock as a Ref, if Dlff is active we cant modify this clock
+        return false;
+    }
+
     if(useTrxSource)
     {
         //Setup PIN PC16 as Clock-Input from mClk-Pin from At86rf233
@@ -92,6 +98,20 @@ bool samr21Clock_enableGen1(bool useTrxSource)
             |PORT_WRCONFIG_PINMASK(PORT_PC16 >> 16) //upper Halfword
         ;
     }
+
+    //Disable first
+    GCLK->GENCTRL.reg = 
+        GCLK_GENCTRL_ID(1)
+        |GCLK_GENCTRL_SRC(useTrxSource ? GCLK_GENCTRL_SRC_GCLKIN_Val : GCLK_GENCTRL_SRC_OSC8M_Val)
+        //|GCLK_GENCTRL_RUNSTDBY
+        |GCLK_GENCTRL_DIVSEL
+        //|GCLK_GENCTRL_OE
+        //|GCLK_GENCTRL_OOV
+        //|GCLK_GENCTRL_GENEN
+    ;
+
+    //Wait for synchronization 
+    while (GCLK->GENCTRL.bit.GENEN);
 
     //Setup GENDIV first (should output 31.250 kHz)
     GCLK->GENDIV.reg = 
@@ -133,6 +153,20 @@ bool samr21Clock_enableGen3(bool useDfll)
         return false;
     }
 
+    //Disable GCLK 3 first
+    GCLK->GENCTRL.reg = 
+        GCLK_GENCTRL_ID(3)
+        |GCLK_GENCTRL_SRC(useDfll ? GCLK_GENCTRL_SRC_DFLL48M_Val : GCLK_GENCTRL_SRC_OSC8M_Val)
+        //|GCLK_GENCTRL_RUNSTDBY
+        //|GCLK_GENCTRL_DIVSEL
+        //|GCLK_GENCTRL_OE
+        //|GCLK_GENCTRL_OOV
+        //|GCLK_GENCTRL_GENEN
+    ;
+
+    //Wait for synchronization 
+    while (GCLK->GENCTRL.bit.GENEN);
+
     //Setup GENDIV first (should output ~1MHz)
     GCLK->GENDIV.reg = 
         GCLK_GENDIV_ID(3) 
@@ -140,7 +174,6 @@ bool samr21Clock_enableGen3(bool useDfll)
     ;
     //Wait for synchronization 
     while ( GCLK->STATUS.bit.SYNCBUSY );
-
 
     //Put GCLK 3 (Timer and RTC) on the OSC8M or DFLL
     GCLK->GENCTRL.reg = 
@@ -168,6 +201,17 @@ bool samr21Clock_enableGen4(bool useDfll)
     {
         return false;
     }
+    
+    //Disable first
+    GCLK->GENCTRL.reg = 
+        GCLK_GENCTRL_ID(4)
+        |GCLK_GENCTRL_SRC(useDfll ? GCLK_GENCTRL_SRC_DFLL48M_Val : GCLK_GENCTRL_SRC_OSC8M_Val)
+        //|GCLK_GENCTRL_RUNSTDBY
+        //|GCLK_GENCTRL_DIVSEL
+        //|GCLK_GENCTRL_OE
+        //|GCLK_GENCTRL_OOV
+        //|GCLK_GENCTRL_GENEN
+    ;
 
     GCLK->GENDIV.reg = 
         GCLK_GENDIV_ID(4) 
@@ -289,16 +333,8 @@ bool samr21Clock_startupDfllClockSource(void)
 
 bool samr21Clock_enableFallbackClockTree(void)
 {
-    //Switch All used GCLK (exept 2) to the 1MHz internal OSC8M
-
-    //GCLK2 is used for WDT and schould not be touched
-
-    //GCLK3 is done first, cause timers and the rtc need a reliable ~1MHz Clock 
-    //GCLK4 is done after, so a stable Communication at 500kHz is possible with the TRX (via SERCOM4)
-    //GCLK0 is done second to last, so the pheripheral clocks are always lower or equally Clocked as the Main Clock
-    //GCLK1 is done last, cause the DFLL Output needs this as a reference and other clocks could be sourced by the DFLL
-
-    //Ensure that internal Oscillator is running
+    //Switch All used Clocks to the internal RC Oscilator (OSC8M) 
+    
     if(!SYSCTRL->OSC8M.bit.ENABLE){
         SYSCTRL->OSC8M.bit.ENABLE = 1;
     }
@@ -307,13 +343,16 @@ bool samr21Clock_enableFallbackClockTree(void)
     while (!SYSCTRL->PCLKSR.bit.OSC8MRDY);
 
     bool failed = false;
-    
+
+    //CPU, AHB and APB (GCLK) depend on this clock Soure
+    //Put it on OSC8M so we have stable clock, while configuring Clocks    
+    failed |= !samr21Clock_switchGen0Source(false);
+
+    //Put them also on OSC8M, so comm with TRX still works
     failed |= !samr21Clock_enableGen3(false);
     failed |= !samr21Clock_enableGen4(false);
-    failed |= !samr21Clock_switchGen0Source(false);
-    failed |= !samr21Clock_enableGen1(false);
 
-
+    //Shut down DFLL cause it is not used
     failed |= !samr21Clock_shutdownDfllClockSource();
 
     return !failed;
@@ -338,9 +377,14 @@ bool samr21Clock_enableOperatingClockTree(bool useTrxClock)
     failed |= !samr21Clock_enableGen1(useTrxClock);
     failed |= !samr21Clock_startupDfllClockSource();
     
-    //Switch All Dependend Clocks to DFLL
+    //CPU, AHB and APB (GCLK) depend on this clock Soure
     failed |= !samr21Clock_switchGen0Source(true); //CPU Clock first
+    
+
+    //Swicht Timer to more percise Source
     failed |= !samr21Clock_enableGen3(true);
+
+    //Switch SPI-TRX Clock to faster clock source (speeds up comm with TRX)
     failed |= !samr21Clock_enableGen4(true);
 
     if(failed)
