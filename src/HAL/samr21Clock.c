@@ -70,7 +70,7 @@ static void enablePeripheralClock(uint8_t peripheralClock, uint8_t gClkGen)
 
 	/* Write the new configuration */
 	GCLK->CLKCTRL.reg = 
-        GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_RTC_Val)
+        GCLK_CLKCTRL_ID(peripheralClock)
         | GCLK_CLKCTRL_GEN(gClkGen)
     ;
 
@@ -83,6 +83,25 @@ static void enablePeripheralClock(uint8_t peripheralClock, uint8_t gClkGen)
     __enable_irq();
 }
 
+
+static void enableGClkGen(uint8_t gClkGen, uint8_t clkSrc, uint32_t divFactor )
+{
+     	/* Select the requested generator channel */
+
+
+	/* Switch to known-working source so that the channel can be disabled */
+	uint32_t prev_gen_id = GCLK->CLKCTRL.bit.GEN;
+	GCLK->CLKCTRL.bit.GEN = 0;
+
+	/* Disable the generic clock */
+	GCLK->CLKCTRL.reg &= ~GCLK_CLKCTRL_CLKEN;
+	while (GCLK->CLKCTRL.reg & GCLK_CLKCTRL_CLKEN) {
+		/* Wait for clock to become disabled */
+	}
+
+	*((uint8_t*)& GCLK->GENDIV.reg) = gClkGen;
+    GCLK->GENDIV.bit.DIV = divFactor;
+}
 
 
 
@@ -119,7 +138,6 @@ static void disableAllPeripheralClocks(void)
     disablePeripheralClock(GCLK_CLKCTRL_ID_SERCOM4_CORE_Val);
 }
 
-
 bool samr21Clock_switchGen0Source(bool useDfll)
 {
     //Setup GENDIV first (should output 8MHz when DFLL is used, ~1 when not)
@@ -128,25 +146,9 @@ bool samr21Clock_switchGen0Source(bool useDfll)
         return false;
     }
 
-    //Should use the Clock Src 1:1 (1MHz or 48Mhz)
-    GCLK->GENDIV.reg = 
-        GCLK_GENDIV_ID(0)
-        |GCLK_GENDIV_DIV(0)
-    ;
-    //Wait for synchronization 
-    while ( GCLK->STATUS.bit.SYNCBUSY );
-
-
     //Put GCLK 0 (Main Clk) on the OSC8M or DFLL
-    GCLK->GENCTRL.reg = 
-        GCLK_GENCTRL_ID(0) 
-        |GCLK_GENCTRL_SRC(useDfll ? GCLK_GENCTRL_SRC_DFLL48M_Val : GCLK_GENCTRL_SRC_OSC8M_Val)
-        //|GCLK_GENCTRL_RUNSTDBY
-        //|GCLK_GENCTRL_DIVSEL
-        //|GCLK_GENCTRL_OE
-        //|GCLK_GENCTRL_OOV
-        |GCLK_GENCTRL_GENEN
-    ;
+    GCLK->GENCTRL.bit.ID = 0;
+    GCLK->GENCTRL.bit.SRC = (useDfll ? GCLK_GENCTRL_SRC_DFLL48M_Val : GCLK_GENCTRL_SRC_OSC8M_Val);
 
     //Wait for synchronization 
     while ( GCLK->STATUS.bit.SYNCBUSY || !GCLK->GENCTRL.bit.GENEN);
@@ -232,38 +234,24 @@ bool samr21Clock_enableGen3(bool useDfll)
         return false;
     }
 
+    GCLK->GENCTRL.bit.ID = 3;
     //Disable GCLK 3 first
-    GCLK->GENCTRL.reg = 
-        GCLK_GENCTRL_ID(3)
-        |GCLK_GENCTRL_SRC(useDfll ? GCLK_GENCTRL_SRC_DFLL48M_Val : GCLK_GENCTRL_SRC_OSC8M_Val)
-        //|GCLK_GENCTRL_RUNSTDBY
-        //|GCLK_GENCTRL_DIVSEL
-        //|GCLK_GENCTRL_OE
-        //|GCLK_GENCTRL_OOV
-        //|GCLK_GENCTRL_GENEN
-    ;
+    GCLK->GENCTRL.bit.GENEN = 0;
 
     //Wait for synchronization 
     while ( GCLK->STATUS.bit.SYNCBUSY);
 
-    //Setup GENDIV first (should output ~1MHz)
-    GCLK->GENDIV.reg = 
-        GCLK_GENDIV_ID(3) 
-        |GCLK_GENDIV_DIV(useDfll ? 48 : 0)
-    ;
-    //Wait for synchronization 
-    while ( GCLK->STATUS.bit.SYNCBUSY );
 
     //Put GCLK 3 (Timer and RTC) on the OSC8M or DFLL
-    GCLK->GENCTRL.reg = 
-        GCLK_GENCTRL_ID(3)
-        |GCLK_GENCTRL_SRC(useDfll ? GCLK_GENCTRL_SRC_DFLL48M_Val : GCLK_GENCTRL_SRC_OSC8M_Val)
-        //|GCLK_GENCTRL_RUNSTDBY
-        //|GCLK_GENCTRL_DIVSEL
-        //|GCLK_GENCTRL_OE
-        //|GCLK_GENCTRL_OOV
-        |GCLK_GENCTRL_GENEN
-    ;
+    GCLK->GENCTRL.bit.ID = 3;
+    //Change source
+    GCLK->GENCTRL.bit.ID = (useDfll ? GCLK_GENCTRL_SRC_DFLL48M_Val : GCLK_GENCTRL_SRC_OSC8M_Val);
+    //Disable GCLK 3 first
+    GCLK->GENCTRL.bit.GENEN = 1;
+ 
+    //Setup Devider
+    GCLK->GENDIV.bit.ID = 3;
+    GCLK->GENDIV.bit.DIV = (useDfll ? 48 : 1);
 
     //Wait for synchronization 
     while ( GCLK->STATUS.bit.SYNCBUSY);
@@ -322,11 +310,6 @@ bool samr21Clock_enableGen4(bool useDfll)
 
 bool samr21Clock_shutdownDfllClockSource(void)
 {
-    if(!s_dfllClockSourceActive)
-    {
-        return true;
-    }
-
     if(!isDfllShutdownSafe())
     {
         return false;
@@ -334,14 +317,9 @@ bool samr21Clock_shutdownDfllClockSource(void)
 
     if(SYSCTRL->DFLLCTRL.bit.ENABLE)
     {
-        SYSCTRL->DFLLCTRL.bit.ENABLE = 0;
+        SYSCTRL->DFLLCTRL.reg = 0;
         while(SYSCTRL->DFLLCTRL.bit.ENABLE);
     }
-
-    SYSCTRL->DFLLCTRL.reg = 0x00;
-
-    SYSCTRL->DFLLVAL.bit.COARSE = 0x00;
-    SYSCTRL->DFLLVAL.bit.DIFF = 0x00;
 
     s_dfllClockSourceActive = false;
 
@@ -367,8 +345,22 @@ bool samr21Clock_startupDfllClockSource(void)
     uint32_t coarse = (*((uint32_t*)(FUSES_DFLL48M_COARSE_CAL_ADDR)) & FUSES_DFLL48M_COARSE_CAL_Msk) >> FUSES_DFLL48M_COARSE_CAL_Pos;
     uint32_t fine = (*((uint32_t*)(FUSES_DFLL48M_FINE_CAL_ADDR)) & FUSES_DFLL48M_FINE_CAL_Msk) >> FUSES_DFLL48M_FINE_CAL_Pos;
 
-    SYSCTRL->DFLLVAL.bit.COARSE = coarse;
-    SYSCTRL->DFLLVAL.bit.DIFF = fine;
+    //Enable DFLL48M clock 
+    SYSCTRL->DFLLCTRL.reg =
+        SYSCTRL_DFLLCTRL_WAITLOCK
+        //|SYSCTRL_DFLLCTRL_BPLCKC
+        //|SYSCTRL_DFLLCTRL_QLDIS
+        //|SYSCTRL_DFLLCTRL_CCDIS
+        //|SYSCTRL_DFLLCTRL_ONDEMAND
+        //|SYSCTRL_DFLLCTRL_RUNSTDBY
+        //|SYSCTRL_DFLLCTRL_USBCRM
+        |SYSCTRL_DFLLCTRL_LLAW
+        //|SYSCTRL_DFLLCTRL_STABLE
+        //|SYSCTRL_DFLLCTRL_MODE
+        |SYSCTRL_DFLLCTRL_ENABLE
+    ;
+
+    while(!SYSCTRL->DFLLCTRL.bit.ENABLE && !SYSCTRL->PCLKSR.bit.DFLLRDY );
 
     //Set Calibration Values for DFLL
     SYSCTRL->DFLLMUL.reg=
@@ -377,8 +369,11 @@ bool samr21Clock_startupDfllClockSource(void)
         |SYSCTRL_DFLLMUL_MUL(1536ul) // 31.250kHz ref --> x1536 -> 48MHz
     ;
 
-    //Enable DFLL48M clock 
-    SYSCTRL->DFLLCTRL.reg =
+    SYSCTRL->DFLLMUL.reg=
+
+
+    //Start Closed Loop
+    SYSCTRL->DFLLCTRL.reg |=
         SYSCTRL_DFLLCTRL_WAITLOCK
         //|SYSCTRL_DFLLCTRL_BPLCKC
         //|SYSCTRL_DFLLCTRL_QLDIS
@@ -391,6 +386,7 @@ bool samr21Clock_startupDfllClockSource(void)
         |SYSCTRL_DFLLCTRL_MODE
         |SYSCTRL_DFLLCTRL_ENABLE
     ;
+
 
     while (!SYSCTRL->PCLKSR.bit.DFLLRDY || !SYSCTRL->PCLKSR.bit.DFLLLCKC || !SYSCTRL->PCLKSR.bit.DFLLLCKF);
 
