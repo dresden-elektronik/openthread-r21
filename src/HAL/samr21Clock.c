@@ -110,7 +110,7 @@ static void enableAllPeripheralClocks(void)
     enablePeripheralClock(GCLK_CLKCTRL_ID_SERCOMX_SLOW_Val, 3);
     enablePeripheralClock(GCLK_CLKCTRL_ID_SERCOM2_CORE_Val, 3);
 
-    //Sercom Fast Clock (8 MHz TRX SPI)
+    //Sercom Fast Clock (12 MHz TRX SPI)
     enablePeripheralClock(GCLK_CLKCTRL_ID_SERCOM4_CORE_Val, 4);
 }
 
@@ -229,7 +229,7 @@ void startupDfllClockSource(bool useUsbClock, uint32_t refMultiplyFactor)
         ;
     }
 
-    while (!SYSCTRL->PCLKSR.bit.DFLLRDY && !SYSCTRL->PCLKSR.bit.DFLLLCKC && !SYSCTRL->PCLKSR.bit.DFLLLCKF);
+    while (!SYSCTRL->PCLKSR.bit.DFLLRDY || !SYSCTRL->PCLKSR.bit.DFLLLCKC || !SYSCTRL->PCLKSR.bit.DFLLLCKF);
 }
 
 void samr21Clock_enableFallbackClockTree(void)
@@ -284,8 +284,8 @@ void samr21Clock_enableOperatingClockTree()
     startupDfllClockSource(false,1536);
 #endif
     
-    enableGClkGen(3,GCLK_GENCTRL_SRC_DFLL48M_Val,48); //    1Mhz (1us Timer)
-    enableGClkGen(4,GCLK_GENCTRL_SRC_DFLL48M_Val,6); //     8Mhz (fast TRX Comm)
+    enableGClkGen(3,GCLK_GENCTRL_SRC_DFLL48M_Val,48); //    1Mhz (used as 1us Timer)
+    enableGClkGen(4,GCLK_GENCTRL_SRC_DFLL48M_Val,4); //     12Mhz (used for fast TRX SPI-Communication)
 
     //CPU, AHB and APB (GCLK) depend on this clock Soure
     switchGClkGen0Source(GCLK_GENCTRL_SRC_DFLL48M_Val);
