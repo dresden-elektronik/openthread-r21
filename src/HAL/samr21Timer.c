@@ -441,12 +441,11 @@ void samr21Timer5_init(uint8_t a_divider, bool a_oneshot, bool a_interrupt){
     while (TC5->COUNT16.STATUS.bit.SYNCBUSY)
         ;
 
-    // // Reset after
-    // TC5->COUNT16.CTRLA.bit.SWRST = 1;
-    // while (TC5->COUNT16.STATUS.bit.SYNCBUSY);
-    // while (TC5->COUNT16.CTRLA.bit.SWRST);
+    // Reset after
+    TC5->COUNT16.CTRLA.bit.SWRST = 1;
+    while (TC5->COUNT16.CTRLA.bit.SWRST);
 
-    // Setup TC Modules
+    // Setup TC Mods
 
     TC5->COUNT16.INTENSET.bit.OVF = 1;
 

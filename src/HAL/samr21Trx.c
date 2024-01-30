@@ -197,7 +197,7 @@ void samr21Trx_initInterface()
     // Note: this should actully be written, but the Trx resets to desired Values anyways
     //       making changes to this causes wierd clock glitches not worth dealing with
     //
-    //samr21Trx_writeRegister(TRX_CTRL_0_REG_ADDR, s_localTrxRegisterCopy.trxCtrl0.reg);
+    samr21Trx_writeRegister(TRX_CTRL_0_REG_ADDR, s_localTrxRegisterCopy.trxCtrl0.reg);
     
     samr21Trx_writeRegister(TRX_CTRL_1_REG_ADDR, s_localTrxRegisterCopy.trxCtrl1.reg);
     

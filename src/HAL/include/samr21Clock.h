@@ -27,7 +27,7 @@
  * Sets up GCLK4 to 8MHz stepped down from the 48MHz DFLL (For SPI-Communication dit AT86RF233)
  * 
  */
-bool samr21Clock_enableOperatingClockTree(bool useTrxClock);
+void samr21Clock_enableOperatingClockTree(void);
 
 /**
  * Inits a stable Clocking System of the SAMR21
@@ -39,5 +39,5 @@ bool samr21Clock_enableOperatingClockTree(bool useTrxClock);
  * Sets up GCLK4 to use the 1MHz from the OSC8M (For SPI-Communication dit AT86RF233)
  * 
  */
-bool samr21Clock_enableFallbackClockTree(void);
+void samr21Clock_enableFallbackClockTree(void);
 #endif //_SAMR21_CLOCK_H_

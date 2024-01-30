@@ -54,19 +54,16 @@ void otSysInit(int argc, char *argv[])
     samr21Nvm_init();
     samr21Dma_init();
 
-#ifndef SAMR21_DONT_USE_TRX_CLOCK
-    samr21Clock_enableOperatingClockTree(true); //Depending on correct output freq of AT86RF233 MCLK
-#else
-    samr21Clock_enableOperatingClockTree(false); //Not depending on MCLK of AT86RF233, but very inaccurate (can cause USB issues)
-#endif
     samr21Trx_initInterface(); //Also inits Clock Output of the AT86RF233, so we can switch to a Crystal based clock Domain
+    samr21Usb_init();
+
+    samr21Clock_enableOperatingClockTree(); //Depending on correct output freq of AT86RF233 MCLK
 
     samr21Trx_initLocalDriver();
 
     samr21_tickleWatchdog();
     samr21Rtc_init();
 
-    samr21Usb_init();
     tusb_init();
 
 #ifdef _GCF_RELEASE_
