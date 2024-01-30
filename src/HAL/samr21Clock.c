@@ -37,6 +37,89 @@ static bool isDfllUsable(void)
     return s_dfllClockSourceActive && s_gclk1Enabled;
 }
 
+static void disablePeripheralClock(uint8_t peripheralClock)
+{
+    __disable_irq();
+   	/* Select the requested generator channel */
+	*((uint8_t*)&GCLK->CLKCTRL.reg) = peripheralClock;
+
+	/* Sanity check WRTLOCK */
+	while(GCLK->CLKCTRL.bit.WRTLOCK);
+
+	/* Switch to known-working source so that the channel can be disabled */
+	uint32_t prev_gen_id = GCLK->CLKCTRL.bit.GEN;
+	GCLK->CLKCTRL.bit.GEN = 0;
+
+	/* Disable the generic clock */
+	GCLK->CLKCTRL.reg &= ~GCLK_CLKCTRL_CLKEN;
+	while (GCLK->CLKCTRL.reg & GCLK_CLKCTRL_CLKEN) {
+		/* Wait for clock to become disabled */
+	}
+
+	/* Restore previous configured clock generator */
+	GCLK->CLKCTRL.bit.GEN = prev_gen_id; 
+    __enable_irq();
+}
+
+
+static void enablePeripheralClock(uint8_t peripheralClock, uint8_t gClkGen)
+{
+    disablePeripheralClock(peripheralClock);
+
+    __disable_irq();
+
+	/* Write the new configuration */
+	GCLK->CLKCTRL.reg = 
+        GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_RTC_Val)
+        | GCLK_CLKCTRL_GEN(gClkGen)
+    ;
+
+    /* Select the requested peripheralClock */
+	*((uint8_t*)&GCLK->CLKCTRL.reg) = peripheralClock;
+
+	/* Enable the generic clock */
+	GCLK->CLKCTRL.reg |= GCLK_CLKCTRL_CLKEN;
+
+    __enable_irq();
+}
+
+
+
+
+static void enableAllPeripheralClocks(void)
+{
+    //CPU Clock (48Mhz)
+    enablePeripheralClock(GCLK_CLKCTRL_ID_EIC_Val,0);
+    enablePeripheralClock(GCLK_CLKCTRL_ID_USB_Val,0);
+
+    //Timer Clock (1Mhz)
+    enablePeripheralClock(GCLK_CLKCTRL_ID_RTC_Val,3);
+    enablePeripheralClock(GCLK_CLKCTRL_ID_TCC0_TCC1_Val, 3);
+    enablePeripheralClock(GCLK_CLKCTRL_ID_TCC2_TC3_Val, 3);
+    enablePeripheralClock(GCLK_CLKCTRL_ID_TC4_TC5_Val, 3);
+
+    //Sercom Slow Clock (1 MHz, DebugUart and APB Interface)
+    enablePeripheralClock(GCLK_CLKCTRL_ID_SERCOMX_SLOW_Val, 3);
+    enablePeripheralClock(GCLK_CLKCTRL_ID_SERCOM2_CORE_Val, 3);
+
+    //Sercom Fast Clock (8 MHz TRX SPI)
+    enablePeripheralClock(GCLK_CLKCTRL_ID_SERCOM4_CORE_Val, 4);
+}
+
+static void disableAllPeripheralClocks(void)
+{
+    disablePeripheralClock(GCLK_CLKCTRL_ID_EIC_Val);
+    disablePeripheralClock(GCLK_CLKCTRL_ID_USB_Val);
+    disablePeripheralClock(GCLK_CLKCTRL_ID_RTC_Val);
+    disablePeripheralClock(GCLK_CLKCTRL_ID_TCC0_TCC1_Val);
+    disablePeripheralClock(GCLK_CLKCTRL_ID_TCC2_TC3_Val);
+    disablePeripheralClock(GCLK_CLKCTRL_ID_TC4_TC5_Val);
+    disablePeripheralClock(GCLK_CLKCTRL_ID_SERCOMX_SLOW_Val);
+    disablePeripheralClock(GCLK_CLKCTRL_ID_SERCOM2_CORE_Val);
+    disablePeripheralClock(GCLK_CLKCTRL_ID_SERCOM4_CORE_Val);
+}
+
+
 bool samr21Clock_switchGen0Source(bool useDfll)
 {
     //Setup GENDIV first (should output 8MHz when DFLL is used, ~1 when not)
@@ -109,9 +192,7 @@ bool samr21Clock_enableGen1(bool useTrxSource)
         //|GCLK_GENCTRL_OOV
         //|GCLK_GENCTRL_GENEN
     ;
-
-    //Wait for synchronization 
-    while (GCLK->GENCTRL.bit.GENEN);
+    while ( GCLK->STATUS.bit.SYNCBUSY );
 
     //Setup GENDIV first (should output 31.250 kHz)
     GCLK->GENDIV.reg = 
@@ -120,7 +201,6 @@ bool samr21Clock_enableGen1(bool useTrxSource)
     ;
     //Wait for synchronization 
     while ( GCLK->STATUS.bit.SYNCBUSY );
-
 
     //Put GCLK 1 (REF for DFLL) on the OSC8M or TRX_CLK_OUT (Both 1 MHz)
     GCLK->GENCTRL.reg = 
@@ -132,9 +212,8 @@ bool samr21Clock_enableGen1(bool useTrxSource)
         //|GCLK_GENCTRL_OOV
         |GCLK_GENCTRL_GENEN
     ;
-
     //Wait for synchronization 
-    while ( GCLK->STATUS.bit.SYNCBUSY || !GCLK->GENCTRL.bit.GENEN);
+    while ( GCLK->STATUS.bit.SYNCBUSY);
 
     s_gclk1Enabled = true;
     s_gclk1SourcedByTrx = useTrxSource;
@@ -165,7 +244,7 @@ bool samr21Clock_enableGen3(bool useDfll)
     ;
 
     //Wait for synchronization 
-    while (GCLK->GENCTRL.bit.GENEN);
+    while ( GCLK->STATUS.bit.SYNCBUSY);
 
     //Setup GENDIV first (should output ~1MHz)
     GCLK->GENDIV.reg = 
@@ -187,7 +266,7 @@ bool samr21Clock_enableGen3(bool useDfll)
     ;
 
     //Wait for synchronization 
-    while ( GCLK->STATUS.bit.SYNCBUSY || !GCLK->GENCTRL.bit.GENEN);
+    while ( GCLK->STATUS.bit.SYNCBUSY);
 
     s_gclk3Enabled = true;
     s_gclk3DependsOnDfll = useDfll;
@@ -212,6 +291,7 @@ bool samr21Clock_enableGen4(bool useDfll)
         //|GCLK_GENCTRL_OOV
         //|GCLK_GENCTRL_GENEN
     ;
+    while ( GCLK->STATUS.bit.SYNCBUSY );
 
     GCLK->GENDIV.reg = 
         GCLK_GENDIV_ID(4) 
@@ -233,7 +313,7 @@ bool samr21Clock_enableGen4(bool useDfll)
     ;
 
     //Wait for synchronization 
-    while ( GCLK->STATUS.bit.SYNCBUSY || !GCLK->GENCTRL.bit.GENEN);
+    while ( GCLK->STATUS.bit.SYNCBUSY );
 
     s_gclk4Enabled = true;
     s_gclk4DependsOnDfll = useDfll; 
@@ -281,20 +361,8 @@ bool samr21Clock_startupDfllClockSource(void)
         return true;
     }
 
-    //WA1 see R21 Datasheet ERRATA 47.1.5
-    SYSCTRL->DFLLCTRL.bit.ONDEMAND = 0;
-    while (!SYSCTRL->PCLKSR.bit.DFLLRDY);
-
     //Use GCLKGEN 1 (31.250 kHz) as Ref Freq for DFLL48M
-    GCLK->CLKCTRL.reg =
-        //GCLK_CLKCTRL_WRTLOCK
-        GCLK_CLKCTRL_CLKEN
-        |GCLK_CLKCTRL_GEN(1)
-        |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_DFLL48_Val)
-    ;
-
-    //Wait for synchronization 
-    while ( GCLK->STATUS.bit.SYNCBUSY );
+    enablePeripheralClock(GCLK_CLKCTRL_ID_DFLL48_Val,1);
 
     uint32_t coarse = (*((uint32_t*)(FUSES_DFLL48M_COARSE_CAL_ADDR)) & FUSES_DFLL48M_COARSE_CAL_Msk) >> FUSES_DFLL48M_COARSE_CAL_Pos;
     uint32_t fine = (*((uint32_t*)(FUSES_DFLL48M_FINE_CAL_ADDR)) & FUSES_DFLL48M_FINE_CAL_Msk) >> FUSES_DFLL48M_FINE_CAL_Pos;
@@ -309,7 +377,7 @@ bool samr21Clock_startupDfllClockSource(void)
         |SYSCTRL_DFLLMUL_MUL(1536ul) // 31.250kHz ref --> x1536 -> 48MHz
     ;
 
-        //Enable DFLL48M clock 
+    //Enable DFLL48M clock 
     SYSCTRL->DFLLCTRL.reg =
         SYSCTRL_DFLLCTRL_WAITLOCK
         //|SYSCTRL_DFLLCTRL_BPLCKC
@@ -327,7 +395,6 @@ bool samr21Clock_startupDfllClockSource(void)
     while (!SYSCTRL->PCLKSR.bit.DFLLRDY || !SYSCTRL->PCLKSR.bit.DFLLLCKC || !SYSCTRL->PCLKSR.bit.DFLLLCKF);
 
     s_dfllClockSourceActive = true;
-
     return true;
 }
 
@@ -348,12 +415,19 @@ bool samr21Clock_enableFallbackClockTree(void)
     //Put it on OSC8M so we have stable clock, while configuring Clocks    
     failed |= !samr21Clock_switchGen0Source(false);
 
+    disableAllPeripheralClocks();
+
     //Put them also on OSC8M, so comm with TRX still works
     failed |= !samr21Clock_enableGen3(false);
     failed |= !samr21Clock_enableGen4(false);
 
     //Shut down DFLL cause it is not used
     failed |= !samr21Clock_shutdownDfllClockSource();
+
+    //Enable clocks for SPI-Comm with TRX
+    enablePeripheralClock(GCLK_CLKCTRL_ID_SERCOMX_SLOW_Val, 3);
+    enablePeripheralClock(GCLK_CLKCTRL_ID_SERCOM4_CORE_Val, 4);
+
 
     return !failed;
 }
@@ -391,6 +465,8 @@ bool samr21Clock_enableOperatingClockTree(bool useTrxClock)
     {
         samr21Clock_enableFallbackClockTree();
     }
+    
+    enableAllPeripheralClocks();
 
     return !failed;
 }

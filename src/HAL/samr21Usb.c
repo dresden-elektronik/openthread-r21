@@ -11,16 +11,6 @@
 
 void samr21Usb_init(){
 
-    //Use GCLKGEN0 (48Mhz if mClk on AT86RF233 outputs 16MHz) as Ref Freq for USB
-    GCLK->CLKCTRL.reg =
-        //GCLK_CLKCTRL_WRTLOCK
-        GCLK_CLKCTRL_CLKEN
-        |GCLK_CLKCTRL_GEN(0) // GCLKGEN0
-        |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_USB_Val)
-    ;
-    //Wait for synchronization 
-    while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
-
     //Enable in Power Manger 
     PM->APBBMASK.bit.USB_ = 1;
     

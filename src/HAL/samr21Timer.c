@@ -13,21 +13,6 @@
 
 static struct 
 {
-    union{
-        bool timer0ClkActive;
-        bool timer1ClkActive;
-    };
-
-    union{
-        bool timer2ClkActive;
-        bool timer3ClkActive;
-    };
-
-    union{
-        bool timer4ClkActive;
-        bool timer5ClkActive;
-    };
-
     bool timer0Active;
     bool timer1Active;
     bool timer2Active;
@@ -38,59 +23,12 @@ static struct
 }s_timerVars;
 
 
-static void clk01Init()
-{
-    // Use GCLKGEN 3 (1MHz) for TCC0 / TCC1
-    GCLK->CLKCTRL.reg =
-        // GCLK_CLKCTRL_WRTLOCK
-        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(3) // GCLKGEN2
-        | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TCC0_TCC1_Val);
-    // Wait for synchronization
-    while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
-        ;
-
-    s_timerVars.timer0ClkActive = true;
-}
-
-static void clk23Init()
-{
-    // Use GCLKGEN 3 (1MHz) for TCC2 TC3
-    GCLK->CLKCTRL.reg =
-        // GCLK_CLKCTRL_WRTLOCK
-        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(3) // GCLKGEN2
-        | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TCC2_TC3_Val);
-    // Wait for synchronization
-    while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
-        ;
-
-    s_timerVars.timer2ClkActive = true;
-}
-
-static void clk45Init()
-{
-    // Use GCLKGEN 3 (1MHz) for TC4 TC5
-    GCLK->CLKCTRL.reg =
-        // GCLK_CLKCTRL_WRTLOCK>
-        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(3) // GCLKGEN2
-        | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TC4_TC5_Val);
-    // Wait for synchronization
-    while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
-        ;
-
-    s_timerVars.timer4ClkActive = true;
-}
-
 //TCC0
 void samr21Timer0_init(uint8_t a_divider, bool a_oneshot, bool a_interrupt)
 {
     if(s_timerVars.timer0Active){
         return;
     }
-
-    if(!s_timerVars.timer0ClkActive){
-        clk01Init();
-    }
-
     // Enable In Power Manger
     PM->APBCMASK.bit.TCC0_ = 1;
 
@@ -172,10 +110,6 @@ void samr21Timer1_init(uint8_t a_divider, bool a_oneshot, bool a_interrupt)
 {
     if(s_timerVars.timer1Active){
         return;
-    }
-
-    if(!s_timerVars.timer1ClkActive){
-        clk01Init();
     }
 
     // Enable In Power Manger
@@ -260,10 +194,6 @@ void samr21Timer2_init(uint8_t a_divider , bool a_oneshot, bool a_interrupt)
         return;
     }
 
-    if(!s_timerVars.timer2ClkActive){
-        clk23Init();
-    }
-
     // Enable In Power Manger
     PM->APBCMASK.bit.TCC2_ = 1;
 
@@ -343,10 +273,6 @@ void samr21Timer3_init(uint8_t a_divider , bool a_oneshot, bool a_interrupt)
 {
     if(s_timerVars.timer3Active){
         return;
-    }
-
-    if(!s_timerVars.timer3ClkActive){
-        clk23Init();
     }
 
     // Enable In Power Manger
@@ -434,10 +360,6 @@ void samr21Timer4_init(uint8_t a_divider , bool a_oneshot, bool a_interrupt)
         return;
     }
 
-    if(!s_timerVars.timer4ClkActive){
-        clk45Init();
-    }
-
     // Enable In Power Manger
     PM->APBCMASK.bit.TC4_ = 1;
 
@@ -509,10 +431,6 @@ void samr21Timer4_stop()
 void samr21Timer5_init(uint8_t a_divider, bool a_oneshot, bool a_interrupt){
     if(s_timerVars.timer5Active){
         return;
-    }
-
-    if(!s_timerVars.timer5ClkActive){
-        clk45Init();
     }
 
     // Enable In Power Manger
@@ -649,8 +567,6 @@ void samr21Timer_deinitAll()
     while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
         ;
     
-    s_timerVars.timer0ClkActive = false;
-
     GCLK->CLKCTRL.reg =
         // GCLK_CLKCTRL_WRTLOCK
         // GCLK_CLKCTRL_CLKEN
@@ -659,8 +575,6 @@ void samr21Timer_deinitAll()
     // Wait for synchronization
     while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
         ;
-
-    s_timerVars.timer2ClkActive = false;
     
     GCLK->CLKCTRL.reg =
         // GCLK_CLKCTRL_WRTLOCK
@@ -670,8 +584,6 @@ void samr21Timer_deinitAll()
     // Wait for synchronization
     while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
         ;
-
-    s_timerVars.timer4ClkActive = false;
 }
 
 

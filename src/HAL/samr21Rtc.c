@@ -11,18 +11,8 @@
 
 extern uint32_t g_currentRtcClkCycle_ns;
 
-void samr21Rtc_init(){
-
-    //Use GCLKGEN 3 (1MHz) for RTC 
-    GCLK->CLKCTRL.reg =
-        //GCLK_CLKCTRL_WRTLOCK
-        GCLK_CLKCTRL_CLKEN
-        |GCLK_CLKCTRL_GEN(3) 
-        |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_RTC_Val)
-    ;
-    //Wait for synchronization 
-    while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
-
+void samr21Rtc_init()
+{
     //Enable RTC In Power Manger
     PM->APBAMASK.bit.RTC_ = 1;
 

@@ -45,28 +45,6 @@ static void trx_dmaDone_cb(void);
 
 void samr21Trx_initInterface()
 {
-    // Setup Clocks for TRX-SPI Sercom
-    GCLK->CLKCTRL.reg =
-        // GCLK_CLKCTRL_WRTLOCK
-        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(4) // 8MHz or 1MHz(Fallback)
-        | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_SERCOM4_CORE_Val);
-
-    // Wait for synchronization
-    while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
-        ;
-
-    GCLK->CLKCTRL.reg =
-        // GCLK_CLKCTRL_WRTLOCK
-        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(4) // 8MHz or 1MHz(Fallback)
-        | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_SERCOMX_SLOW_Val);
-
-    // Wait for synchronization
-    while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
-        ;
-
-    // Enable Sercom  in Power manager
-    PM->APBCMASK.bit.SERCOM4_ = 1;
-
     // Setup Ports for TRX
     // Setup PIN PC19 as MISO <-> At86rf233 via SERCOM4
     // Make Input
@@ -170,6 +148,9 @@ void samr21Trx_initInterface()
     // Set Default Low
     PORT->Group[0].OUT.reg |= ((uint32_t)0 & 0x1) << 20;
 
+    // Enable EIC in Power Manager
+    PM->APBCMASK.bit.SERCOM4_ = 1;
+    
     // Reset SERCOM4
     SERCOM4->SPI.CTRLA.bit.SWRST = 1;
 
@@ -248,15 +229,6 @@ void samr21Trx_initInterrupts()
     // Enable EIC in Power Manager
     PM->APBAMASK.bit.EIC_ = 1;
 
-    // Enable IRQ via EIC
-    // Use GCLKGEN0 as core Clock for EIC (At86rf233, IRQ_Detect)
-    GCLK->CLKCTRL.reg =
-        // GCLK_CLKCTRL_WRTLOCK
-        GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN(0) // 48 MHz (CPU Clock) we want minimum reaction time
-        | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_EIC_Val);
-    // Wait for synchronization
-    while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
-        ;
     // Reset first and wait for reset to finish
     EIC->CTRL.bit.SWRST = 1;
     while (EIC->STATUS.bit.SYNCBUSY)
@@ -283,9 +255,8 @@ void samr21Trx_initInterrupts()
     EIC->INTFLAG.bit.EXTINT0 = 1;
 }
 
-void samr21Trx_deinitInterrupts()
+void samr21Trx_deinitInterrupts(void)
 {
-
     if (EIC->CTRL.bit.ENABLE)
     {
         // Disable EIC Module
@@ -299,18 +270,8 @@ void samr21Trx_deinitInterrupts()
             ;
         while (EIC->CTRL.bit.SWRST)
             ;
-
-        // Disable GCLKGEN0 for EIC (At86rf233, IRQ_Detect)
-        GCLK->CLKCTRL.reg =
-            // GCLK_CLKCTRL_WRTLOCK
-            // |GCLK_CLKCTRL_CLKEN 
-            GCLK_CLKCTRL_GEN(0) // GCLKGEN1
-            | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_EIC_Val);
-
-        // Wait for synchronization
-        while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
-            ;
     }
+
 
     // Disable EIC in Power Manager
     if (PM->APBAMASK.bit.EIC_)
@@ -368,6 +329,7 @@ void samr21Trx_spiStartAccess(uint8_t a_command, uint8_t a_addr)
         ;
 
     NVIC_DisableIRQ(EIC_IRQn);
+    NVIC_DisableIRQ(TC4_IRQn);
 
     s_trxVars.spiActive = true;
     PORT->Group[1].OUTCLR.reg = 1 << 31; // SSel Low Active
@@ -412,7 +374,7 @@ void samr21Trx_spiCloseAccess()
     s_trxVars.spiActive = false;
 
     NVIC_EnableIRQ(EIC_IRQn);
-    // NVIC_EnableIRQ(TC4_IRQn);
+    NVIC_EnableIRQ(TC4_IRQn);
 }
 
 void samr21Trx_updateStatusRegister()
@@ -422,6 +384,7 @@ void samr21Trx_updateStatusRegister()
     while (s_trxVars.spiActive)
         ;
     NVIC_DisableIRQ(EIC_IRQn);
+    NVIC_DisableIRQ(TC4_IRQn);
     PORT->Group[1].OUTCLR.reg = 1 << 31; // SSel Low Active
     s_trxVars.spiActive = true;
 
@@ -930,6 +893,7 @@ void samr21Trx_dmaUploadToFramebuffer(uint8_t *a_data_p, uint8_t a_len, uint8_t 
 
     //Faster SPI Start Access (does ignore the inital status byte)
     NVIC_DisableIRQ(EIC_IRQn);
+    NVIC_DisableIRQ(TC4_IRQn);
     PORT->Group[1].OUTCLR.reg = 1 << 31; // SSel Low Active
     s_trxVars.spiActive = true;
 

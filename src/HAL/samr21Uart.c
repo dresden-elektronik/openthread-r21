@@ -20,22 +20,11 @@ static bool s_dmaBusy = false;
 void dma_callback(void);
 
 void samr21Uart_init(){
-//Setup Clocks for TRX-SPI
-        //Use GCLKGEN4 (8Mhz or 1MHz) as core Clock for the debug UART 
-        GCLK->CLKCTRL.reg =
-            //GCLK_CLKCTRL_WRTLOCK
-            GCLK_CLKCTRL_CLKEN
-            |GCLK_CLKCTRL_GEN(4) // GCLKGEN3
-            |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_SERCOM4_CORE_Val)
-        ;
-        //Wait for synchronization 
-        while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
-
     
     //Enable in Power manager
         PM->APBCMASK.bit.SERCOM2_ = 1;
 
-    //Setup Ports for TRX
+    //Setup Ports for UART
         //Setup PIN PA14 as UART TX
             //Make Input
             PORT->Group[0].DIRSET.reg= PORT_PA14;
@@ -133,8 +122,6 @@ void samr21Uart_deinit(){
     //Disable RTC In Power Manger
     PM->APBAMASK.bit.RTC_ = 0;
 
-    //Disable CLKGEN
-    GCLK->CLKCTRL.reg =
         //GCLK_CLKCTRL_WRTLOCK
         //GCLK_CLKCTRL_CLKEN
         GCLK_CLKCTRL_GEN(0) // GCLKGEN2
