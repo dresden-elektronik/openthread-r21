@@ -8,7 +8,7 @@
 #endif
 
 
-#ifdef _GCF_RELEASE_
+#if defined(TARGET_DEVICE) && (TARGET_DEVICE == CONBEE2)
     #define SAMR21_OT_NVM_ROWS 14
 #else
     #define SAMR21_OT_NVM_ROWS 16

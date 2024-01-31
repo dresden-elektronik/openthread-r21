@@ -12,7 +12,7 @@
 #include "samr21Clock.h"
 
 
-static void enableGClkGen(uint8_t gClkGen, uint8_t clkSrc, uint32_t divFactor )
+static void clock_enableGClkGen(uint8_t gClkGen, uint8_t clkSrc, uint32_t divFactor )
 {
     //Disable first
     GCLK->GENCTRL.reg = 
@@ -26,6 +26,7 @@ static void enableGClkGen(uint8_t gClkGen, uint8_t clkSrc, uint32_t divFactor )
     ;
     while ( GCLK->STATUS.bit.SYNCBUSY || GCLK->GENCTRL.bit.GENEN);
 
+    //Setup Divider Factor
     GCLK->GENDIV.reg = 
         GCLK_GENDIV_ID(gClkGen) 
         |GCLK_GENDIV_DIV(divFactor)
@@ -34,6 +35,7 @@ static void enableGClkGen(uint8_t gClkGen, uint8_t clkSrc, uint32_t divFactor )
     while ( GCLK->STATUS.bit.SYNCBUSY );
 
 
+    //Enable again
     GCLK->GENCTRL.reg = 
         GCLK_GENCTRL_ID(gClkGen)
         |GCLK_GENCTRL_SRC(clkSrc)
@@ -52,39 +54,38 @@ static void enableGClkGen(uint8_t gClkGen, uint8_t clkSrc, uint32_t divFactor )
     while ( GCLK->STATUS.bit.SYNCBUSY || !GCLK->GENCTRL.bit.GENEN);
 }
 
-static void disablePeripheralClock(uint8_t peripheralClock)
+static void clock_disablePeripheralClock(uint8_t peripheralClock)
 {
     while(GCLK->STATUS.bit.SYNCBUSY);
     __disable_irq();
-   	/* Select the requested generator channel */
+   	
+    //Select the requested peripheral Clock
 	*((uint8_t*)&GCLK->CLKCTRL.reg) = peripheralClock;
 
-	/* Sanity check WRTLOCK */
+	//Sanity check for WRTLOCK 
 	while(GCLK->CLKCTRL.bit.WRTLOCK);
 
-	/* Switch to known-working source so that the channel can be disabled */
+	// Switch to known-working source so that the channel can be disabled 
 	uint32_t prev_gen_id = GCLK->CLKCTRL.bit.GEN;
 	GCLK->CLKCTRL.bit.GEN = 0;
 
-	/* Disable the generic clock */
+	// Disable the peripheral Clock
 	GCLK->CLKCTRL.reg &= ~GCLK_CLKCTRL_CLKEN;
-	while (GCLK->CLKCTRL.reg & GCLK_CLKCTRL_CLKEN) {
-		/* Wait for clock to become disabled */
-	}
+	
+    // Wait for clock to become disabled
+	while (GCLK->CLKCTRL.reg & GCLK_CLKCTRL_CLKEN);
 
-	/* Restore previous configured clock generator */
-	//GCLK->CLKCTRL.bit.GEN = prev_gen_id; 
     __enable_irq();
 }
 
 
-static void enablePeripheralClock(uint8_t peripheralClock, uint8_t gClkGen)
+static void clock_enablePeripheralClock(uint8_t peripheralClock, uint8_t gClkGen)
 {
-    disablePeripheralClock(peripheralClock);
+    clock_disablePeripheralClock(peripheralClock);
 
     __disable_irq();
 
-	/* Write the new configuration */
+	//Write the new configuration
 	GCLK->CLKCTRL.reg =
         GCLK_CLKCTRL_ID(peripheralClock)
         | GCLK_CLKCTRL_GEN(gClkGen)
@@ -94,40 +95,40 @@ static void enablePeripheralClock(uint8_t peripheralClock, uint8_t gClkGen)
     __enable_irq();
 }
 
-static void enableAllPeripheralClocks(void)
+static void clock_enableAllPeripheralClocks(void)
 {
     //CPU Clock (48Mhz)
-    enablePeripheralClock(GCLK_CLKCTRL_ID_EIC_Val,0);
-    enablePeripheralClock(GCLK_CLKCTRL_ID_USB_Val,0);
+    clock_enablePeripheralClock(GCLK_CLKCTRL_ID_EIC_Val,0);
+    clock_enablePeripheralClock(GCLK_CLKCTRL_ID_USB_Val,0);
 
     //Timer Clock (1Mhz)
-    enablePeripheralClock(GCLK_CLKCTRL_ID_TCC0_TCC1_Val, 3);
-    enablePeripheralClock(GCLK_CLKCTRL_ID_TCC2_TC3_Val, 3);
-    enablePeripheralClock(GCLK_CLKCTRL_ID_TC4_TC5_Val, 3);
-    enablePeripheralClock(GCLK_CLKCTRL_ID_RTC_Val,3);
+    clock_enablePeripheralClock(GCLK_CLKCTRL_ID_TCC0_TCC1_Val, 3);
+    clock_enablePeripheralClock(GCLK_CLKCTRL_ID_TCC2_TC3_Val, 3);
+    clock_enablePeripheralClock(GCLK_CLKCTRL_ID_TC4_TC5_Val, 3);
+    clock_enablePeripheralClock(GCLK_CLKCTRL_ID_RTC_Val,3);
 
     //Sercom Slow Clock (1 MHz, DebugUart and APB Interface)
-    enablePeripheralClock(GCLK_CLKCTRL_ID_SERCOMX_SLOW_Val, 3);
-    enablePeripheralClock(GCLK_CLKCTRL_ID_SERCOM2_CORE_Val, 3);
+    clock_enablePeripheralClock(GCLK_CLKCTRL_ID_SERCOMX_SLOW_Val, 3);
+    clock_enablePeripheralClock(GCLK_CLKCTRL_ID_SERCOM2_CORE_Val, 3);
 
     //Sercom Fast Clock (12 MHz TRX SPI)
-    enablePeripheralClock(GCLK_CLKCTRL_ID_SERCOM4_CORE_Val, 4);
+    clock_enablePeripheralClock(GCLK_CLKCTRL_ID_SERCOM4_CORE_Val, 4);
 }
 
-static void disableAllPeripheralClocks(void)
+static void clock_disableAllPeripheralClocks(void)
 {
-    disablePeripheralClock(GCLK_CLKCTRL_ID_EIC_Val);
-    disablePeripheralClock(GCLK_CLKCTRL_ID_USB_Val);
-    disablePeripheralClock(GCLK_CLKCTRL_ID_TCC0_TCC1_Val);
-    disablePeripheralClock(GCLK_CLKCTRL_ID_TCC2_TC3_Val);
-    disablePeripheralClock(GCLK_CLKCTRL_ID_TC4_TC5_Val);
-    disablePeripheralClock(GCLK_CLKCTRL_ID_RTC_Val);
-    disablePeripheralClock(GCLK_CLKCTRL_ID_SERCOM2_CORE_Val);
-    disablePeripheralClock(GCLK_CLKCTRL_ID_SERCOM4_CORE_Val);
-    disablePeripheralClock(GCLK_CLKCTRL_ID_SERCOMX_SLOW_Val);
+    clock_disablePeripheralClock(GCLK_CLKCTRL_ID_EIC_Val);
+    clock_disablePeripheralClock(GCLK_CLKCTRL_ID_USB_Val);
+    clock_disablePeripheralClock(GCLK_CLKCTRL_ID_TCC0_TCC1_Val);
+    clock_disablePeripheralClock(GCLK_CLKCTRL_ID_TCC2_TC3_Val);
+    clock_disablePeripheralClock(GCLK_CLKCTRL_ID_TC4_TC5_Val);
+    clock_disablePeripheralClock(GCLK_CLKCTRL_ID_RTC_Val);
+    clock_disablePeripheralClock(GCLK_CLKCTRL_ID_SERCOM2_CORE_Val);
+    clock_disablePeripheralClock(GCLK_CLKCTRL_ID_SERCOM4_CORE_Val);
+    clock_disablePeripheralClock(GCLK_CLKCTRL_ID_SERCOMX_SLOW_Val);
 }
 
-bool switchGClkGen0Source(uint8_t clkSrc)
+bool clock_switchGClkGen0Source(uint8_t clkSrc)
 {
     GCLK->GENCTRL.bit.ID = 0;
     GCLK->GENCTRL.bit.SRC = clkSrc;
@@ -138,7 +139,7 @@ bool switchGClkGen0Source(uint8_t clkSrc)
     return true;
 }
 
-static void setupGClkIn(void)
+static void clock_setupGClkIn(void)
 {
     //Setup PIN PC16 as Clock-Input from mClk-Pin from At86rf233
     //Make Input
@@ -158,19 +159,17 @@ static void setupGClkIn(void)
 }
 
 
-void shutdownDfllClockSource(void)
+void clock_shutdownDfllClockSource(void)
 {
     if(SYSCTRL->DFLLCTRL.bit.ENABLE)
     {
         SYSCTRL->DFLLCTRL.reg = 0;
         while(SYSCTRL->DFLLCTRL.bit.ENABLE);
     }
-
-    return true;
 }
 
 
-void startupDfllClockSource(bool useUsbClock, uint32_t refMultiplyFactor)
+void clock_startupDfllClockSource(bool useUsbClock, uint32_t refMultiplyFactor)
 {
     uint32_t coarse = (*((uint32_t*)(FUSES_DFLL48M_COARSE_CAL_ADDR)) & FUSES_DFLL48M_COARSE_CAL_Msk) >> FUSES_DFLL48M_COARSE_CAL_Pos;
     uint32_t fine = (*((uint32_t*)(FUSES_DFLL48M_FINE_CAL_ADDR)) & FUSES_DFLL48M_FINE_CAL_Msk) >> FUSES_DFLL48M_FINE_CAL_Pos;
@@ -193,8 +192,6 @@ void startupDfllClockSource(bool useUsbClock, uint32_t refMultiplyFactor)
         |SYSCTRL_DFLLMUL_FSTEP(0xff / 4)// Fine step is 511, half of the max value
         |SYSCTRL_DFLLMUL_MUL(useUsbClock ?  0xBB80 : refMultiplyFactor ) // 31.250kHz ref --> x1536 -> 48MHz
     ;
-
-
 
     if(useUsbClock)
     {
@@ -234,8 +231,14 @@ void startupDfllClockSource(bool useUsbClock, uint32_t refMultiplyFactor)
 
 void samr21Clock_enableFallbackClockTree(void)
 {
-    //Disable RTC cause clocksettings are reset persistent
-    disablePeripheralClock(GCLK_CLKCTRL_ID_RTC_Val);
+    //RTC-BUG (PART 1)
+    //
+    // The RTC GCLK-Settings are Reset-Persitent.
+    // This means it may still be set to GCLKGEN = 3 (which is disabled after a Reset) 
+    // This will cause the GCLK SWRST to never finish.
+    // While SWRST is ongoing GCLKs can't be modifyed, so we force disable the RTC before.
+    // In case the SWRST Looks up we just force a NVIC-Reset and boot up again with the RTC now disabled
+    clock_disablePeripheralClock(GCLK_CLKCTRL_ID_RTC_Val);
     
     //Start a Restart
     GCLK->CTRL.bit.SWRST = 1;
@@ -245,7 +248,10 @@ void samr21Clock_enableFallbackClockTree(void)
     {
         if(timeout++ > 10000)
         {
-            //If The RTC was active before the clock system is Soft locked
+            //RTC-BUG (PART 2)
+            //
+            // The SWRST is looked up.
+            // NVIC-Reset here, so after the reboot the RTC should be disabled
             NVIC_SystemReset();
         }
     }
@@ -257,46 +263,42 @@ void samr21Clock_enableFallbackClockTree(void)
     //Wait for OSC8M to be availible
     while (!SYSCTRL->PCLKSR.bit.OSC8MRDY);
 
-    disableAllPeripheralClocks();
+    clock_disableAllPeripheralClocks();
 
     //Enable clocks for SPI-Comm with TRX
-    enablePeripheralClock(GCLK_CLKCTRL_ID_SERCOMX_SLOW_Val, 0);
-    enablePeripheralClock(GCLK_CLKCTRL_ID_SERCOM4_CORE_Val, 0);
+    clock_enablePeripheralClock(GCLK_CLKCTRL_ID_SERCOMX_SLOW_Val, 0);
+    clock_enablePeripheralClock(GCLK_CLKCTRL_ID_SERCOM4_CORE_Val, 0);
 
     //Switch CPU to OSC8M
-    switchGClkGen0Source(GCLK_GENCTRL_SRC_OSC8M_Val);
+    clock_switchGClkGen0Source(GCLK_GENCTRL_SRC_OSC8M_Val);
 
 }
 
 void samr21Clock_enableOperatingClockTree()
 {
-    //Setup DFLL
-    shutdownDfllClockSource();
+    //Shutdown the DFLL first
+    clock_shutdownDfllClockSource();
 
-#ifdef SAMR21_USE_USB_CLOCK
-    startupDfllClockSource(true,0);
+#if defined(SAMR21_USE_USB_CLOCK) && (SAMR21_USE_USB_CLOCK > 0)
+    //Use The Clock Reference coming form the SOF USB Signal
+    clock_startupDfllClockSource(true,0);
 #else
     //Setup MCLK of ATRF233 as Reference to dfll 
-    setupGClkIn();
-    enableGClkGen(1,GCLK_GENCTRL_SRC_GCLKIN_Val,32);
-    enablePeripheralClock(GCLK_CLKCTRL_ID_DFLL48_Val, 1);
+    clock_setupGClkIn();
+    clock_enableGClkGen(1,GCLK_GENCTRL_SRC_GCLKIN_Val,32);
+    clock_enablePeripheralClock(GCLK_CLKCTRL_ID_DFLL48_Val, 1);
 
-    startupDfllClockSource(false,1536);
+    //Use The Clock Reference coming form the  AT86RF233
+    clock_startupDfllClockSource(false,1536);
 #endif
     
-    enableGClkGen(3,GCLK_GENCTRL_SRC_DFLL48M_Val,48); //    1Mhz (used as 1us Timer)
-    enableGClkGen(4,GCLK_GENCTRL_SRC_DFLL48M_Val,4); //     12Mhz (used for fast TRX SPI-Communication)
+    //Enable clocks for Peripherals 
+    clock_enableGClkGen(3,GCLK_GENCTRL_SRC_DFLL48M_Val,48); //   48Mhz / 48 = 1Mhz (used as 1us Timer)
+    clock_enableGClkGen(4,GCLK_GENCTRL_SRC_DFLL48M_Val,4); //     48Mhz / 4 = 12MHz (used for fast TRX SPI-Communication)
 
+    //Switch CPU to DFLL
     //CPU, AHB and APB (GCLK) depend on this clock Soure
-    switchGClkGen0Source(GCLK_GENCTRL_SRC_DFLL48M_Val);
+    clock_switchGClkGen0Source(GCLK_GENCTRL_SRC_DFLL48M_Val);
     
-    enableAllPeripheralClocks();
-}
-
-
-
-void samr21Clock_init(void) 
-{
-    samr21Clock_enableFallbackClockTree();
-    samr21Clock_enableOperatingClockTree();
+    clock_enableAllPeripheralClocks();
 }

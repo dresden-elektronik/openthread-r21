@@ -10,9 +10,9 @@
 #include "samr21FeCtrl.h"
 
 
-//Conbee II uses an active Frontend
-void samr21FeCtrl_enable(){
-    
+void samr21FeCtrl_enable(void)
+{
+#if defined(TARGET_DEVICE) && ((TARGET_DEVICE == CONBEE2) || (TARGET_DEVICE == RASPBEE2))
     PM->APBCMASK.bit.RFCTRL_ = 1;
 
     PORT->Group[0].DIRSET.reg= PORT_PA08;
@@ -43,6 +43,7 @@ void samr21FeCtrl_enable(){
     RFCTRL->FECFG.bit.F0CFG = 0x1;
     RFCTRL->FECFG.bit.F1CFG = 0x22;
 
+#endif
 }
 
 

@@ -24,7 +24,7 @@ static struct
 }s_otPlatUartUsbVars;
 
 
-#ifdef _GCF_RELEASE_
+#ifdef GCF_BUILD
 static const uint8_t s_gcfResetCommand[] =
     {
         0xC0, //Slip END Flag
@@ -56,7 +56,7 @@ static void uart_receiveTask()
 
         otPlatUartReceived(buf, count);
 
-#ifdef _GCF_RELEASE_
+#ifdef GCF_BUILD
         for(uint8_t i = 0; i < count; i++){
             if(buf[i] == s_gcfResetCommand[s_gcfResetCommandMatchLen])
             {

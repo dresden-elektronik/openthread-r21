@@ -32,7 +32,7 @@
  *   [MSB]         HID | MSC | CDC          [LSB]
  */
 
-#define USB_PID   0x0032    
+#define USB_PID   0x0030    
 #define USB_VID   0x1cf1
 #define USB_BCD   0x0200
 
@@ -255,10 +255,10 @@ uint16_t const* tud_descriptor_string_cb(uint8_t index, uint16_t langid)
     chr_count = 1;
   }
 
-#ifdef _GCF_RELEASE_
+#ifdef GCF_BUILD
   else if ( index == 3 ){
     for(uint8_t i = 0; i < 9; i++){
-      _desc_str[1+i] = ((uint8_t*)0x00804012)[i];
+      _desc_str[1+i] = ((uint8_t*)0x00804012)[i]; //Dresden Elektonik Safes the Serial Number here
     }
     chr_count = 9;
   }

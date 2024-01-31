@@ -111,7 +111,7 @@ bool samr21Dma_initChannel(uint8_t channel, uint32_t targetAddress, uint8_t trig
     return true;
 }
 
-bool samr21Dma_start(uint8_t channel, uint8_t * data, uint32_t dataLength, DmacDescriptor * linkedDescriptor)
+bool samr21Dma_activateChannel(uint8_t channel, uint8_t * data, uint32_t dataLength, DmacDescriptor * linkedDescriptor)
 {
     if((channel >= SAMR21_NUM_DMA_CHANNEL) || !s_channelInitted[channel])
     {

@@ -20,12 +20,13 @@ OT_OPTIONS=(
     "-DOT_APP_CLI=OFF"
     "-DOT_APP_NCP=OFF"
     "-DDDEL_GCF_BUILD=ON"
+    "-DTARGET_DEVICE=RASPBEE2"
 )
 readonly OT_OPTIONS
 
 build()
 {
-    local builddir="${OT_CMAKE_BUILD_DIR:-${OT_SRCDIR}/out/rcpConbee}"
+    local builddir="${OT_CMAKE_BUILD_DIR:-${OT_SRCDIR}/out/rcpRaspbee2}"
 
 
     mkdir -p "${builddir}"
@@ -50,7 +51,7 @@ main()
 
     build "${options[@]}"
 
-    exec ${OT_SRCDIR}/gcc-arm-none-eabi/bin/arm-none-eabi-objcopy -O binary ${OT_SRCDIR}/out/build/bin/ot-rcp ${OT_SRCDIR}/out/ot-rcp-gcf.bin
+    exec ${OT_SRCDIR}/gcc-arm-none-eabi/bin/arm-none-eabi-objcopy -O binary ${OT_SRCDIR}/out/rcpRaspbee2/bin/ot-rcp ${OT_SRCDIR}/out/rcpRaspbee2/ot-rcp-rb2-gcf.bin
 }
 
 main "$@"

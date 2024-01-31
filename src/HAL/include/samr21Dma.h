@@ -22,9 +22,51 @@
 
 typedef void (*samr21Dma_done_cb)(void);
 
+
+
+/**
+ * Inits the DMA Module
+ * 
+ * Must be called before any DMA Action can take place
+ *
+ */
 void samr21Dma_init(void);
+
+/**
+ * Sets up a DMA Channel for Asynchronous memcpy to a Peripheral  
+ *
+ * @param[in]  channel  channel used for the DMA Action (lower Channel have higher Priority)
+ * @param[in]  targetAddress  address to the desired Peripheral DATA Register
+ * @param[in]  triggerSource trigger that initiates the transfer of a Single Byte 
+ * @param[in]  callbackFunc function called after a DMA-Transaction is finished (can be NULL if none is used)
+ *
+ * @returns True if Channel was initted correctly
+ *
+ */
 bool samr21Dma_initChannel(uint8_t channel, uint32_t targetAddress, uint8_t triggerSource, samr21Dma_done_cb callbackFunc);
-bool samr21Dma_start(uint8_t channel, uint8_t * data, uint32_t dataLength, DmacDescriptor * linkedDescriptor);
+
+
+/**
+ * Sets DMA Channel as Active, so it reacts to Trigger Events
+ *
+ * @param[in]  channel  channel used for the DMA Action (lower Channel have higher Priority)
+ * @param[in]  data  pointer to the ByteArray the supposed to be copied
+ * @param[in]  dataLength  length of the ByteArray supposed to be copied
+ * @param[in]  linkedDescriptor  DMA Descriptor to a queued DMA-Job
+ *
+ * @returns True if Channel was activated 
+ *
+ */
+bool samr21Dma_activateChannel(uint8_t channel, uint8_t * data, uint32_t dataLength, DmacDescriptor * linkedDescriptor);
+
+
+/**
+ * Forces a Trigger Event on specified DMA Channel
+ * 
+ * Used to Jump-Start Transfers
+ *
+ * @param[in]  channel  channel thats supposed to be triggered
+ */
 void samr21Dma_triggerChannelAction(uint8_t channel);
 
 #endif //_SAMR21_DMA_H_

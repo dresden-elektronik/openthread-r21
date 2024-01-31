@@ -14,8 +14,10 @@
 
 /**
  * Sets up the FE-CTRL Multiplexer of the SAMR21, so the Frontend can be Controlled by the TRX
+ * 
+ * This is used by the ConBee2
  */
-void samr21RadioFeCtrl_enable();
+void samr21RadioFeCtrl_enable(void);
 
 
 #endif //_SAMR21_FECTRL_H_

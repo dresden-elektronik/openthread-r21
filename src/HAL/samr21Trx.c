@@ -32,7 +32,7 @@ static ramCopyTrxRegister_t s_localTrxRegisterCopy =
         .trxCtrl1.bit.txAutoCrcOn = 1, //Stop uploading when the CRC is due, TRX inserts the correct one
         .trxCtrl1.bit.irq2ExtEn = 0,
 
-#ifdef _GCF_RELEASE_
+#if defined(TARGET_DEVICE) && (TARGET_DEVICE == CONBEE2)
         .trxCtrl1.bit.paExtnEn = 1,
         .phyTxPwr.bit.txPwr = 0x7
 #else
@@ -205,7 +205,7 @@ void samr21Trx_initInterface()
     samr21Trx_writeRegister(PHY_TX_PWR_REG_ADDR, s_localTrxRegisterCopy.phyTxPwr.reg);
 }
 
-void samr21Trx_initLocalDriver()
+void samr21Trx_initDriver()
 {
     // Enable Timer 5 for Trx Orchestration
     samr21Timer5_init(0, true, true); // 1MHz / (2^0) -> 1us resolution
@@ -612,7 +612,11 @@ int8_t samr21Trx_getLastRssiValue()
         return INT8_MAX;
     }
 
+#if defined(TARGET_DEVICE) && ((TARGET_DEVICE == CONBEE2) || (TARGET_DEVICE == RASPBEE2))
     return AT86RF233_RSSI_BASE_VAL_dBm + (int8_t)samr21Trx_readRegister(PHY_ED_LEVEL_REG_ADDR);
+#else
+    return AT86RF233_RSSI_BASE_VAL_dBm + (int8_t)samr21Trx_readRegister(PHY_ED_LEVEL_REG_ADDR) - 5; //FE-LNA adds 5dBm Receive Strength
+#endif
 }
 
 /*************************CCA Control*************************************/
@@ -644,7 +648,8 @@ int8_t samr21Trx_getCcaThreshold()
 /*************************Tx Power Control*************************************/
 // TX Power
 #define SIZE_AT86RF233_TX_POWER_TABLE 16
-#ifdef _GCF_RELEASE_
+
+#if defined(TARGET_DEVICE) && ((TARGET_DEVICE == CONBEE2) || (TARGET_DEVICE == RASPBEE2))
 static const float sc_txPowerTable_dBm_1D[SIZE_AT86RF233_TX_POWER_TABLE] = {11.9, 11.7, 11.6, 11.5, 11.3, 11.2, 11, 10.7, 10.4, 10.1, 9.3, 8.2, 6.4, 3.9, 0.1, -5.8};
 #else
 static const float sc_txPowerTable_dBm_1D[SIZE_AT86RF233_TX_POWER_TABLE] = {4, 3.7, 3.4, 3, 2.5, 2, 1, 0, -1, -2, -3, -4, -6, -8, -12, -17};
@@ -909,7 +914,7 @@ void samr21Trx_dmaUploadToFramebuffer(uint8_t *a_data_p, uint8_t a_len, uint8_t 
     s_framebufferDmaDescriptor.BTCTRL.bit.VALID = 1;
     
     //Start a DMA Job for the SRAM Acces Command itself and link the actual Framebuffer DMA after that
-    samr21Dma_start(0,s_sramAccessCommand,sizeof(s_sramAccessCommand),&s_framebufferDmaDescriptor);
+    samr21Dma_activateChannel(0,s_sramAccessCommand,sizeof(s_sramAccessCommand),&s_framebufferDmaDescriptor);
     //Jumpstart the DMA
     samr21Dma_triggerChannelAction(0);
 

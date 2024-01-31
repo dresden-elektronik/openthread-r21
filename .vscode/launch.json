@@ -11,7 +11,7 @@
             "request": "launch",
             "type": "cortex-debug",
             "servertype": "openocd",
-            "configFiles": [ "${workspaceFolder}/test/OpenOCD_config/ATMEL-ICE-OpenOCD-samr21e18a.cfg" ],
+            "configFiles": [ "${workspaceFolder}/OpenOCD_config/ATMEL-ICE-OpenOCD-samr21e18a.cfg" ],
             "gdbTarget": "localhost:3333",
             "gdbPath" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-gdb",
             "toolchainPrefix" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-",
@@ -24,12 +24,23 @@
             "request": "attach",
             "type": "cortex-debug",
             "servertype": "openocd",
-            "configFiles": [ "${workspaceFolder}/test/OpenOCD_config/ATMEL-ICE-OpenOCD-samr21e18a.cfg" ],
+            "configFiles": [ "${workspaceFolder}/OpenOCD_config/ATMEL-ICE-OpenOCD-samr21e18a.cfg" ],
             "gdbTarget": "localhost:3333",
             "gdbPath" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-gdb",
             "toolchainPrefix" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-",
             "preLaunchTask": "build RCP Debug"
+        },
+        {
+            "name": "ConBee Debug Attach",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/out/rcpConbee2/bin/ot-rcp",
+            "request": "attach",
+            "type": "cortex-debug",
+            "servertype": "openocd",
+            "configFiles": [ "${workspaceFolder}/OpenOCD_config/ATMEL-ICE-OpenOCD-samr21e18a.cfg" ],
+            "gdbTarget": "localhost:3333",
+            "gdbPath" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-gdb",
+            "toolchainPrefix" : "${workspaceFolder}/gcc-arm-none-eabi/bin/arm-none-eabi-",
         }
-
     ]
 }

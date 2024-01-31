@@ -48,8 +48,29 @@ void samr21Uart_deinit();
 void samr21Uart_sendByte(uint8_t data);
 
 
+/**
+ * Allocates a Buffer to be filled by the Application
+ * 
+ * The given Buffer is considered invalid until a Length is set.
+ * So length should be set last when modifying the Buffer
+ * 
+ * @returns a Pointer to a empty TransmitBuffer or NULL if none is available 
+ */
 uartBuffer_t * samr21Uart_allocTransmitBuffer(void);
+
+/**
+ * Queues up a given Byte Array to be transmitted asynchronously via the UART 
+ * 
+ * @param[in]  data  pointer to the ByteArray the supposed to be transmitted
+ * @param[in]  length  length of the ByteArray supposed to be transmitted
+ * 
+ * @returns num of bytes queued up for Transmission
+ */
 uint16_t samr21Uart_write(uint8_t * data, uint16_t length);
+
+/**
+ * Checks for allocated AND VALID (length > 0) Transmit-Buffer and starts the DMA if needed 
+*/
 void samr21Uart_checkForPendingTransmit(void);
 
 #endif //_SAMR21_UART_H_

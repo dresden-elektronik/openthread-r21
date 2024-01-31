@@ -63,16 +63,6 @@ void samr21Usb_deinit(){
 
     USB->DEVICE.CTRLA.bit.SWRST = 1;
     while (USB->DEVICE.SYNCBUSY.bit.SWRST);
-
-    //Disable GCLKGEN0 for USB
-    GCLK->CLKCTRL.reg =
-        //GCLK_CLKCTRL_WRTLOCK
-        //GCLK_CLKCTRL_CLKEN
-        GCLK_CLKCTRL_GEN(0) // GCLKGEN0
-        |GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_USB_Val)
-    ;
-    //Wait for synchronization 
-    while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
     
     PM->APBBMASK.bit.USB_ = 0;
 }

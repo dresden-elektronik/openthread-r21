@@ -17,27 +17,33 @@
 
 
 /**
- * Inits the Clocking System of the SAMR21
- * Activates a Clock Source GCLKIN derived from the Crystal on the AT86rf233 (MCLK 1MHz)
+ * Inits the Clocking Tree to a minimum state where all peripheral are disabled.
+ * Only the SERCOM4 Module gets feed by a internal 1MHz Oscillator Clock.
+ * This is done so a basic Communication with the AT86RF233 is possible.
  * 
- * 
- * Sets up GCLK0 (CPU Clock) to use the 48MHz DFLL 
- * Sets up GCLK1 to sourced from GCLKIN or OSC8M depending on useTrxClock (1Mhz MCLK stepped down to 32.250 kHz)
- * Sets up GCLK3 to 1MHz stepped down from the 48MHz DFLL (For Timer and RTC)
- * Sets up GCLK4 to 8MHz stepped down from the 48MHz DFLL (For SPI-Communication dit AT86RF233)
- * 
- */
-void samr21Clock_enableOperatingClockTree(void);
-
-/**
- * Inits a stable Clocking System of the SAMR21
- * Not depended on the DFLL be operational 
- * 
- * Sets up GCLK0 (CPU Clock) to use the 1MHz from the OSC8M
- * Sets up GCLK1 to sourced from OSC8M (1Mhz MCLK stepped down to 32.250 kHz)
- * Sets up GCLK3 to use the 1MHz from the OSC8M (For Timer and RTC)
- * Sets up GCLK4 to use the 1MHz from the OSC8M (For SPI-Communication dit AT86RF233)
- * 
+ * CPU  = 1MHz 
+ * USB  = disabled
+ * EIC  = disabled
+ * Timer and  RTC = disabled
+ * UART = disabled
+ * TRX-SPI = 1MHz
  */
 void samr21Clock_enableFallbackClockTree(void);
+
+/**
+ * Inits the DFLL to output 48MHz.
+ * Uses the MCLK from the AT86RF233 as a Reference for Accuracy.
+ * Before calling this Function the AT86RF233 must be setup to output 1MHz on the MCLK Pin.
+ * 
+ * Alternatively the USB-BUS SOF Signal can be used as the Reference (#ifdef SAMR21_USE_USB_CLOCK).
+ * 
+ * 
+ * CPU  = 48MHz 
+ * USB  = 48MHz 
+ * EIC  = 48MHz 
+ * Timer and  RTC = 1MHz 
+ * UART = 1MHz 
+ * TRX-SPI = 12MHz
+ */
+void samr21Clock_enableOperatingClockTree(void);
 #endif //_SAMR21_CLOCK_H_

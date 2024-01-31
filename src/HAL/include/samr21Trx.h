@@ -53,7 +53,7 @@ void samr21Trx_initInterface();
 /**
  * Inits DMA and Timer used by the radio
  */
-void samr21Trx_initLocalDriver();
+void samr21Trx_initDriver();
 
 /**
  * Setups External IRQ Controller for Interrupts From Trx

@@ -32,9 +32,9 @@ int8_t otPlatRadioGetReceiveSensitivity(otInstance *a_instance_p)
 {
     OT_UNUSED_VARIABLE(a_instance_p);
 
-#ifdef _GCF_RELEASE_
-    // Frontend gives -10dBm Rx Sensitivity
-    return AT86RF233_RSSI_BASE_VAL_dBm - 10;
+#if defined(TARGET_DEVICE) && ((TARGET_DEVICE == CONBEE2) || (TARGET_DEVICE == RASPBEE2))
+    // Frontend gives 5dBm Rx Sensitivity
+    return AT86RF233_RSSI_BASE_VAL_dBm - 5;
 #else
     return AT86RF233_RSSI_BASE_VAL_dBm;
 #endif
@@ -283,7 +283,7 @@ otRadioFrame *otPlatRadioGetTransmitBuffer(otInstance *a_instance_p)
 {
     OT_UNUSED_VARIABLE(a_instance_p);
 
-    return samr21RadioGetOtTxBuffer();
+    return samr21Radio_getOtTxBuffer();
 }
 
 otError otPlatRadioTransmit(otInstance *a_instance_p, otRadioFrame *a_frame)
@@ -488,7 +488,7 @@ static void transmitTask()
             otPlatRadioTxDone(
                 s_instance_p,
                 s_txOtFrame_p,
-                samr21RadioGetLastReceivedAckFrame(),
+                samr21Radio_getLastReceivedAckOtFrame(),
                 OT_ERROR_NONE);
             return;
         case RADIO_TRANSMISSION_CHANNEL_ACCESS_FAILED:

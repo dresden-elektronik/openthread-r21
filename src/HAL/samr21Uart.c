@@ -148,7 +148,7 @@ void samr21Uart_checkForPendingTransmit(void)
         if(( pendingBuffer_p != NULL) && (pendingBuffer_p->length > 0)) //Dont't start while the Buffer is in setup (marked by length == -1)
         {
             //Transmit the next Buffer
-            samr21Dma_start(1, pendingBuffer_p->data, pendingBuffer_p->length, NULL);
+            samr21Dma_activateChannel(1, pendingBuffer_p->data, pendingBuffer_p->length, NULL);
 
             //Jumpstart DMA
             samr21Dma_triggerChannelAction(0);
@@ -210,7 +210,7 @@ void dma_callback(void)
     if((pendingBuffer_p != NULL) && (pendingBuffer_p->length > 0)) //Dont't start while the Buffer is in setup (marked by length == -1)
     {
         //Transmit the next Buffer
-        samr21Dma_start(1, pendingBuffer_p->data, pendingBuffer_p->length, NULL);
+        samr21Dma_activateChannel(1, pendingBuffer_p->data, pendingBuffer_p->length, NULL);
 
         //Jumpstart DMA
         // Note: not necessary cause last Tx Byte should still be in transmit 

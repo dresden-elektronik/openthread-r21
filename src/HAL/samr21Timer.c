@@ -372,10 +372,8 @@ void samr21Timer4_init(uint8_t a_divider , bool a_oneshot, bool a_interrupt)
     TC4->COUNT16.CTRLA.bit.SWRST = 1;
     while (TC4->COUNT16.CTRLA.bit.SWRST || TC4->COUNT16.STATUS.bit.SYNCBUSY)
         ;
-
-    // Setup TC Modules
-
-
+    
+    //Enable interrupt 
     TC4->COUNT16.INTENSET.bit.OVF = 1;
 
 
@@ -445,8 +443,7 @@ void samr21Timer5_init(uint8_t a_divider, bool a_oneshot, bool a_interrupt){
     TC5->COUNT16.CTRLA.bit.SWRST = 1;
     while (TC5->COUNT16.CTRLA.bit.SWRST);
 
-    // Setup TC Mods
-
+    // Enable Interrupt
     TC5->COUNT16.INTENSET.bit.OVF = 1;
 
     TC5->COUNT16.CTRLA.reg =
@@ -555,34 +552,6 @@ void samr21Timer_deinitAll()
     s_timerVars.timer3Active = false;
     s_timerVars.timer4Active = false;
     s_timerVars.timer5Active = false;
-
-    // Disable CLKGEN
-    GCLK->CLKCTRL.reg =
-        // GCLK_CLKCTRL_WRTLOCK
-        // GCLK_CLKCTRL_CLKEN
-        GCLK_CLKCTRL_GEN(3) // GCLKGEN2
-        | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TCC0_TCC1_Val);
-    // Wait for synchronization
-    while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
-        ;
-    
-    GCLK->CLKCTRL.reg =
-        // GCLK_CLKCTRL_WRTLOCK
-        // GCLK_CLKCTRL_CLKEN
-        GCLK_CLKCTRL_GEN(3) // GCLKGEN2
-        | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TCC2_TC3_Val);
-    // Wait for synchronization
-    while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
-        ;
-    
-    GCLK->CLKCTRL.reg =
-        // GCLK_CLKCTRL_WRTLOCK
-        // GCLK_CLKCTRL_CLKEN
-        GCLK_CLKCTRL_GEN(3) // GCLKGEN2
-        | GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TC4_TC5_Val);
-    // Wait for synchronization
-    while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY)
-        ;
 }
 
 

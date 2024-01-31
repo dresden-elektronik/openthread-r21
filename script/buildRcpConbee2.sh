@@ -10,22 +10,23 @@ readonly OT_SRCDIR
 
 OT_OPTIONS=(
     "-DCMAKE_TOOLCHAIN_FILE=${OT_SRCDIR}/src/arm-none-eabi-gcc.cmake"
-    "-DCMAKE_BUILD_TYPE=MinSizeRel"
-    "-DOT_LOG_LEVEL=NONE"
+    "-DCMAKE_BUILD_TYPE=Release"
     "-DOT_PLATFORM=external"
     "-DOT_SLAAC=ON"
     "-DOT_APP_RCP=ON"
     "-DOT_RCP=ON"
-    "-DOT_FTD=ON"
-    "-DOT_MTD=ON"
-    "-DOT_APP_CLI=ON"
+    "-DOT_FTD=OFF"
+    "-DOT_MTD=OFF"
+    "-DOT_APP_CLI=OFF"
     "-DOT_APP_NCP=OFF"
+    "-DDDEL_GCF_BUILD=ON"
+    "-DTARGET_DEVICE=CONBEE2"
 )
 readonly OT_OPTIONS
 
 build()
 {
-    local builddir="${OT_CMAKE_BUILD_DIR:-${OT_SRCDIR}/out/build}"
+    local builddir="${OT_CMAKE_BUILD_DIR:-${OT_SRCDIR}/out/rcpConbee2}"
 
 
     mkdir -p "${builddir}"
@@ -34,9 +35,9 @@ build()
     cmake -GNinja -DOT_COMPILE_WARNING_AS_ERROR=ON "$@" "${OT_SRCDIR}"
 
     if [[ -n ${OT_CMAKE_NINJA_TARGET[*]} ]]; then
-        ninja "${OT_CMAKE_NINJA_TARGET[@]}"  -
+        ninja "${OT_CMAKE_NINJA_TARGET[@]}"
     else
-        ninja 
+        ninja
     fi
 
     cd "${OT_SRCDIR}"
@@ -49,6 +50,8 @@ main()
     options+=("$@")
 
     build "${options[@]}"
+
+    exec ${OT_SRCDIR}/gcc-arm-none-eabi/bin/arm-none-eabi-objcopy -O binary ${OT_SRCDIR}/out/rcpConbee2/bin/ot-rcp ${OT_SRCDIR}/out/rcpConbee2/ot-rcp-cb2-gcf.bin
 }
 
 main "$@"

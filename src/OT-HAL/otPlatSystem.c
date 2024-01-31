@@ -21,7 +21,7 @@
 
 static void samr21_tickleWatchdog()
 {
-#ifdef _GCF_RELEASE_
+#ifdef GCF_BUILD
     WDT->CLEAR.reg = WDT_CLEAR_CLEAR_KEY_Val;
 #endif
 }
@@ -48,37 +48,41 @@ void otSysInit(int argc, char *argv[])
     samr21_initIrqPriority();
 
     samr21Clock_enableFallbackClockTree(); //Not depending on MCLK of AT86RF233
-
-    samr21_tickleWatchdog();
     
+    samr21_tickleWatchdog();
     samr21Nvm_init();
     samr21Dma_init();
 
+    samr21_tickleWatchdog();
     samr21Trx_initInterface(); //Also inits Clock Output of the AT86RF233, so we can switch to a Crystal based clock Domain
-    samr21Usb_init();
 
+#if defined(SAMR21_USE_USB_CLOCK) && (SAMR21_USE_USB_CLOCK > 0)
+    samr21Usb_init(); 
+    samr21Clock_enableOperatingClockTree(); //Depending on receiving USB-SOF Signals
+#else
     samr21Clock_enableOperatingClockTree(); //Depending on correct output freq of AT86RF233 MCLK
+    samr21Usb_init();
+#endif
 
-    samr21Trx_initLocalDriver();
+    samr21_tickleWatchdog();
+    samr21Trx_initDriver();
+    samr21FeCtrl_enable();
 
     samr21_tickleWatchdog();
     samr21Rtc_init();
 
+    samr21_tickleWatchdog();
     tusb_init();
 
-#ifdef _GCF_RELEASE_
-    samr21_tickleWatchdog();
-    samr21FeCtrl_enable();
-
+#ifdef GCF_BUILD
     //Confirm the App Started to Bootloader
     uint8_t confirmedBtlFlag = 0x77;
     samr21Nvm_writeWithinRow(0x4FFF, &confirmedBtlFlag, sizeof(uint8_t));
 #endif
 
-    //samr21_tickleWatchdog();
-    //samr21LogInit();
-
+    samr21_tickleWatchdog();
     samr21Uart_init();
+
     samr21_tickleWatchdog();
     samr21OtPlat_alarmInit();
 }

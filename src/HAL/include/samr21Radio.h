@@ -278,7 +278,7 @@ void samr21radio_transmit(otRadioFrame *otFrame);
  * @returns Pointer to OpenThread FrameBuffer for Transmission purposes 
  *
  */
-otRadioFrame* samr21RadioGetOtTxBuffer();
+otRadioFrame* samr21Radio_getOtTxBuffer();
 
 /**
  * Gets the Ack of the Last Transmission
@@ -286,7 +286,7 @@ otRadioFrame* samr21RadioGetOtTxBuffer();
  * @returns Pointer to OpenThread FrameBuffer for last received Transmission acknowledgment 
  *
  */
-otRadioFrame* samr21RadioGetLastReceivedAckFrame();
+otRadioFrame* samr21Radio_getLastReceivedAckOtFrame();
 
 /**
  * Starts a Energy Detect

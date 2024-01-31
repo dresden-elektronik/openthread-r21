@@ -9,24 +9,23 @@
  */
 #include "samr21SysTick.h"
 
-extern uint32_t g_currentCpuClkCycle_ns;
-
-
-
 void samr21SysTick_delayTicks(uint32_t a_delayCycles){
-    //Sets the trigger value
-    SysTick->LOAD = a_delayCycles;
-    //Clear current value register
-    SysTick->VAL = 0;
-    //Enable Systick
-    SysTick->CTRL = 
-        SysTick_CTRL_CLKSOURCE_Msk 
-        |SysTick_CTRL_ENABLE_Msk
-    ;
+        if(a_delayCycles)
+        {
+                //Sets the trigger value
+                SysTick->LOAD = a_delayCycles;
+                //Clear current value register
+                SysTick->VAL = 0;
+                //Enable Systick
+                SysTick->CTRL = 
+                    SysTick_CTRL_CLKSOURCE_Msk 
+                    |SysTick_CTRL_ENABLE_Msk
+                ;
 
-    //Delay Loop
-    while(!(SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk));
+                //Delay Loop
+                while(!(SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk));
 
-    //Disable Systick
-    SysTick->CTRL = 0;
+                //Disable Systick
+                SysTick->CTRL = 0;
+        }
 }
