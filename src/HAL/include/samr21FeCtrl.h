@@ -17,7 +17,7 @@
  * 
  * This is used by the ConBee2
  */
-void samr21RadioFeCtrl_enable(void);
+void samr21RadioFeCtrl_init(void);
 
 
 #endif //_SAMR21_FECTRL_H_

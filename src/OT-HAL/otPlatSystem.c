@@ -47,10 +47,18 @@ void otSysInit(int argc, char *argv[])
     samr21_tickleWatchdog();
     samr21_initIrqPriority();
 
+    samr21Nvm_init();
+
+#ifdef GCF_BUILD
+    //Confirm the App Started to Bootloader
+    uint8_t confirmedBtlFlag = 0x77;
+    samr21Nvm_writeWithinRow(0x4FFF, &confirmedBtlFlag, sizeof(uint8_t));
+#endif
+
+    samr21_tickleWatchdog();
     samr21Clock_enableFallbackClockTree(); //Not depending on MCLK of AT86RF233
     
     samr21_tickleWatchdog();
-    samr21Nvm_init();
     samr21Dma_init();
 
     samr21_tickleWatchdog();
@@ -66,7 +74,7 @@ void otSysInit(int argc, char *argv[])
 
     samr21_tickleWatchdog();
     samr21Trx_initDriver();
-    samr21FeCtrl_enable();
+    samr21FeCtrl_init();
 
     samr21_tickleWatchdog();
     samr21Rtc_init();
@@ -74,11 +82,6 @@ void otSysInit(int argc, char *argv[])
     samr21_tickleWatchdog();
     tusb_init();
 
-#ifdef GCF_BUILD
-    //Confirm the App Started to Bootloader
-    uint8_t confirmedBtlFlag = 0x77;
-    samr21Nvm_writeWithinRow(0x4FFF, &confirmedBtlFlag, sizeof(uint8_t));
-#endif
 
     samr21_tickleWatchdog();
     samr21Uart_init();

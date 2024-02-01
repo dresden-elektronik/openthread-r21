@@ -10,9 +10,10 @@
 #include "samr21FeCtrl.h"
 
 
-void samr21FeCtrl_enable(void)
+void samr21FeCtrl_init(void)
 {
 #if defined(TARGET_DEVICE) && ((TARGET_DEVICE == CONBEE2) || (TARGET_DEVICE == RASPBEE2))
+
     PM->APBCMASK.bit.RFCTRL_ = 1;
 
     PORT->Group[0].DIRSET.reg= PORT_PA08;
@@ -40,10 +41,28 @@ void samr21FeCtrl_enable(void)
         |PORT_WRCONFIG_PINMASK(PORT_PA09) //lower Halfword
     ;
     
-    RFCTRL->FECFG.bit.F0CFG = 0x1;
-    RFCTRL->FECFG.bit.F1CFG = 0x22;
+    //PA Bypass
+    PORT->Group[0].DIRSET.reg= PORT_PA16;
+    PORT->Group[0].OUTSET.reg= PORT_PA16;
+
+    //PA Enable
+    PORT->Group[0].DIRSET.reg= PORT_PA17;
+    PORT->Group[0].OUTSET.reg= PORT_PA17;
+
+    RFCTRL->FECFG.bit.F0CFG = 0x03;
+	RFCTRL->FECFG.bit.F1CFG = 0x02;
 
 #endif
 }
 
 
+void samr21FeCtrl_enable(void)
+{
+
+}
+
+
+void samr21FeCtrl_disable(void)
+{
+
+}

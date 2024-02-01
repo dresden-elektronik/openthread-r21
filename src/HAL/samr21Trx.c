@@ -32,7 +32,7 @@ static ramCopyTrxRegister_t s_localTrxRegisterCopy =
         .trxCtrl1.bit.txAutoCrcOn = 1, //Stop uploading when the CRC is due, TRX inserts the correct one
         .trxCtrl1.bit.irq2ExtEn = 0,
 
-#if defined(TARGET_DEVICE) && (TARGET_DEVICE == CONBEE2)
+#if defined(TARGET_DEVICE) && ((TARGET_DEVICE == CONBEE2) || (TARGET_DEVICE == RASPBEE2))
         .trxCtrl1.bit.paExtnEn = 1,
         .phyTxPwr.bit.txPwr = 0x7
 #else

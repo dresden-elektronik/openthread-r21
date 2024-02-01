@@ -87,7 +87,8 @@
         "otutilities_uart.h": "c",
         "samr21systick.h": "c",
         "fifobuffer_t.h": "c",
-        "logging.h": "c"
+        "logging.h": "c",
+        "samr21fectrl.h": "c"
     },
     "cmake.configureOnOpen": false,
     "cortex-debug.variableUseNaturalFormat": true,
