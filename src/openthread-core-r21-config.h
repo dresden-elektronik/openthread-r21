@@ -38,6 +38,7 @@
 #define OPENTHREAD_CORE_SAMR21_CONFIG_H_
 
 #include <stdint.h>
+#include "platformVersion.h"
 
 extern uint32_t __d_nv_mem_start;
 extern uint32_t __d_nv_mem_end;
@@ -52,7 +53,7 @@ extern uint32_t __d_nv_mem_end;
  * The platform-specific string to insert into the OpenThread version string.
  *
  */
-#define OPENTHREAD_CONFIG_PLATFORM_INFO "CONBEE2_RASPBEE2"
+#define OPENTHREAD_CONFIG_PLATFORM_INFO "CONBEE2_RASPBEE2_0x" STR(OT_SAMR21_PLATFORM_VERSION_MAJOR) STR(OT_SAMR21_PLATFORM_VERSION_MAJOR) "0900"
 
 /**
  * @def OPENTHREAD_CONFIG_PLATFORM_FLASH_API_ENABLE
