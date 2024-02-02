@@ -43,7 +43,14 @@ int8_t otPlatRadioGetReceiveSensitivity(otInstance *a_instance_p)
 void otPlatRadioGetIeeeEui64(otInstance *a_instance_p, uint8_t *a_ieeeEui64_p)
 {
     OT_UNUSED_VARIABLE(a_instance_p);
-    samr21Nvm_getIeeeAddr(a_ieeeEui64_p);
+
+    uint8_t wrongEndianIeeeAddr[IEEE_15_4_EXTENDED_ADDR_SIZE];
+    samr21Nvm_getIeeeAddr(wrongEndianIeeeAddr);
+
+    for (unsigned int  i = 0; i < IEEE_15_4_EXTENDED_ADDR_SIZE; i++)
+    {
+        a_ieeeEui64_p[IEEE_15_4_EXTENDED_ADDR_SIZE - 1 - i] = wrongEndianIeeeAddr[i];
+    }
 }
 
 void otPlatRadioSetPanId(otInstance *a_instance_p, otPanId a_panId)
