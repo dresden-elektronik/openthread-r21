@@ -597,3 +597,81 @@ void samr21Timer_deinitAll()
 //      /*CODE*/
 //  }
 // MOVED TO samr21RadioFSM.c
+#include <stddef.h>
+typedef void (*samr21Timer_fired_cb)(void);
+
+static union timestamp_u
+{
+    struct 
+    {
+        uint32_t lower;
+        uint32_t upper;
+    }u32Value;
+
+    uint64_t u64Value;
+    
+} s_now;
+
+static bool s_timerFired = false;
+
+static samr21Timer_fired_cb s_timeCriticalCallback_func = NULL;
+
+uint32_t samr21Timer_getNowU32()
+{
+    return s_now.u32Value.lower;
+}
+
+uint32_t samr21Timer_getNowU64()
+{
+    return s_now.u64Value;
+}
+
+
+void samr21Timer_tick()
+{
+    if (s_timerFired)
+    {
+        s_timerFired = false;
+
+        
+    } 
+}
+
+
+void TC4_Handler()
+{
+    //Check if this Interrupt must exec a timing critical Callback
+    if(TC4->COUNT32.INTFLAG.bit.MC0)
+    {
+        //Reset Interrupt
+        TC4->COUNT32.INTFLAG.bit.MC0 = 1;
+
+        //exec the Timing critical callback
+        if(s_timeCriticalCallback_func != NULL)
+        {
+            s_timeCriticalCallback_func();
+        }
+    }
+
+    //Check if a callback must be executed from within the next samr21Timer_tick() call 
+    if (TC4->COUNT32.INTFLAG.bit.MC1)
+    {
+        //Reset Interrupt
+        TC4->COUNT32.INTFLAG.bit.MC1 = 1;
+
+        //set a var vor the tick routine
+        s_timerFired = true;
+    }
+    
+    //The internal Timer is only 32Bits wide, so we use a static variable that counts the upper halfword for the application
+    if(TC4->COUNT32.INTFLAG.bit.OVF)
+    {
+        //Reset Interrupt
+        TC4->COUNT32.INTFLAG.bit.OVF = 1;
+
+        //overflow of the 32 bit counter
+        //increment upper halfword of timestamp
+        s_now.u32Value.upper++;
+    }
+
+}
