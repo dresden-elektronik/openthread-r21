@@ -11,119 +11,64 @@
 
 static otInstance *s_instance = NULL;
 
-static struct otPlatAlarmVars_s
+
+static void otPlatAlarmMicroFired_cb(void)
 {
-    otInstance *instance;
-
-    bool millisAlarmArmed;
-    bool microsAlarmArmed;
-
-}s_otPlatAlarmVars;
-
-
-
-
-void otPlatAlarmMilliStartAt(otInstance *a_instance, uint32_t a_t0_ms, uint32_t a_dT_ms)
+    otPlatAlarmMicroFired(s_instance);
+}
+static void otPlatAlarmMilliFired_cb(void)
 {
-    s_otPlatAlarmVars.instance = a_instance;
-
-    uint32_t now_ms = samr21Rtc_getTimestamp()  /  MICRO_SECS_PER_MILLI_SEC;
-
-    uint32_t offset_ms = now_ms  - a_t0_ms;
-
-    s_otPlatAlarmVars.millisAlarmArmed = true;
-    samr21Timer2_startOneshot( a_dT_ms  -  offset_ms);
+    otPlatAlarmMilliFired(s_instance);
 }
 
-void otPlatAlarmMicroStartAt(otInstance *a_Instance, uint32_t a_t0_ms, uint32_t a_dT_ms)
+void otPlatAlarmMilliStartAt(otInstance *instance, uint32_t t0_ms, uint32_t dT_ms)
 {
-    s_otPlatAlarmVars.instance = a_Instance;
+    s_instance = instance;
 
-    uint32_t now_ms = samr21Rtc_getTimestamp();
+    timestamp_t now = samr21Timer_getCurrentTimestamp();
 
-    uint32_t offset_ms = now_ms  - a_t0_ms;
+    uint32_t now_ms = (uint32_t) (now.u64Value  /  MICRO_SECS_PER_MILLI_SEC);
 
-    s_otPlatAlarmVars.microsAlarmArmed = true;
-    samr21Timer1_startOneshot( a_dT_ms - ( samr21Rtc_getTimestamp() - a_t0_ms ) );
+    uint32_t offset_ms = now_ms  - t0_ms;
+
+    timestamp_t triggerTime = now;
+
+    triggerTime.u64Value += (dT_ms - offset_ms) * MICRO_SECS_PER_MILLI_SEC;
+
+    samr21Timer_addScheduledTask(triggerTime, otPlatAlarmMilliFired_cb);
+}
+
+void otPlatAlarmMicroStartAt(otInstance *instance, uint32_t t0_ms, uint32_t dT_ms)
+{
+    s_instance = instance;
+
+    timestamp_t now = samr21Timer_getCurrentTimestamp();
+
+    uint32_t offset =  now.u32Value.lower - t0_ms;
+
+    timestamp_t triggerTime = now;
+
+    triggerTime.u64Value += (dT_ms - offset); 
+
+    samr21Timer_addScheduledTask(triggerTime, otPlatAlarmMicroFired_cb);
 }
 
 void otPlatAlarmMilliStop(otInstance *a_Instance)
 {
-    s_otPlatAlarmVars.instance = a_Instance;
-    samr21Timer2_stop();
-
-    s_otPlatAlarmVars.millisAlarmArmed = false;
+    samr21Timer_removeScheduledTask(otPlatAlarmMilliFired_cb);
 }
 
 void otPlatAlarmMicroStop(otInstance *a_Instance)
 {
-    s_otPlatAlarmVars.instance = a_Instance;
-    samr21Timer1_stop();
-
-    s_otPlatAlarmVars.microsAlarmArmed = false;
+    samr21Timer_removeScheduledTask(otPlatAlarmMicroFired_cb);
 }
 
 uint32_t otPlatAlarmMilliGetNow(void)
 {
-    return samr21Rtc_getTimestamp() / MICRO_SECS_PER_MILLI_SEC;
+    return (uint32_t)(samr21Timer_getNowU64() / MICRO_SECS_PER_MILLI_SEC);
 }
 
 uint32_t otPlatAlarmMicroGetNow(void)
 {
-    return samr21Rtc_getTimestamp();
-}
-
-// void TCC1_Handler(){
-//     TCC1->INTFLAG.bit.OVF = 1;
-
-//     if(s_instance){
-//         otPlatAlarmMicroFired(s_instance);
-//     }
-// }
-
-// void TCC2_Handler(){
-//     TCC2->INTFLAG.bit.OVF = 1;
-
-//     if(s_instance){
-//         otPlatAlarmMilliFired(s_instance);
-//     }
-// }
-
-void samr21OtPlat_alarmInit(void)
-{
-    //TCC1 Used by OT Micros Alarm
-    samr21Timer1_init(0,true,false); // 1MHz / (2^0) -> 1us resolution
-    //TCC2 Used by OT Millis Alarm
-    samr21Timer2_init(7, true,false); // 1MHz / (2^7) -> ~1ms resolution
-}
-
-void samr21OtPlat_alarmTask(void)
-{
-    if (TCC1->INTFLAG.bit.OVF)
-    {
-        //Clear Trigger Flag
-        TCC1->INTFLAG.bit.OVF = 1;
-
-        if(s_otPlatAlarmVars.microsAlarmArmed)
-        {
-            s_otPlatAlarmVars.microsAlarmArmed = false;
-            
-            //Inform OT
-            otPlatAlarmMicroFired(s_otPlatAlarmVars.instance);
-        }
-    }
-    
-    if(TCC2->INTFLAG.bit.OVF)
-    {
-        //Clear Trigger Flag
-        TCC2->INTFLAG.bit.OVF = 1;
-
-        if(s_otPlatAlarmVars.millisAlarmArmed)
-        {
-            s_otPlatAlarmVars.millisAlarmArmed = false;
-
-            //Inform OT
-            otPlatAlarmMilliFired(s_otPlatAlarmVars.instance);
-        }
-    }
+    return samr21Timer_getNowU32();
 }

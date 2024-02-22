@@ -207,11 +207,8 @@ void samr21Trx_initInterface()
 
 void samr21Trx_initDriver()
 {
-    // Enable Timer 5 for Trx Orchestration
-    samr21Timer5_init(0, true, true); // 1MHz / (2^0) -> 1us resolution
-
-    // Enable Timer 3 for DMA Paceing
-    samr21Timer3_init(0, false, false); // 1MHz / (2^0) -> 1us resolution
+    // Enable TC3 for DMA Paceing
+    samr21Timer_initDmaPaceMaker(); // 1MHz / (2^0) -> 1us resolution
 
     samr21Dma_initChannel(
         0, //Channel 0 cause it has the highest Priority
@@ -683,19 +680,6 @@ int8_t samr21Trx_getTxPower()
 static volatile bool *s_timeoutFlag = NULL;
 static void (*s_currentTimerHandler_fktPtr)(void) = NULL;
 
-// NVIC IRQ-Handler Function for Timer5 (TC5). Fkt-Addr is found in NVIC-IRQ-Vector-Table
-void TC5_Handler()
-{
-    // Reset IRQ
-    TC5->COUNT16.INTFLAG.bit.OVF = 1;
-
-    if (s_currentTimerHandler_fktPtr)
-    {
-        // Invoke Handler
-        (*s_currentTimerHandler_fktPtr)();
-    }
-}
-
 static void trx_timeoutHandler()
 {
     *s_timeoutFlag = true;
@@ -706,12 +690,12 @@ static void trx_startTimeoutTimer(uint16_t a_duration_us, volatile bool *a_trigg
 {
     s_timeoutFlag = a_triggerFlag;
     s_currentTimerHandler_fktPtr = &trx_timeoutHandler;
-    samr21Timer5_startOneshot(a_duration_us);
+    samr21Timer_addDelayedAction(a_duration_us, trx_timeoutHandler);
 }
 
 static void trx_stopTimeoutTimer()
 {
-    samr21Timer5_stop();
+    samr21Timer_removeDelayedAction(trx_timeoutHandler);
     s_timeoutFlag = NULL;
     s_currentTimerHandler_fktPtr = NULL;
 }
@@ -719,13 +703,13 @@ static void trx_stopTimeoutTimer()
 static void trx_queueDelayedAction(uint16_t a_delay_us, void (*a_queuedAction_fktPtr)(void))
 {
     s_currentTimerHandler_fktPtr = a_queuedAction_fktPtr;
-    samr21Timer5_startOneshot(a_delay_us);
+    samr21Timer_addDelayedAction(a_delay_us, s_currentTimerHandler_fktPtr);
 }
 
 static void trx_removeQueuedAction()
 {
+    samr21Timer_removeDelayedAction(s_currentTimerHandler_fktPtr);
     s_currentTimerHandler_fktPtr = NULL;
-    samr21Timer5_stop();
 }
 
 
@@ -919,7 +903,7 @@ void samr21Trx_dmaUploadToFramebuffer(uint8_t *a_data_p, uint8_t a_len, uint8_t 
     samr21Dma_triggerChannelAction(0);
 
     //Set a Periodic DMA-Trigger Timer
-    samr21Timer3_setContinuousPeriod(IEEE_15_4_24GHZ_TIME_PER_OCTET_us - 5); //Some wiggle Room
+    samr21Timer_startDmaPaceMaker(IEEE_15_4_24GHZ_TIME_PER_OCTET_us - 5); //Some wiggle Room
 }
 
 static void trx_dmaDone_cb(void)
@@ -928,7 +912,7 @@ static void trx_dmaDone_cb(void)
     s_framebufferDmaDescriptor.BTCTRL.bit.VALID = 0;
 
     //Stop the Periodic DMA-Trigger Timer
-    samr21Timer3_Stop();
+    samr21Timer_stopDmaPaceMaker();
 
     //Orderly close the SPI-Access 
     samr21Trx_spiCloseAccess();

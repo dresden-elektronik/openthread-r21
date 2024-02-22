@@ -105,7 +105,7 @@ static void clock_enableAllPeripheralClocks(void)
     clock_enablePeripheralClock(GCLK_CLKCTRL_ID_TCC0_TCC1_Val, 3);
     clock_enablePeripheralClock(GCLK_CLKCTRL_ID_TCC2_TC3_Val, 3);
     clock_enablePeripheralClock(GCLK_CLKCTRL_ID_TC4_TC5_Val, 3);
-    clock_enablePeripheralClock(GCLK_CLKCTRL_ID_RTC_Val,3);
+    //clock_enablePeripheralClock(GCLK_CLKCTRL_ID_RTC_Val,3); //Timer now handles RTC duties. RTC causes way to much trouble on reboots
 
     //Sercom Slow Clock (1 MHz, DebugUart and APB Interface)
     clock_enablePeripheralClock(GCLK_CLKCTRL_ID_SERCOMX_SLOW_Val, 3);
@@ -238,7 +238,9 @@ void samr21Clock_enableFallbackClockTree(void)
     // This will cause the GCLK SWRST to never finish.
     // While SWRST is ongoing GCLKs can't be modifyed, so we force disable the RTC before.
     // In case the SWRST Looks up we just force a NVIC-Reset and boot up again with the RTC now disabled
-    clock_disablePeripheralClock(GCLK_CLKCTRL_ID_RTC_Val);
+    //clock_disablePeripheralClock(GCLK_CLKCTRL_ID_RTC_Val);
+
+    //Note: Timer now handles RTC duties. RTC causes way to much trouble on reboots
     
     //Start a Restart
     GCLK->CTRL.bit.SWRST = 1;

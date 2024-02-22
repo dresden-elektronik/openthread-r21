@@ -242,18 +242,6 @@ bool otPlatRadioIsEnabled(otInstance *a_instance_p)
 otError otPlatRadioSleep(otInstance *a_instance_p)
 {
     OT_UNUSED_VARIABLE(a_instance_p);
-
-    otRadioState currentState = samr21Radio_getOtState();
-
-    if (currentState == OT_RADIO_STATE_TRANSMIT)
-    {
-        return OT_ERROR_BUSY;
-    }
-    if (currentState == OT_RADIO_STATE_DISABLED)
-    {
-        return OT_ERROR_INVALID_STATE;
-    }
-
     samr21Radio_sleep();
     return OT_ERROR_NONE;
 }

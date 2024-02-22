@@ -77,7 +77,9 @@ void otSysInit(int argc, char *argv[])
     samr21FeCtrl_init();
 
     samr21_tickleWatchdog();
-    samr21Rtc_init();
+
+    //samr21Rtc_init();     //Timer now handles RTC duties. RTC causes way to much trouble on reboots
+    samr21Timer_init();
 
     samr21_tickleWatchdog();
     tusb_init();
@@ -87,7 +89,6 @@ void otSysInit(int argc, char *argv[])
     samr21Uart_init();
 
     samr21_tickleWatchdog();
-    samr21OtPlat_alarmInit();
 }
 
 bool otSysPseudoResetWasRequested(void)
@@ -104,7 +105,8 @@ void otSysProcessDrivers(otInstance *aInstance)
 {
     samr21OtPlat_uartCommTask();
     samr21OtPlat_radioTick();
-    samr21OtPlat_alarmTask();
+    
+    samr21Timer_tick(); 
 
     samr21_tickleWatchdog();
 }
