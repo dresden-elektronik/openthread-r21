@@ -208,7 +208,7 @@ void samr21Trx_setActiveChannel(uint8_t channel);
  *
  * @returns  current Channel ID
  */
-uint8_t samr21Trx_getAktiveChannel();
+uint8_t samr21Trx_getActiveChannel();
 
 /**
  * Sets the transmit Power of the AT86rf233

@@ -29,16 +29,10 @@ static void samr21_tickleWatchdog()
 static void samr21_initIrqPriority()
 {
     //192 Lowest, 0 Highest
-    NVIC_SetPriority(TCC0_IRQn, 192); //Unused 
-    NVIC_SetPriority(TCC1_IRQn, 5); //Used by OT Micro Alarm
-    NVIC_SetPriority(TCC2_IRQn, 4); //Used by OT Millis Alarm
-    NVIC_SetPriority(TC3_IRQn, 1); //Timer for DMA-Pace while uploading JIT to framebuffer
-    NVIC_SetPriority(DMAC_IRQn, 0); //Timer for DMA-Pace while uploading to framebuffer
-    NVIC_SetPriority(TC4_IRQn, 1); //Timer For Mac-Orchestration 
-    NVIC_SetPriority(TC5_IRQn, 0); //Critical Timer for Mac-Security Feature
+    NVIC_SetPriority(TCC0_IRQn, 0); //Timer For Trx-Orchestration 
+    NVIC_SetPriority(TC4_IRQn, 1); //Timer For Radio-Orchestration 
     NVIC_SetPriority(EIC_IRQn, 2); //IRQs from AT86RF233
-    NVIC_SetPriority(USB_IRQn, 5); //For Communication with USB-Host
-    NVIC_SetPriority(RTC_IRQn, 4); //For timed Transmission
+    NVIC_SetPriority(USB_IRQn, 3); //For Communication with USB-Host
 }
 
 

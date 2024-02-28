@@ -97,6 +97,8 @@ static linkedListBuffer_t s_timerActionsLinkedListBuffer =
     .numActiveEntries = 0
 };
 
+
+
 static void updateNowTimestamp(void)
 {
     //The internal Timer is only 32Bits wide, so we use a static variable that counts the upper halfword for the application
@@ -114,29 +116,6 @@ static void updateNowTimestamp(void)
     s_now.u32Value.lower = TC4->COUNT32.COUNT.reg;
 }
 
-static void test2()
-{
-    updateNowTimestamp();
-    int x = 0;
-
-    x++;
-}
-
-static int temp = 0;
-static void test1()
-{
-    updateNowTimestamp();
-    
-    int x = 0;
-
-    x++;
-    
-    if(temp++ < 50)
-    {
-        samr21Timer_addDelayedAction(200, test1);
-        samr21Timer_addDelayedAction(100, test2);
-    }
-}
 
 void samr21Timer_init()
 {
@@ -196,13 +175,6 @@ void samr21Timer_init()
 
     NVIC_ClearPendingIRQ(TC4_IRQn);
     NVIC_EnableIRQ(TC4_IRQn);
-
-    // timestamp_t triggerTime =
-    // {
-    //     .u64Value = samr21Timer_getNowU64() + 5000000
-    // };
-
- //   samr21Timer_addScheduledTask(triggerTime, test1);
 }
 
 uint32_t samr21Timer_getNowU32()
@@ -340,28 +312,29 @@ bool samr21Timer_addDelayedAction(uint32_t delay, samr21Timer_fired_cb triggerCa
     return true;
 }
 
+
 bool samr21Timer_removeDelayedAction(samr21Timer_fired_cb triggerCallback)
 {
     __disable_irq();
-    linkedListBufferEntry_t * timerActionEntry = linkedList_getFirstEntry(&s_timerActionsLinkedListBuffer);
+    linkedListBufferEntry_t * pendingActionEntry = linkedList_getFirstEntry(&s_timerActionsLinkedListBuffer);
 
-    while (timerActionEntry != NULL)
+    while (pendingActionEntry != NULL)
     {
-        if(timerActionEntry->data.callback == triggerCallback)
+        if(pendingActionEntry->data.callback == triggerCallback)
         {
             break;
         }
         
-        timerActionEntry = linkedList_getNext(&s_timerActionsLinkedListBuffer, timerActionEntry);
+        pendingActionEntry = linkedList_getNext(&s_timerActionsLinkedListBuffer, pendingActionEntry);
     }
     
-    if (timerActionEntry == NULL)
+    if (pendingActionEntry == NULL)
     {
         __enable_irq();
         return false;
     }
 
-    linkedList_freeEntry(&s_timerActionsLinkedListBuffer,timerActionEntry);
+    linkedList_freeEntry(&s_timerActionsLinkedListBuffer,pendingActionEntry);
     __enable_irq();
     return true;
 }
@@ -371,15 +344,15 @@ void samr21Timer_tick()
          __disable_irq();
 
         //Check for pending Timer Jobs
-        linkedListBufferEntry_t * pendingJob = linkedList_getFirstEntry(&s_timerTaskLinkedListBuffer);
+        linkedListBufferEntry_t * pendingTaskEntry = linkedList_getFirstEntry(&s_timerTaskLinkedListBuffer);
         samr21Timer_fired_cb pendingTask = NULL;
 
-        while (pendingJob->data.triggerTime.u64Value < samr21Timer_getNowU64())
+        while (pendingTaskEntry->data.triggerTime.u64Value < samr21Timer_getNowU64())
         {
-            pendingTask = pendingJob->data.callback;
+            pendingTask = pendingTaskEntry->data.callback;
 
             //Remove Entry
-            linkedList_freeEntry(&s_timerTaskLinkedListBuffer, pendingJob);
+            linkedList_freeEntry(&s_timerTaskLinkedListBuffer, pendingTaskEntry);
 
             if(pendingTask)
             {
@@ -390,7 +363,7 @@ void samr21Timer_tick()
 
 
             //Check if there is more to do
-            pendingJob = linkedList_getFirstEntry(&s_timerTaskLinkedListBuffer);
+            pendingTaskEntry = linkedList_getFirstEntry(&s_timerTaskLinkedListBuffer);
         }
         __enable_irq();
 }
@@ -400,8 +373,7 @@ void TC4_Handler()
     //Check if this Interrupt must exec a timing critical Callback
     if(TC4->COUNT32.INTFLAG.bit.MC0)
     {
-
-         //Disable IRQ for now
+        //Disable IRQ for now
         TC4->COUNT32.INTENCLR.bit.MC0 = 1;
         //Clear Interrupt
         TC4->COUNT32.INTFLAG.bit.MC0 = 1;
@@ -411,16 +383,16 @@ void TC4_Handler()
 
         while(pendingActionEntry)
         {
-            samr21Timer_fired_cb pendingTask = pendingActionEntry->data.callback;
+            samr21Timer_fired_cb pendingAction = pendingActionEntry->data.callback;
 
             if (pendingActionEntry->data.triggerTime.u64Value <= samr21Timer_getNowU64())
             {
                 //Remove Entry
                 linkedList_freeEntry(&s_timerActionsLinkedListBuffer, pendingActionEntry);
 
-                if(pendingTask)
+                if(pendingAction)
                 {
-                    pendingTask();
+                    pendingAction();
                 }
             }
             else

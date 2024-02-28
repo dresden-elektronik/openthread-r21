@@ -13,44 +13,40 @@
 #include "otUtilities_sourceMatch.h"
 #include "otUtilities_linkMetrics.h"
 
-
-
 static struct radioVars_s
 {
-    bool        initiated;
-    bool        rxActive;
+    bool initiated;
+    bool rxActive;
 
-    otShortAddress      shortAddress;
-    otExtAddress          extendedAddress;
-    otPanId                     panId;
+    otShortAddress shortAddress;
+    otExtAddress extendedAddress;
+    otPanId panId;
 
-    bool        txBusy;
-    bool        rxBusy;
-    bool        edBusy;
+    bool txBusy;
+    bool rxBusy;
+    bool edBusy;
 
-    bool        scheduledRxSlot;
+    bool scheduledRxSlot;
 
-    bool        promiscuousMode;
-    bool        framePendingSrcMatch;
+    bool promiscuousMode;
+    bool framePendingSrcMatch;
 
-    uint32_t    macCounter;
+    uint32_t macCounter;
 
-    uint8_t     currentMacKeyId;
+    uint8_t currentMacKeyId;
 
-    otMacKeyMaterial    previousMacKey;
-    otMacKeyMaterial    currentMacKey;
-    otMacKeyMaterial    nextMacKey;
-
+    otMacKeyMaterial previousMacKey;
+    otMacKeyMaterial currentMacKey;
+    otMacKeyMaterial nextMacKey;
 
 #if OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
-    uint32_t    cslSampleTime;
-    uint32_t    cslPeriod;
+    uint32_t cslSampleTime;
+    uint32_t cslPeriod;
 #endif
 
-    uint32_t    receiveSlotDuration_us;
-    uint8_t     receiveSlotChannel;
-    uint16_t    numReceivedFramesDuringSlot;
-
+    uint32_t receiveSlotDuration_us;
+    uint8_t receiveSlotChannel;
+    uint16_t numReceivedFramesDuringSlot;
 
     samr21RxState rxState;
     samr21TxState txState;
@@ -66,19 +62,18 @@ static void radio_scheduleDelayedAction(uint16_t a_delay_us, void (*a_queuedActi
 
     s_currentTimerHandler_fktPtr = a_queuedAction_fktPtr;
 
-    samr21Timer_addScheduledTask(triggerTimestamp, a_queuedAction_fktPtr );
+    samr21Timer_addScheduledTask(triggerTimestamp, a_queuedAction_fktPtr);
 }
 
 static void radio_removeQueuedAction()
 {
-    if(s_currentTimerHandler_fktPtr)
+    if (s_currentTimerHandler_fktPtr)
     {
         samr21Timer_removeScheduledTask(s_currentTimerHandler_fktPtr);
 
         s_currentTimerHandler_fktPtr = NULL;
     }
 }
-
 
 void samr21Radio_enable()
 {
@@ -92,7 +87,7 @@ void samr21Radio_enable()
 }
 
 void samr21Radio_disable()
-{   
+{
     // Disable IRQ in NVIC
     __NVIC_DisableIRQ(EIC_IRQn);
 
@@ -109,18 +104,20 @@ void samr21Radio_disable()
     s_radioVars.rxActive = false;
 }
 
-
-
-otRadioState samr21Radio_getOtState(){
-    if(!s_radioVars.initiated){
+otRadioState samr21Radio_getOtState()
+{
+    if (!s_radioVars.initiated)
+    {
         return OT_RADIO_STATE_DISABLED;
     }
 
-    if(s_radioVars.txBusy){
+    if (s_radioVars.txBusy)
+    {
         return OT_RADIO_STATE_TRANSMIT;
     }
 
-    if(s_radioVars.rxActive || s_radioVars.edBusy){
+    if (s_radioVars.rxActive || s_radioVars.edBusy)
+    {
         return OT_RADIO_STATE_RECEIVE;
     }
 
@@ -168,65 +165,64 @@ uint16_t samr21RadioCtrlCslGetPhase()
 
 #endif
 
-void samr21Radio_setMacKeys
-(
+void samr21Radio_setMacKeys(
     uint8_t a_keyId,
     const otMacKeyMaterial *a_previousKey_p,
     const otMacKeyMaterial *a_currentKey_p,
-    const otMacKeyMaterial *a_nextKey_p
-)
+    const otMacKeyMaterial *a_nextKey_p)
 {
     __disable_irq();
 
     s_radioVars.currentMacKeyId = a_keyId;
 
-    s_radioVars.previousMacKey= *a_previousKey_p;
-    s_radioVars.currentMacKey= *a_currentKey_p;
-    s_radioVars.nextMacKey= *a_nextKey_p;
+    s_radioVars.previousMacKey = *a_previousKey_p;
+    s_radioVars.currentMacKey = *a_currentKey_p;
+    s_radioVars.nextMacKey = *a_nextKey_p;
 
     __enable_irq();
-
 }
 
-void samr21Radio_setPanId(otPanId a_panId){
+void samr21Radio_setPanId(otPanId a_panId)
+{
     s_radioVars.panId = a_panId;
 }
-uint16_t samr21Radio_getPanId(){
+uint16_t samr21Radio_getPanId()
+{
     return s_radioVars.panId;
 }
 
-void samr21Radio_setShortAddress(otShortAddress a_shortAddress){
+void samr21Radio_setShortAddress(otShortAddress a_shortAddress)
+{
     s_radioVars.shortAddress = a_shortAddress;
 }
-uint16_t samr21Radio_getShortAddr(){
+uint16_t samr21Radio_getShortAddr()
+{
     return s_radioVars.shortAddress;
 }
 
-void samr21Radio_setExtendedAddress(const otExtAddress* a_extendedAddress_p){
+void samr21Radio_setExtendedAddress(const otExtAddress *a_extendedAddress_p)
+{
 
-   __disable_irq();
-   for(uint8_t i = 0; i < sizeof(uint64_t); i++)
-   {
-        s_radioVars.extendedAddress.m8[i] = a_extendedAddress_p->m8[sizeof(uint64_t)-1-i];
-   }
-   __enable_irq();
+    __disable_irq();
+    for (uint8_t i = 0; i < sizeof(uint64_t); i++)
+    {
+        s_radioVars.extendedAddress.m8[i] = a_extendedAddress_p->m8[sizeof(uint64_t) - 1 - i];
+    }
+    __enable_irq();
 }
 
-uint8_t* samr21Radio_getExtendedAddress(){
-    return (uint8_t*) &s_radioVars.extendedAddress.m8;
+uint8_t *samr21Radio_getExtendedAddress()
+{
+    return (uint8_t *)&s_radioVars.extendedAddress.m8;
 }
-
 
 void samr21Radio_setFramePendingSrcMatch(bool a_enable)
 {
     s_radioVars.framePendingSrcMatch = a_enable;
 }
 
-
-
-
 /******************************RX Operation***************************************/
-//Prototype
+// Prototype
 static void rxJob_abortReception();
 static void rxJob_finishReception();
 static void rxJob_prepareImmediateAck();
@@ -250,7 +246,7 @@ static struct rxBuffer_s
 } s_rxBuffer[SAMR21_NUM_RX_BUFFER];
 static uint8_t s_activeRxBuffer = 0;
 
-//Software Ack
+// Software Ack
 static uint8_t s_rxAckFrameBuffer[IEEE_15_4_FRAME_SIZE];
 static uint8_t s_rxAckNonce[IEEE_15_4_AES_CCM_NONCE_SIZE];
 static otRadioFrame s_rxOtAckFrame = {.mPsdu = &s_rxAckFrameBuffer[1]};
@@ -262,22 +258,19 @@ static uint8_t s_rxAckSecurityLevel;
 
 static void rxJob_abortReception()
 {
-
     s_radioVars.rxState = SAMR21_RADIO_RX_STATE_IDLE;
-
     s_radioVars.rxBusy = false;
+
+
+    // Stop delayed rxJobs
+    samr21Timer_removeDelayedAction(rxJob_sendAck);
+    samr21Timer_removeDelayedAction(rxJob_handleAddrField);
+    samr21Timer_removeDelayedAction(rxJob_downloadAndHandleRemaining);
 
     // Stop Timeout
     radio_removeQueuedAction();
-    
-    // Stop delayed rxJobs
-    samr21Timer_removeDelayedAction(rxJob_handleAddrField);
-    samr21Timer_removeDelayedAction(rxJob_downloadAndHandleRemaining);
-    samr21Timer_removeDelayedAction(rxJob_sendAck);
-    
 
     s_rxBuffer[s_activeRxBuffer].done = false;
-    
 
     // Put TRX in receive again
     samr21Trx_queueMoveToRx(false);
@@ -312,20 +305,19 @@ static void rxJob_finishReception()
 static void rxJob_sendAck()
 {
     s_radioVars.rxState = SAMR21_RADIO_RX_STATE_SENDING_ACK;
-    
+
     // Set a handler for when the Ack is successfully transmitted
     samr21Trx_setInterruptHandler(TRX_IRQ_TRX_END, rxJob_finishReception);
 
-    samr21Trx_dmaUploadToFramebuffer(s_rxAckFrameBuffer, s_rxAckFrameBuffer[0] + IEEE_15_4_PHR_SIZE , 0);
-
+    samr21Trx_dmaUploadToFramebuffer(s_rxAckFrameBuffer, s_rxAckFrameBuffer[0] + IEEE_15_4_PHR_SIZE, 0);
 
     if (s_rxAckSecurityLevel)
     {
         otMacFrameProcessTransmitAesCcm(&s_rxOtAckFrame, &s_radioVars.extendedAddress);
         s_rxOtAckFrame.mInfo.mTxInfo.mIsSecurityProcessed = true;
     }
-    
-    //Start Transmission
+
+    // Start Transmission
     samr21Trx_setSleepTransmitPin(true);
     samr21SysTick_delayTicks(10);
     samr21Trx_setSleepTransmitPin(false);
@@ -343,8 +335,7 @@ static void rxJob_prepareImmediateAck()
     otMacFrameGenerateImmAck(
         &(s_rxBuffer[s_activeRxBuffer].otFrame),
         s_rxBuffer[s_activeRxBuffer].framePending,
-        &s_rxOtAckFrame
-    );
+        &s_rxOtAckFrame);
 
     s_rxAckFrameBuffer[0] = s_rxOtAckFrame.mLength;
 }
@@ -353,7 +344,7 @@ static void rxJob_prepareImmediateAck()
 static void rxJob_prepareEnhancedAck()
 {
     // Prepare Data for Header-IE
-    uint8_t ieData[OT_ACK_IE_MAX_SIZE]; 
+    uint8_t ieData[OT_ACK_IE_MAX_SIZE];
     uint8_t ieDataLen = 0;
 
 #if OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
@@ -393,14 +384,12 @@ static void rxJob_prepareEnhancedAck()
     }
 #endif
 
-    otMacFrameGenerateEnhAck
-    (
+    otMacFrameGenerateEnhAck(
         &(s_rxBuffer[s_activeRxBuffer].otFrame),
         s_rxBuffer[s_activeRxBuffer].framePending,
         ieData,
         ieDataLen,
-        &s_rxOtAckFrame
-    );
+        &s_rxOtAckFrame);
 
     s_rxAckFrameBuffer[0] = s_rxOtAckFrame.mLength;
     s_rxBuffer[s_activeRxBuffer].otFrame.mInfo.mRxInfo.mAckedWithFramePending = s_rxBuffer[s_activeRxBuffer].framePending;
@@ -425,7 +414,6 @@ static void rxJob_prepareEnhancedAck()
     }
 }
 
-
 static void rxJob_downloadAndHandleRemaining()
 {
 
@@ -436,17 +424,14 @@ static void rxJob_downloadAndHandleRemaining()
             s_rxBuffer[s_activeRxBuffer].otFrame.mPsdu,
             &s_rxBuffer[s_activeRxBuffer].otFrame.mInfo.mRxInfo.mLqi,
             &s_rxBuffer[s_activeRxBuffer].otFrame.mInfo.mRxInfo.mRssi,
-            true 
-        )
-    ){
+            true))
+    {
         // Timeout or invalid Frame Length
         rxJob_abortReception();
         return;
     }
 
-
-
-    bool ackRequested  = otMacFrameIsAckRequested(&(s_rxBuffer[s_activeRxBuffer].otFrame));
+    bool ackRequested = otMacFrameIsAckRequested(&(s_rxBuffer[s_activeRxBuffer].otFrame));
 
     // A Message has been fully received at this point
     if (s_radioVars.promiscuousMode || !ackRequested)
@@ -459,7 +444,6 @@ static void rxJob_downloadAndHandleRemaining()
     // A Acknowledgment was requested
     // Send after Ack-InterFrame-Spacing delay
     samr21Timer_addDelayedAction(IEEE_15_4_ADJUSTED_AIFS_us, rxJob_sendAck);
-
 
     s_radioVars.rxState = SAMR21_RADIO_RX_STATE_PREP_ACK;
     // Move TRX to Tx, so PLL is already dialed in when ack is about to be Transmitted
@@ -491,11 +475,10 @@ static void rxJob_handleAddrField()
     }
 
     bool isRecipient = otMacFrameDoesAddrMatch(
-                                  &(s_rxBuffer[s_activeRxBuffer].otFrame),
-                                  s_radioVars.panId,
-                                  s_radioVars.shortAddress,
-                                  &s_radioVars.extendedAddress
-                        );
+        &(s_rxBuffer[s_activeRxBuffer].otFrame),
+        s_radioVars.panId,
+        s_radioVars.shortAddress,
+        &s_radioVars.extendedAddress);
 
     if (!s_radioVars.promiscuousMode && !isRecipient)
     {
@@ -504,21 +487,26 @@ static void rxJob_handleAddrField()
         return;
     }
 
-    if(s_radioVars.framePendingSrcMatch){
+    if (s_radioVars.framePendingSrcMatch)
+    {
 
         otMacAddress srcAddr;
         otMacFrameGetSrcAddr(&(s_rxBuffer[s_activeRxBuffer].otFrame), &srcAddr);
 
         s_rxBuffer[s_activeRxBuffer].framePending = false;
 
-        if(srcAddr.mType == OT_MAC_ADDRESS_TYPE_EXTENDED){
-            if(utilsSoftSrcMatchExtFindEntry(&srcAddr.mAddress.mExtAddress) > 0){
+        if (srcAddr.mType == OT_MAC_ADDRESS_TYPE_EXTENDED)
+        {
+            if (utilsSoftSrcMatchExtFindEntry(&srcAddr.mAddress.mExtAddress) > 0)
+            {
                 s_rxBuffer[s_activeRxBuffer].framePending = true;
             }
         }
 
-        if(srcAddr.mType == OT_MAC_ADDRESS_TYPE_SHORT){
-            if(utilsSoftSrcMatchShortFindEntry(srcAddr.mAddress.mShortAddress) > 0){
+        if (srcAddr.mType == OT_MAC_ADDRESS_TYPE_SHORT)
+        {
+            if (utilsSoftSrcMatchShortFindEntry(srcAddr.mAddress.mShortAddress) > 0)
+            {
                 s_rxBuffer[s_activeRxBuffer].framePending = true;
             }
         }
@@ -527,20 +515,20 @@ static void rxJob_handleAddrField()
     {
         s_rxBuffer[s_activeRxBuffer].framePending = true;
     }
-    
-    int32_t nextAction_us =
-        (
-            (s_rxBuffer[s_activeRxBuffer].otFrame.mLength - s_rxBuffer[s_activeRxBuffer].neededPdsuSizeForNextAction) //Num of Pending Bytes
-            * (IEEE_15_4_24GHZ_TIME_PER_OCTET_us - SAMR21_SPI_TIME_PER_BYTE_us)) //Time when they all arrive minus the time it takes to download
-            - SAMR21_SPI_INIT_TIME_FRAMEBUFFER_us // Time it takes to init a SPI Action
-            - (s_rxBuffer[s_activeRxBuffer].neededPdsuSizeForNextAction * SAMR21_SPI_TIME_PER_BYTE_us //Time it takes to download the already received Bytes (can only download full Framebuffer)
-        );
 
-    //Next time we start a FramebufferDownload we download everything
+    int32_t nextAction_us =
+        ((s_rxBuffer[s_activeRxBuffer].otFrame.mLength - s_rxBuffer[s_activeRxBuffer].neededPdsuSizeForNextAction) // Num of Pending Bytes
+         * (IEEE_15_4_24GHZ_TIME_PER_OCTET_us - SAMR21_SPI_TIME_PER_BYTE_us))                                      // Time when they all arrive minus the time it takes to download
+        - SAMR21_SPI_INIT_TIME_FRAMEBUFFER_us                                                                      // Time it takes to init a SPI Action
+        - (s_rxBuffer[s_activeRxBuffer].neededPdsuSizeForNextAction * SAMR21_SPI_TIME_PER_BYTE_us                  // Time it takes to download the already received Bytes (can only download full Framebuffer)
+          );
+
+    // Next time we start a FramebufferDownload we download everything
     s_rxBuffer[s_activeRxBuffer].neededPdsuSizeForNextAction = s_rxBuffer[s_activeRxBuffer].otFrame.mLength;
 
-    //This is mainly used for long frames where we don't want to be in the IRQ-Routine for ages
-    if(nextAction_us > SAMR21_SOFTWARE_RADIO_MIN_DOWNLOAD_BACKOFF_us){
+    // This is mainly used for long frames where we don't want to be in the IRQ-Routine for ages
+    if (nextAction_us > SAMR21_SOFTWARE_RADIO_MIN_DOWNLOAD_BACKOFF_us)
+    {
         s_radioVars.rxState = SAMR21_RADIO_RX_STATE_WAIT_REMAINING;
         samr21Timer_addDelayedAction(nextAction_us, rxJob_downloadAndHandleRemaining);
         return;
@@ -553,21 +541,21 @@ static void rxJob_handleFcf()
 {
     s_radioVars.rxBusy = true;
     s_radioVars.rxState = SAMR21_RADIO_RX_STATE_PARSE_FCF;
-    
 
     s_rxBuffer[s_activeRxBuffer].otFrame.mInfo.mRxInfo.mTimestamp = samr21Rtc_getTimestamp();
-    s_rxBuffer[s_activeRxBuffer].otFrame.mChannel = samr21Trx_getAktiveChannel(); 
+    s_rxBuffer[s_activeRxBuffer].otFrame.mChannel = samr21Trx_getActiveChannel();
 
     // +4 => 1Byte phyLen, 2Byte FCF, 1Byte DSN
     if (!samr21Trx_realtimeFramebufferDownload(s_rxBuffer[s_activeRxBuffer].frameBuffer, 4))
-    { 
+    {
         // Timeout or invalid Frame Length
         rxJob_abortReception();
         return;
     }
 
-    if(s_rxBuffer[s_activeRxBuffer].frameBuffer[0] > IEEE_15_4_FRAME_SIZE){
-        //Can't be a valid frame
+    if (s_rxBuffer[s_activeRxBuffer].frameBuffer[0] > IEEE_15_4_FRAME_SIZE)
+    {
+        // Can't be a valid frame
         rxJob_abortReception();
         return;
     }
@@ -627,12 +615,12 @@ static void rxJob_handleFcf()
     if (addrFieldSize)
     {
         int32_t nextAction_us =
-            ((addrFieldSize) * (IEEE_15_4_24GHZ_TIME_PER_OCTET_us - SAMR21_SPI_TIME_PER_BYTE_us)) 
-            - SAMR21_SPI_INIT_TIME_FRAMEBUFFER_us - (4 * SAMR21_SPI_TIME_PER_BYTE_us);
+            ((addrFieldSize) * (IEEE_15_4_24GHZ_TIME_PER_OCTET_us - SAMR21_SPI_TIME_PER_BYTE_us)) - SAMR21_SPI_INIT_TIME_FRAMEBUFFER_us - (4 * SAMR21_SPI_TIME_PER_BYTE_us);
 
         s_rxBuffer[s_activeRxBuffer].neededPdsuSizeForNextAction = addrFieldSize + 4;
 
-        if(nextAction_us > SAMR21_SOFTWARE_RADIO_MIN_DOWNLOAD_BACKOFF_us){
+        if (nextAction_us > SAMR21_SOFTWARE_RADIO_MIN_DOWNLOAD_BACKOFF_us)
+        {
             s_radioVars.rxState = SAMR21_RADIO_RX_STATE_WAIT_ADDR;
             samr21Timer_addDelayedAction(nextAction_us, rxJob_handleAddrField);
             return;
@@ -647,7 +635,8 @@ static void rxJob_handleFcf()
 
     s_rxBuffer[s_activeRxBuffer].neededPdsuSizeForNextAction = s_rxBuffer[s_activeRxBuffer].otFrame.mLength;
 
-    if(nextAction_us > SAMR21_SOFTWARE_RADIO_MIN_DOWNLOAD_BACKOFF_us){
+    if (nextAction_us > SAMR21_SOFTWARE_RADIO_MIN_DOWNLOAD_BACKOFF_us)
+    {
         s_radioVars.rxState = SAMR21_RADIO_RX_STATE_WAIT_REMAINING;
         radio_scheduleDelayedAction(nextAction_us, rxJob_downloadAndHandleRemaining);
         return;
@@ -656,10 +645,9 @@ static void rxJob_handleFcf()
     rxJob_downloadAndHandleRemaining();
 }
 
-
 void samr21Radio_startReceiving(uint8_t a_channel)
 {
-    //Cleanup from previous Mode
+    // Cleanup from previous Mode
     samr21Trx_removeAllInterruptHandler();
     radio_removeQueuedAction();
 
@@ -667,7 +655,7 @@ void samr21Radio_startReceiving(uint8_t a_channel)
     s_radioVars.rxBusy = 0;
 
     s_radioVars.rxState = SAMR21_RADIO_RX_STATE_IDLE;
-    
+
     s_rxBuffer[s_activeRxBuffer].otFrame.mPsdu = &s_rxBuffer[s_activeRxBuffer].frameBuffer[1];
     s_rxBuffer[s_activeRxBuffer].done = false;
 
@@ -687,42 +675,49 @@ void samr21Radio_startReceiving(uint8_t a_channel)
     // Enable Buffer Underrun for LIVE RX Parser
     samr21Trx_enableInterrupt(TRX_IRQ_TRX_UR);
 
-    //Move to Rx
+    // Move to Rx
     samr21Trx_queueMoveToRx(true);
 }
 
-otRadioFrame* samr21Radio_getReceivedOtFrame(){
-    for(uint8_t i = 0; i < SAMR21_NUM_RX_BUFFER; i++){
-        if(s_rxBuffer[i].done){
+otRadioFrame *samr21Radio_getReceivedOtFrame()
+{
+    for (uint8_t i = 0; i < SAMR21_NUM_RX_BUFFER; i++)
+    {
+        if (s_rxBuffer[i].done)
+        {
             s_rxBuffer[i].done = false;
             return &(s_rxBuffer[i].otFrame);
         }
     }
-    //No Finished Buffer available
+    // No Finished Buffer available
     return NULL;
 }
 
-static void rx_handleReceiveSlotDone(){
+static void rx_handleReceiveSlotDone()
+{
 
-    //Put Radio to sleep
+    // Put Radio to sleep
     samr21Radio_sleep();
 
-    if(s_radioVars.numReceivedFramesDuringSlot == 0){
+    if (s_radioVars.numReceivedFramesDuringSlot == 0)
+    {
         samr21Radio_noMessagesDuringSlot_cb();
     }
 
-    s_radioVars.scheduledRxSlot =false;
+    s_radioVars.scheduledRxSlot = false;
     s_radioVars.numReceivedFramesDuringSlot = 0;
     s_radioVars.receiveSlotChannel = 0;
     s_radioVars.receiveSlotDuration_us = 0;
 }
 
-static void rx_handleQueuedReceiveSlot(){
+static void rx_handleQueuedReceiveSlot()
+{
 
     s_radioVars.numReceivedFramesDuringSlot = 0;
     samr21Radio_startReceiving(s_radioVars.receiveSlotChannel);
 
-    if(s_radioVars.receiveSlotDuration_us){
+    if (s_radioVars.receiveSlotDuration_us)
+    {
 
         timestamp_t endTimestamp = samr21Timer_getCurrentTimestamp();
 
@@ -730,14 +725,15 @@ static void rx_handleQueuedReceiveSlot(){
 
         samr21Timer_addScheduledTask(endTimestamp, rx_handleReceiveSlotDone);
     }
-
 }
 
-bool samr21Radio_queueReceiveSlot(uint32_t a_startPointTimestamp, uint8_t a_channel, uint32_t a_duration){
-    
-    if(s_radioVars.scheduledRxSlot){
+bool samr21Radio_queueReceiveSlot(uint32_t a_startPointTimestamp, uint8_t a_channel, uint32_t a_duration)
+{
 
-        //There already is a Queued Event
+    if (s_radioVars.scheduledRxSlot)
+    {
+
+        // There already is a Queued Event
         return false;
     }
 
@@ -746,7 +742,7 @@ bool samr21Radio_queueReceiveSlot(uint32_t a_startPointTimestamp, uint8_t a_chan
 
     timestamp_t startTimestamp = samr21Timer_getCurrentTimestamp();
 
-    if(a_startPointTimestamp < startTimestamp.u32Value.lower)
+    if (a_startPointTimestamp < startTimestamp.u32Value.lower)
     {
         startTimestamp.u32Value.upper++;
     }
@@ -759,9 +755,8 @@ bool samr21Radio_queueReceiveSlot(uint32_t a_startPointTimestamp, uint8_t a_chan
     return true;
 }
 
-
 /******************************TX Operation***************************************/
-//Prototypes
+// Prototypes
 static void txJob_doneHandler();
 static void txJob_abort();
 static void txJob_evaluateAck();
@@ -769,140 +764,148 @@ static void txJob_prepareForAckReception();
 static void txJob_retry();
 static void txJob_startTransmit();
 static void txJob_evalCca();
+static void txJob_csmaBackoff();
 static void txJob_startCca();
 
 static uint8_t s_txFrameBuffer[IEEE_15_4_FRAME_SIZE];
 static uint8_t s_txAckFrameBuffer[IEEE_15_4_FRAME_SIZE];
-static otRadioFrame s_txOtFrame = { .mPsdu = &s_txFrameBuffer[1]};
-static otRadioFrame s_txAckOtFrame = { .mPsdu = &s_txAckFrameBuffer[1]};
+static otRadioFrame s_txOtFrame = {.mPsdu = &s_txFrameBuffer[1]};
+static otRadioFrame s_txAckOtFrame = {.mPsdu = &s_txAckFrameBuffer[1]};
 
 static uint8_t s_txNumTransmissionRetries;
 static uint8_t s_txNumCsmaBackoff;
 
-
-//Transmission Security
+// Transmission Security
 static uint8_t s_txNonce[IEEE_15_4_AES_CCM_NONCE_SIZE];
 static uint8_t *s_txPayload;
 static uint8_t *s_txFooter;
 static uint8_t *s_txAesKey;
 static uint8_t s_txSecurityLevel;
 
-
-static void txJob_doneHandler(){
+static void txJob_doneHandler()
+{
 
     s_radioVars.txState = SAMR21_RADIO_TX_STATE_IDLE;
 
-    //Stop Timeout
+    // Stop Timeout
     radio_removeQueuedAction();
 
     s_radioVars.txBusy = false;
 
-    //Move back to Receive
-    samr21Radio_startReceiving(0);
+    if (s_radioVars.rxActive)
+    {
+        // Move back to Receive
+        samr21Radio_startReceiving(0);
+    }
 
-    //Inform UpperLayer
+    // Inform UpperLayer
     samr21Radio_transmissionDone_cb(RADIO_TRANSMISSION_SUCCESSFUL, &s_txOtFrame);
 }
 
-static void txJob_abort(){
-    
-    s_radioVars.txState = SAMR21_RADIO_TX_STATE_IDLE;
-    
-    //Stop Timeout
+static void txJob_abort()
+{
+
+    // Stop Timer
     radio_removeQueuedAction();
 
-    s_radioVars.txBusy = false;
+    // Stop Any Scheduled CSMA Attempts
+    if (s_radioVars.txState == SAMR21_RADIO_TX_STATE_CSMA_BACKOFF)
+    {
+        samr21Timer_removeScheduledTask(txJob_startCca);
+    }
 
-    if(s_txNumCsmaBackoff >= s_txOtFrame.mInfo.mTxInfo.mMaxCsmaBackoffs)
+    s_radioVars.txBusy = false;
+    s_radioVars.txState = SAMR21_RADIO_TX_STATE_IDLE;
+
+    if (s_txNumCsmaBackoff >= s_txOtFrame.mInfo.mTxInfo.mMaxCsmaBackoffs)
     {
         samr21Radio_transmissionDone_cb(RADIO_TRANSMISSION_CHANNEL_ACCESS_FAILED, &s_txOtFrame);
     }
-    else if(s_txNumTransmissionRetries >= s_txOtFrame.mInfo.mTxInfo.mMaxFrameRetries)
+    else if (s_txNumTransmissionRetries >= s_txOtFrame.mInfo.mTxInfo.mMaxFrameRetries)
     {
         samr21Radio_transmissionDone_cb(RADIO_TRANSMISSION_NO_ACK, &s_txOtFrame);
     }
-    else 
+    else
     {
         samr21Radio_transmissionDone_cb(RADIO_TRANSMISSION_UNDEFINED_ERROR, &s_txOtFrame);
     }
 
-    //Move back to Receive
-    samr21Radio_startReceiving(0);
+    if (s_radioVars.rxActive)
+    {
+        // Move back to Receive
+        samr21Radio_startReceiving(0);
+    }
 }
 
-static void txJob_evaluateAck(){
+static void txJob_evaluateAck()
+{
 
     s_radioVars.txState = SAMR21_RADIO_TX_STATE_EVAL_ACK;
 
-    //Stop Timeout
+    // Stop Timeout
     radio_removeQueuedAction();
 
-    //Download Ack
+    // Download Ack
     bool validFrame = samr21Trx_downloadReceivedFramebuffer(
         &s_txAckOtFrame.mLength,
         s_txAckOtFrame.mPsdu,
         &s_txAckOtFrame.mInfo.mRxInfo.mLqi,
         &s_txAckOtFrame.mInfo.mRxInfo.mRssi,
-        false
-    );
+        false);
 
     if (
-        otMacFrameIsAck(&s_txAckOtFrame) 
-        && ( otMacFrameGetSequence(&s_txAckOtFrame) == otMacFrameGetSequence(&s_txOtFrame) ) 
-        && validFrame
-    ){
-        //Ack is Valid
+        otMacFrameIsAck(&s_txAckOtFrame) && (otMacFrameGetSequence(&s_txAckOtFrame) == otMacFrameGetSequence(&s_txOtFrame)) && validFrame)
+    {
+        // Ack is Valid
         txJob_doneHandler();
         return;
     }
 
-    //Ack is Invalid
+    // Ack is Invalid
     txJob_retry();
 }
 
-static void samr21RadioAckReceptionStarted(){
+static void samr21RadioAckReceptionStarted()
+{
 
-    //Add a Handler for when Ack is fully received
+    // Add a Handler for when Ack is fully received
     samr21Trx_setInterruptHandler(TRX_IRQ_TRX_END, txJob_evaluateAck);
 
     s_radioVars.txState = SAMR21_RADIO_TX_STATE_WAIT_FOR_ACK_END;
 
-    //Add a Timestamp for the Ack reception started
-    s_txAckOtFrame.mInfo.mRxInfo.mTimestamp = samr21Rtc_getTimestamp();
+    // Add a Timestamp for the Ack reception started
+    s_txAckOtFrame.mInfo.mRxInfo.mTimestamp = samr21Timer_getNowU64();
 }
 
+static void txJob_retry()
+{
 
-    
-static void txJob_retry(){
-    if(s_txNumTransmissionRetries < s_txOtFrame.mInfo.mTxInfo.mMaxFrameRetries)
+    if (s_txNumTransmissionRetries < s_txOtFrame.mInfo.mTxInfo.mMaxFrameRetries)
     {
-        //Reset CSMA Counter
+        // Reset CSMA Counter
         s_txNumCsmaBackoff = 0;
 
-        //Increase Retry Counter
+        // Increase Retry Counter
         s_txNumTransmissionRetries++;
 
-        //Start over
+        // Start over
         txJob_startCca();
         return;
     }
 
-    //No Retry Attempts left
+    // No Retry Attempts left
     txJob_abort();
 }
 
-
-
-
-
-static void txJob_startTransmit(){
+static void txJob_startTransmit()
+{
 
     s_radioVars.txState = SAMR21_RADIO_TX_STATE_SENDING;
 
-    //Queue Move to Tx
+    // Queue Move to Tx
     samr21Trx_forceMoveToTx(false);
 
-    //Enter Time Critical Section
+    // Enter Time Critical Section
     __disable_irq();
 
     if (!s_txOtFrame.mInfo.mTxInfo.mIsHeaderUpdated)
@@ -935,7 +938,6 @@ static void txJob_startTransmit(){
 #endif // OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
     }
 
-    
     if (otMacFrameIsSecurityEnabled(&s_txOtFrame) && otMacFrameIsKeyIdMode1(&s_txOtFrame) && !s_txOtFrame.mInfo.mTxInfo.mIsSecurityProcessed)
     {
         s_radioVars.txState = SAMR21_RADIO_TX_STATE_SENDING_SECURITY;
@@ -943,29 +945,29 @@ static void txJob_startTransmit(){
         s_txOtFrame.mInfo.mTxInfo.mIsSecurityProcessed = true;
     }
     else
-    {   
+    {
         s_radioVars.txState = SAMR21_RADIO_TX_STATE_SENDING_RAW;
     }
 
-    samr21Trx_dmaUploadToFramebuffer(s_txFrameBuffer, s_txFrameBuffer[0] + IEEE_15_4_PHR_SIZE , 0);
+    samr21Trx_dmaUploadToFramebuffer(s_txFrameBuffer, s_txFrameBuffer[0] + IEEE_15_4_PHR_SIZE, 0);
 
-    //Start Transmission
+    // Start Transmission
     samr21Trx_setSleepTransmitPin(true);
     samr21SysTick_delayTicks(10);
     samr21Trx_setSleepTransmitPin(false);
 
-    //Leaving Time Critical Section
+    // Leaving Time Critical Section
     __enable_irq();
 
     // Set a handler for when the Frame is fully transmitted
-    if(otMacFrameIsAckRequested(&s_txOtFrame))
-    {   
-        //Add a Handler for when Ack is received
+    if (otMacFrameIsAckRequested(&s_txOtFrame))
+    {
+        // Add a Handler for when Ack is received
         samr21Trx_setInterruptHandler(TRX_IRQ_RX_START, samr21RadioAckReceptionStarted);
-        //Queue Radio Mode Change to RX after Transmission is completed
+        // Queue Radio Mode Change to RX after Transmission is completed
         samr21Trx_queueMoveToRx(false);
 
-        //Add a Timeout in case there is no Ack
+        // Add a Timeout in case there is no Ack
         radio_scheduleDelayedAction(SAMR21_SOFTWARE_RADIO_ACK_TIMEOUT_us, txJob_retry);
         s_radioVars.rxState = SAMR21_RADIO_RX_STATE_WAIT_ACK_START;
     }
@@ -977,52 +979,73 @@ static void txJob_startTransmit(){
         s_radioVars.txState = SAMR21_RADIO_TX_STATE_WAIT_SENDING_END;
     }
 
-    //Inform Upper Layer that Transmission started
-    samr21Radio_transmissionStarted_cb( &s_txOtFrame);
+    // Inform Upper Layer that Transmission started
+    samr21Radio_transmissionStarted_cb(&s_txOtFrame);
 }
 
-static void txJob_evalCca(){
+static void txJob_csmaBackoff()
+{
+    // Calculate Backoff Time and Queue Action
+    uint8_t currentBackoffExponent = IEEE_15_4_MIN_BACKOFF_EXPONENT + s_txNumCsmaBackoff;
+    if (currentBackoffExponent > IEEE_15_4_MAX_BACKOFF_EXPONENT)
+    {
+        currentBackoffExponent = IEEE_15_4_MAX_BACKOFF_EXPONENT;
+    }
 
-    s_radioVars.txState = SAMR21_RADIO_TX_STATE_EVAL_CCA_RESULT;    
-    //Clear Timeout
+    uint32_t backoffPeriods = samr21Trx_getRandomByte() % (0x1 << currentBackoffExponent);
+    uint32_t backoffTime_us = backoffPeriods * 20 * IEEE_15_4_24GHZ_TIME_PER_OCTET_us;
+
+    if (backoffTime_us < (20 * IEEE_15_4_24GHZ_TIME_PER_OCTET_us))
+    {
+        backoffTime_us = 20 * IEEE_15_4_24GHZ_TIME_PER_OCTET_us;
+    }
+
+    timestamp_t nextAttemptTimestamp = samr21Timer_getCurrentTimestamp();
+    nextAttemptTimestamp.u64Value += backoffTime_us;
+
+    s_radioVars.txState = SAMR21_RADIO_TX_STATE_CSMA_BACKOFF;
+    s_txNumCsmaBackoff++;
+
+    samr21Timer_addScheduledTask(nextAttemptTimestamp, txJob_startCca);
+}
+
+static void txJob_evalCca()
+{
+
+    s_radioVars.txState = SAMR21_RADIO_TX_STATE_EVAL_CCA_RESULT;
+    // Clear Timeout
     radio_removeQueuedAction();
 
     if (samr21Trx_getCcaResult())
     {
-        //Channel is free
+        // Channel is free
         txJob_startTransmit();
         return;
     }
-    
-    //Channel is busy
-    if(s_txNumCsmaBackoff < s_txOtFrame.mInfo.mTxInfo.mMaxCsmaBackoffs)
-    {
-        //Calculate Backoff Time and Queue Action
-        uint32_t backoffTime_us =
-            ((samr21Trx_getRandomByte() >> (8 - (IEEE_15_4_MIN_BACKOFF_EXPONENT + s_txNumCsmaBackoff > IEEE_15_4_MAX_BACKOFF_EXPONENT ? IEEE_15_4_MAX_BACKOFF_EXPONENT : IEEE_15_4_MIN_BACKOFF_EXPONENT + s_txNumCsmaBackoff))) - 1) * (20 * IEEE_15_4_24GHZ_TIME_PER_OCTET_us);
-        
-        s_txNumCsmaBackoff++;
 
-        s_radioVars.txState = SAMR21_RADIO_TX_STATE_CSMA_BACKOFF;
-        radio_scheduleDelayedAction(backoffTime_us, txJob_startCca);
-        return;
+    // Channel is busy
+
+    if (s_txNumCsmaBackoff < s_txOtFrame.mInfo.mTxInfo.mMaxCsmaBackoffs)
+    {
+        txJob_csmaBackoff();
     }
 
-    //No CSMA Attempts left
+    // No CSMA Attempts left
     txJob_abort();
 }
 
-static void txJob_startCca(){
+static void txJob_startCca()
+{
 
     s_radioVars.txState = SAMR21_RADIO_TX_STATE_CCA;
 
     // Put Transceiver is in receive Mode
     samr21Trx_queueMoveToRx(true);
 
-    // Set a Timeout in Case something goes wrong 
+    // Set a Timeout in Case something goes wrong
     radio_scheduleDelayedAction(SAMR21_SOFTWARE_RADIO_CCA_TIMEOUT_us, txJob_evalCca);
 
-    //Start the measurement
+    // Start the measurement
     samr21Trx_startCca();
 
     s_radioVars.txState = SAMR21_RADIO_TX_STATE_WAIT_CCA_RESULT;
@@ -1030,20 +1053,29 @@ static void txJob_startCca(){
 
 void samr21radio_transmit(otRadioFrame *a_otFrame)
 {
-
     s_txNumTransmissionRetries = 0;
     s_txNumCsmaBackoff = 0;
     s_txSecurityLevel = 0;
     s_txFrameBuffer[0] = s_txOtFrame.mLength;
-    
-    //Setup IRQ Handler for Transmit-Operation
-    samr21Trx_removeAllInterruptHandler();
-    radio_removeQueuedAction();
+
+    bool channelBusy = false;
+
+    if((s_radioVars.rxBusy) && (s_txOtFrame.mChannel == samr21Trx_getActiveChannel()))
+    {
+        channelBusy = true;
+    }
+
+    if(s_radioVars.rxBusy)
+    {
+        rxJob_abortReception();
+    }
 
     s_radioVars.txBusy = true;
 
-    //Change Channel to desired one
+    // Change Channel to desired one
     samr21Trx_setActiveChannel(s_txOtFrame.mChannel);
+
+    samr21Trx_removeAllInterruptHandler();
 
     // Enable CCA_ED IRQ for Channel Clear Assessment
     samr21Trx_setInterruptHandler(TRX_IRQ_CCA_ED_DONE, txJob_evalCca);
@@ -1055,31 +1087,28 @@ void samr21radio_transmit(otRadioFrame *a_otFrame)
     // Enable Rx-Start IRQ to indicate Ack Reception
     samr21Trx_enableInterrupt(TRX_IRQ_RX_START);
 
-
-    //Check if Security needs to be applied by the Radio Driver
-    if (    !s_txOtFrame.mInfo.mTxInfo.mIsARetx 
-            && !s_txOtFrame.mInfo.mTxInfo.mIsHeaderUpdated 
-            && otMacFrameIsSecurityEnabled(&s_txOtFrame)
-    ){
+    // Check if Security needs to be applied by the Radio Driver
+    if (!s_txOtFrame.mInfo.mTxInfo.mIsARetx && !s_txOtFrame.mInfo.mTxInfo.mIsHeaderUpdated && otMacFrameIsSecurityEnabled(&s_txOtFrame))
+    {
         __disable_irq();
         otMacFrameSetFrameCounter(&s_txOtFrame, ++s_radioVars.macCounter);
 
         if (otMacFrameIsKeyIdMode1(&s_txOtFrame))
         {
             otMacFrameSetKeyId(&s_txOtFrame, s_radioVars.currentMacKeyId);
-            s_txOtFrame.mInfo.mTxInfo.mAesKey =  &s_radioVars.currentMacKey;
+            s_txOtFrame.mInfo.mTxInfo.mAesKey = &s_radioVars.currentMacKey;
         }
         __enable_irq();
     }
 
-    //Check if Transmission needs to be delayed
-    if(s_txOtFrame.mInfo.mTxInfo.mTxDelay){
-
+    // Check if Transmission needs to be delayed
+    if (s_txOtFrame.mInfo.mTxInfo.mTxDelay)
+    {
         s_radioVars.txState = SAMR21_RADIO_TX_STATE_WAIT_FOR_TX_TIMING;
 
         timestamp_t transmitTimestamp = samr21Timer_getCurrentTimestamp();
 
-        if(transmitTimestamp.u32Value.lower < s_txOtFrame.mInfo.mTxInfo.mTxDelayBaseTime)
+        if (transmitTimestamp.u32Value.lower < s_txOtFrame.mInfo.mTxInfo.mTxDelayBaseTime)
         {
             transmitTimestamp.u32Value.upper--;
         }
@@ -1087,83 +1116,95 @@ void samr21radio_transmit(otRadioFrame *a_otFrame)
         transmitTimestamp.u32Value.lower = s_txOtFrame.mInfo.mTxInfo.mTxDelayBaseTime;
         transmitTimestamp.u64Value += s_txOtFrame.mInfo.mTxInfo.mTxDelay;
 
-        samr21Timer_addScheduledTask(
-            transmitTimestamp, 
-            s_txOtFrame.mInfo.mTxInfo.mCsmaCaEnabled ? txJob_startCca : txJob_startTransmit
-        );
-
-        return;
+        if (transmitTimestamp.u64Value > samr21Timer_getNowU64)
+        {
+            samr21Timer_addScheduledTask(
+                transmitTimestamp,
+                s_txOtFrame.mInfo.mTxInfo.mCsmaCaEnabled ? txJob_startCca : txJob_startTransmit);
+            return;
+        }
     }
 
-
-
-    if(s_txOtFrame.mInfo.mTxInfo.mCsmaCaEnabled){
-        txJob_startCca();
+    if (s_txOtFrame.mInfo.mTxInfo.mCsmaCaEnabled)
+    {
+        if(channelBusy)
+        {
+            txJob_csmaBackoff;
+            return;
+        }
+        else
+        {
+            txJob_startCca();
+        }
         return;
     }
 
     txJob_startTransmit();
 }
 
-otRadioFrame* samr21Radio_getOtTxBuffer()
+otRadioFrame *samr21Radio_getOtTxBuffer()
 {
     return &s_txOtFrame;
 }
 
-otRadioFrame* samr21Radio_getLastReceivedAckOtFrame()
+otRadioFrame *samr21Radio_getLastReceivedAckOtFrame()
 {
-    if(otMacFrameGetSequence(&s_txAckOtFrame) == otMacFrameGetSequence(&s_txOtFrame)){
+    if (otMacFrameGetSequence(&s_txAckOtFrame) == otMacFrameGetSequence(&s_txOtFrame))
+    {
         return &s_txAckOtFrame;
     }
 
     return NULL;
 }
 
-
 /******************************ED Operation***************************************/
 static uint8_t s_maxEnergyDetectionLevel;
 static uint32_t s_edScansLeft;
 
-static void edJob_evaluateScan(){
-    
-    //Remove Timeout
+static void edJob_evaluateScan()
+{
+
+    // Remove Timeout
     radio_removeQueuedAction();
 
     uint8_t edReading = samr21Trx_readRegister(PHY_ED_LEVEL_REG_ADDR);
 
-    if(s_maxEnergyDetectionLevel < edReading){
+    if (s_maxEnergyDetectionLevel < edReading)
+    {
         s_maxEnergyDetectionLevel = edReading;
     }
 
-    if(--s_edScansLeft){
-        //Set a Timeout if ED IRQ fails to trigger
-        radio_scheduleDelayedAction((1000 / ( SAMR21_SOFTWARE_RADIO_ED_SCANS_PER_MS / 2 )), edJob_evaluateScan);
+    if (--s_edScansLeft)
+    {
+        // Set a Timeout if ED IRQ fails to trigger
+        radio_scheduleDelayedAction((1000 / (SAMR21_SOFTWARE_RADIO_ED_SCANS_PER_MS / 2)), edJob_evaluateScan);
 
-        //Start ED
-        samr21Trx_startEd(); 
+        // Start ED
+        samr21Trx_startEd();
         return;
     }
 
     samr21Radio_energyDetectionDone_cb(AT86RF233_RSSI_BASE_VAL_dBm + s_maxEnergyDetectionLevel);
 
     s_radioVars.edBusy = false;
-    //Move back to Receive
+    // Move back to Receive
     samr21Radio_startReceiving(0);
 }
 
-
-bool samr21Radio_startEnergyDetection(uint8_t a_channel, uint32_t a_duration_ms){
+bool samr21Radio_startEnergyDetection(uint8_t a_channel, uint32_t a_duration_ms)
+{
 
 #ifdef _DEBUG
     assert(a_duration_ms > 0);
 #endif
 
-    if(s_radioVars.edBusy){
-        //A Scan is already ongoing
+    if (s_radioVars.edBusy)
+    {
+        // A Scan is already ongoing
         return false;
     }
 
-    //Cleanup from previous Mode
+    // Cleanup from previous Mode
     samr21Trx_removeAllInterruptHandler();
     radio_removeQueuedAction();
 
@@ -1172,40 +1213,45 @@ bool samr21Radio_startEnergyDetection(uint8_t a_channel, uint32_t a_duration_ms)
     s_maxEnergyDetectionLevel = 0;
     s_edScansLeft = a_duration_ms * SAMR21_SOFTWARE_RADIO_ED_SCANS_PER_MS;
 
-
     if (a_channel)
     {
         samr21Trx_setActiveChannel(a_channel);
     }
 
-    //Set a Handler for when the ED is done
+    // Set a Handler for when the ED is done
     samr21Trx_setInterruptHandler(TRX_IRQ_CCA_ED_DONE, edJob_evaluateScan);
     samr21Trx_enableInterrupt(TRX_IRQ_CCA_ED_DONE);
 
-    //Set a Timeout if ED IRQ fails to trigger
-    radio_scheduleDelayedAction((1000 / ( SAMR21_SOFTWARE_RADIO_ED_SCANS_PER_MS / 2 )),edJob_evaluateScan);
+    // Set a Timeout if ED IRQ fails to trigger
+    radio_scheduleDelayedAction((1000 / (SAMR21_SOFTWARE_RADIO_ED_SCANS_PER_MS / 2)), edJob_evaluateScan);
 
-    //Start ED
+    // Start ED
     samr21Trx_startEd();
-
 }
 
-int8_t samr21Radio_getLastEdResult(){
+int8_t samr21Radio_getLastEdResult()
+{
     return AT86RF233_RSSI_BASE_VAL_dBm + s_maxEnergyDetectionLevel;
 }
 
 void samr21Radio_sleep()
 {
     s_radioVars.rxActive = false;
-    
+
+    if (s_radioVars.txBusy)
+        ;
+    {
+        txJob_abort();
+    }
+
+    if (s_radioVars.rxBusy)
+        ;
+    {
+        rxJob_abortReception();
+    }
+
     radio_removeQueuedAction();
     samr21Trx_removeAllInterruptHandler();
 
-    samr21Timer_removeDelayedAction(rxJob_handleAddrField);
-    samr21Timer_removeDelayedAction(rxJob_downloadAndHandleRemaining);
-    samr21Timer_removeDelayedAction(rxJob_sendAck);
-
-    s_radioVars.txBusy = false;
     s_radioVars.edBusy = false;
-    s_radioVars.rxBusy = false;
 }

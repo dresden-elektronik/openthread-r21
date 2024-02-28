@@ -205,10 +205,87 @@ void samr21Trx_initInterface()
     samr21Trx_writeRegister(PHY_TX_PWR_REG_ADDR, s_localTrxRegisterCopy.phyTxPwr.reg);
 }
 
+//TCC0
+static void samr21Trx_initTimer()
+{
+    // Enable In Power Manger
+    PM->APBCMASK.bit.TCC0_ = 1;
+
+    // Disable Modules First
+    TCC0->CTRLA.bit.ENABLE = 0;
+    while (TCC0->SYNCBUSY.bit.ENABLE)
+        ;
+
+    // Reset after
+    TCC0->CTRLA.bit.SWRST = 1;
+    while (TCC0->CTRLA.bit.SWRST || TCC0->SYNCBUSY.bit.SWRST)
+        ;
+
+    // Setup TC Modules
+    
+    // Enable IRQ in NVIC
+    TCC0->INTENSET.bit.OVF = 1;
+    
+    TCC0->CTRLA.reg =
+        TCC_CTRLA_ENABLE 
+        | TCC_CTRLA_RESOLUTION(TCC_CTRLA_RESOLUTION_NONE_Val) 
+        | TCC_CTRLA_PRESCALER(0) 
+        | TCC_CTRLA_PRESCSYNC(TCC_CTRLA_PRESCSYNC_GCLK_Val)
+        //|TCC_CTRLA_ALOCK
+        // TCC_CTRLA_CPTEN0
+        // TCC_CTRLA_CPTEN1
+        // TCC_CTRLA_CPTEN2
+        // TCC_CTRLA_CPTEN3
+        ;
+    while (TCC0->SYNCBUSY.bit.ENABLE)
+        ;
+
+    TCC0->CTRLBSET.reg =
+        TCC_CTRLBSET_CMD_STOP 
+        | TCC_CTRLBSET_DIR 
+        | TCC_CTRLBSET_ONESHOT
+    ;
+
+    while (TCC0->SYNCBUSY.bit.CTRLB)
+        ;
+
+    TCC0->WAVE.reg =
+        TCC_WAVE_WAVEGEN(TCC_WAVE_WAVEGEN_MFRQ_Val);
+    while (TCC0->SYNCBUSY.bit.WAVE)
+        ;
+
+    // clear pending interrupt in TC Module
+    TCC0->INTFLAG.bit.OVF = 1;
+    NVIC_ClearPendingIRQ(TCC0_IRQn);
+
+    // Enable IRQ in NVIC
+    NVIC_EnableIRQ(TCC0_IRQn);
+}
+
+static void samr21Trx_setTimer(uint32_t a_timerTicks)
+{
+    while (TCC0->SYNCBUSY.reg)
+        ;
+    TCC0->COUNT.reg = a_timerTicks;
+
+    TCC0->CTRLBSET.reg =
+        TCC_CTRLBSET_CMD_RETRIGGER;
+}
+
+static void samr21Trx_stopTimer()
+{
+    while (TCC0->SYNCBUSY.reg)
+        ;
+
+    TCC0->CTRLBSET.reg =
+        TCC_CTRLBSET_CMD_STOP;
+}
+
 void samr21Trx_initDriver()
 {
     // Enable TC3 for DMA Paceing
     samr21Timer_initDmaPaceMaker(); // 1MHz / (2^0) -> 1us resolution
+    samr21Trx_initTimer();
 
     samr21Dma_initChannel(
         0, //Channel 0 cause it has the highest Priority
@@ -576,7 +653,7 @@ void samr21Trx_setActiveChannel(uint8_t a_channel)
     samr21Trx_writeRegister(PHY_CC_CCA_REG_ADDR, s_localTrxRegisterCopy.phyCcCca.reg);
 }
 
-uint8_t samr21Trx_getAktiveChannel()
+uint8_t samr21Trx_getActiveChannel()
 {
     return s_localTrxRegisterCopy.phyCcCca.bit.channel;
 }
@@ -678,38 +755,26 @@ int8_t samr21Trx_getTxPower()
 
 /***************Timer-Handler for Trx-Operational Timing***************************/
 static volatile bool *s_timeoutFlag = NULL;
-static void (*s_currentTimerHandler_fktPtr)(void) = NULL;
 
-static void trx_timeoutHandler()
+void TCC0_Handler()
 {
-    *s_timeoutFlag = true;
-    s_currentTimerHandler_fktPtr = NULL;
+    TCC0->INTFLAG.bit.OVF = 1;
+    if(s_timeoutFlag)
+    {
+        *s_timeoutFlag = true;
+    }
 }
 
 static void trx_startTimeoutTimer(uint16_t a_duration_us, volatile bool *a_triggerFlag)
 {
     s_timeoutFlag = a_triggerFlag;
-    s_currentTimerHandler_fktPtr = &trx_timeoutHandler;
-    samr21Timer_addDelayedAction(a_duration_us, trx_timeoutHandler);
+    samr21Trx_setTimer(a_duration_us);
 }
 
 static void trx_stopTimeoutTimer()
 {
-    samr21Timer_removeDelayedAction(trx_timeoutHandler);
+    samr21Trx_stopTimer();
     s_timeoutFlag = NULL;
-    s_currentTimerHandler_fktPtr = NULL;
-}
-
-static void trx_queueDelayedAction(uint16_t a_delay_us, void (*a_queuedAction_fktPtr)(void))
-{
-    s_currentTimerHandler_fktPtr = a_queuedAction_fktPtr;
-    samr21Timer_addDelayedAction(a_delay_us, s_currentTimerHandler_fktPtr);
-}
-
-static void trx_removeQueuedAction()
-{
-    samr21Timer_removeDelayedAction(s_currentTimerHandler_fktPtr);
-    s_currentTimerHandler_fktPtr = NULL;
 }
 
 
